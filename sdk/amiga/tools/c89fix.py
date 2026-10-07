@@ -75,8 +75,58 @@ def split_decl_statements(lines):
     return out
 
 
+def struct_fields(text):
+    """typedef struct { ... } Name;  ->  {Name: [field, ...]} (simple members only)"""
+    out = {}
+    for m in re.finditer(r"typedef\s+struct\s*\w*\s*\{(.*?)\}\s*(\w+)\s*;", text, re.S):
+        body = re.sub(r"/\*.*?\*/", "", m.group(1), flags=re.S)
+        fields = []
+        for decl in body.split(";"):
+            decl = decl.strip()
+            if not decl:
+                continue
+            names = decl.split(",")
+            first = re.match(r".*?([A-Za-z_]\w*)\s*(\[[^\]]*\])?\s*$", names[0].strip())
+            if not first:
+                fields = None
+                break
+            fields.append(first.group(1))
+            for n in names[1:]:
+                nm = re.match(r"\s*\**\s*([A-Za-z_]\w*)", n)
+                if nm:
+                    fields.append(nm.group(1))
+        if fields:
+            out[m.group(2)] = fields
+    return out
+
+
+def compound_literals(text):
+    """lhs = (Type){ a, b, c };  ->  lhs.f1 = a; lhs.f2 = b; lhs.f3 = c;"""
+    types = struct_fields(text)
+    count = 0
+
+    def repl(m):
+        nonlocal count
+        lhs, typ, vals = m.group(1), m.group(2), split_top(m.group(3), ",")
+        if typ not in types or len(vals) > len(types[typ]):
+            return m.group(0)
+        count += 1
+        return " ".join(f"{lhs}.{f} = {v};" for f, v in zip(types[typ], vals))
+    text = re.sub(r"([A-Za-z_][\w\.\[\]>-]*)\s*=\s*\((\w+)\)\s*\{([^{}]*)\}\s*;", repl, text)
+    return text, count
+
+
 def fix(path):
-    lines = split_decl_statements(open(path).read().split("\n"))
+    text = open(path).read()
+    text, n_lit = compound_literals(text)
+    if n_lit:
+        print(f"{path}: rewrote {n_lit} compound literal(s)")
+    n_inline = len(re.findall(r"\bstatic\s+inline\b|\binline\s+static\b|\b__inline\b", text))
+    text = re.sub(r"\bstatic\s+inline\b|\binline\s+static\b", "static", text)
+    text = re.sub(r"\b__inline\b\s*", "", text)
+    if n_inline:
+        print(f"{path}: removed {n_inline} inline keyword(s)")
+    lines = split_decl_statements(text.split("\n"))
     # stack of blocks: [line index of '{', seen_statement, insert_at, depth]
     stack = []
     hoists = {}          # line index -> list of declarations to insert after it
@@ -116,7 +166,8 @@ def fix(path):
             if top[1]:
                 ind, typ = m.group("ind"), (m.group("type") + m.group("ptr").rstrip())
                 decls = split_top(m.group("rest"))
-                if m.group("const") or "static" in line or any("{" in d or "[" in d.split("=")[0] for d in decls):
+                if m.group("const") or "static" in line or any("{" in d for d in decls) or \
+                        any("[" in d.split("=")[0] and "=" in d for d in decls):
                     manual.append((i + 1, line.strip()))
                 else:
                     names, assigns = [], []
@@ -124,7 +175,7 @@ def fix(path):
                         nm, _, init = d.partition("=")
                         stars = re.match(r"^\s*(\**)", nm).group(1)
                         nm = nm.strip().lstrip("*").strip()
-                        names.append(stars + nm)
+                        names.append(stars + nm)          # arrays keep their [N]
                         if init.strip():
                             assigns.append(f"{nm} = {init.strip()};")
                     base = m.group("type")

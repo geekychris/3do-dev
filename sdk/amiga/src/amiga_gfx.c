@@ -397,8 +397,29 @@ span(struct RastPort *rp, LONG x0, LONG x1, LONG y, int pen)
         while(n--) { *p ^= 0x7FFF; p++; }
       else
         {
+          /* two pixels per 32-bit store: ARMv3 has no halfword stores */
           UWORD c = s_pal[pen & 255];
-          while(n--) *p++ = c;
+          ULONG cc = ((ULONG)c << 16) | c, *q;
+          if(n > 0 && ((ULONG)p & 2))
+            {
+              *p++ = c;
+              n--;
+            }
+          q = (ULONG *)p;
+          while(n >= 8)
+            {
+              q[0] = cc; q[1] = cc; q[2] = cc; q[3] = cc;
+              q += 4;
+              n -= 8;
+            }
+          while(n >= 2)
+            {
+              *q++ = cc;
+              n -= 2;
+            }
+          p = (UWORD *)q;
+          if(n)
+            *p = c;
         }
     }
 }
@@ -572,6 +593,23 @@ Draw(struct RastPort *rp, LONG x1, LONG y1)
       for(;;)
         {
           *p = (UBYTE)pen;
+          if(x0 == x1 && y0 == y1)
+            break;
+          e2 = err * 2;
+          if(e2 > -dy) { err -= dy; x0 += sx; p += sx; }
+          if(e2 <  dx) { err += dx; y0 += sy; p += stepy; }
+        }
+      return;
+    }
+  if(s_pix16 && !(rp->DrawMode & COMPLEMENT))
+    {
+      /* 16-bit mode: same, with direct stores */
+      UWORD c = s_pal[pen & 255];
+      UWORD *p = s_pix16 + y0 * W + x0;
+      LONG stepy = sy * W;
+      for(;;)
+        {
+          *p = c;
           if(x0 == x1 && y0 == y1)
             break;
           e2 = err * 2;
@@ -1071,6 +1109,24 @@ Text(struct RastPort *rp, CONST_STRPTR str, ULONG count)
           rp->cp_x = (WORD)(rp->cp_x + 8);
           continue;
         }
+      if(s_pix16 && !(rp->DrawMode & COMPLEMENT) &&
+         x >= rp->clip_x0 && x + 7 <= rp->clip_x1 && top >= rp->clip_y0 && top + 7 <= rp->clip_y1)
+        {
+          /* 16-bit mode: whole glyph on screen, direct stores (no plot()) */
+          UWORD F = s_pal[fg & 255], B = s_pal[bg & 255];
+          UWORD *d = s_pix16 + top * W + x;
+          for(row = 0; row < 8; row++, d += W)
+            {
+              unsigned bits = g[row];
+              for(col = 0; col < 8; col++)
+                if((bits >> col) & 1)
+                  d[col] = F;
+                else if(jam2)
+                  d[col] = B;
+            }
+          rp->cp_x = (WORD)(rp->cp_x + 8);
+          continue;
+        }
       for(row = 0; row < 8; row++)
         {
           unsigned bits = g[row];
@@ -1113,7 +1169,7 @@ struct TextFont *OpenFont(struct TextAttr *ta) { (void)ta; return &s_topaz; }
 /* ------------------------------------------------------------------ area fill */
 
 #define AREA_MAX 256
-static WORD s_area[AREA_MAX * 2];
+static LONG s_area[AREA_MAX * 2];    /* LONG: no halfword loads on ARMv3 */
 static int  s_area_n;
 
 void
@@ -1136,31 +1192,52 @@ InitTmpRas(struct TmpRas *tr, PLANEPTR buffer, LONG size)
 static void
 area_flush(struct RastPort *rp)
 {
-  /* even-odd scanline fill of the polygon in s_area */
+  /* even-odd scanline fill of the polygon in s_area. Each edge gets a
+   * 16.16 slope once (one division per edge, not per edge per line). */
   LONG miny = 32767, maxy = -32768, y;
-  int i, n = s_area_n;
+  int i, n = s_area_n, ne = 0;
   LONG xs[64];
+  struct { LONG ytop, ybot, x0, y0, x1, y1, slope; } e[AREA_MAX];
 
   if(n >= 3)
     {
       for(i = 0; i < n; i++)
         {
-          if(s_area[2 * i + 1] < miny) miny = s_area[2 * i + 1];
-          if(s_area[2 * i + 1] > maxy) maxy = s_area[2 * i + 1];
+          LONG x0 = s_area[2 * i], y0 = s_area[2 * i + 1];
+          LONG x1 = s_area[2 * ((i + 1) % n)], y1 = s_area[2 * ((i + 1) % n) + 1];
+          if(y0 < miny) miny = y0;
+          if(y0 > maxy) maxy = y0;
+          if(y0 == y1)
+            continue;               /* horizontal edges never cross a scanline centre */
+          e[ne].ytop = y0 < y1 ? y0 : y1;
+          e[ne].ybot = y0 < y1 ? y1 : y0;
+          e[ne].x0 = x0;
+          e[ne].y0 = y0;
+          e[ne].x1 = x1;
+          e[ne].y1 = y1;
+          /* (y - y0) * slope must fit in 32 bits: very wide edges (far
+           * off-screen projections) keep the exact per-line division */
+          e[ne].slope = (x1 - x0 > -16384 && x1 - x0 < 16384) ? ((x1 - x0) << 16) / (y1 - y0) : 0x7FFFFFFF;
+          ne++;
         }
       if(miny < rp->clip_y0) miny = rp->clip_y0;
       if(maxy > rp->clip_y1) maxy = rp->clip_y1;
       for(y = miny; y <= maxy; y++)
         {
           int k = 0, a, b;
-          for(i = 0; i < n; i++)
-            {
-              LONG x0 = s_area[2 * i], y0 = s_area[2 * i + 1];
-              LONG x1 = s_area[2 * ((i + 1) % n)], y1 = s_area[2 * ((i + 1) % n) + 1];
-              if((y0 <= y && y1 > y) || (y1 <= y && y0 > y))
-                if(k < 64)
-                  xs[k++] = x0 + ((y - y0) * (x1 - x0)) / (y1 - y0);
-            }
+          for(i = 0; i < ne; i++)
+            if(y >= e[i].ytop && y < e[i].ybot && k < 64)
+              {
+                /* x0 + (y - y0) * dx / dy, truncated toward zero like the
+                 * division it replaces */
+                if(e[i].slope == 0x7FFFFFFF)
+                  xs[k++] = e[i].x0 + ((y - e[i].y0) * (e[i].x1 - e[i].x0)) / (e[i].y1 - e[i].y0);
+                else
+                  {
+                    LONG t = (y - e[i].y0) * e[i].slope;
+                    xs[k++] = e[i].x0 + (t >= 0 ? (t >> 16) : -((-t) >> 16));
+                  }
+              }
           /* insertion sort */
           for(a = 1; a < k; a++)
             {
@@ -1186,8 +1263,8 @@ AreaMove(struct RastPort *rp, LONG x, LONG y)
   if(s_area_n >= 3)
     area_flush(rp);
   s_area_n = 0;
-  s_area[0] = (WORD)x;
-  s_area[1] = (WORD)y;
+  s_area[0] = x;
+  s_area[1] = y;
   s_area_n = 1;
   return 0;
 }
@@ -1198,8 +1275,8 @@ AreaDraw(struct RastPort *rp, LONG x, LONG y)
   (void)rp;
   if(s_area_n >= AREA_MAX)
     return -1;
-  s_area[2 * s_area_n] = (WORD)x;
-  s_area[2 * s_area_n + 1] = (WORD)y;
+  s_area[2 * s_area_n] = x;
+  s_area[2 * s_area_n + 1] = y;
   s_area_n++;
   return 0;
 }

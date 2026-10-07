@@ -57,6 +57,10 @@ void  Delay(LONG ticks);                 /* 1/50 s */
 /* Whole-file convenience: returns malloc'd data (free with FreeVec) or NULL. */
 APTR  amiga_load_file(CONST_STRPTR name, LONG *size_out);
 
+/* AmigaDOS time: days, minutes, ticks (1/50 s) since the game started */
+struct DateStamp { LONG ds_Days, ds_Minute, ds_Tick; };
+struct DateStamp *DateStamp(struct DateStamp *ds);
+
 /* ---- objects only referenced through pointers ---- */
 struct Screen;
 struct Window;
