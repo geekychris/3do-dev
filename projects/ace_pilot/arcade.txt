@@ -1,0 +1,4 @@
+title=Ace Pilot
+origin=Amiga
+order=150
+desc=3D wireframe dogfighting over an airfield to the Blue Danube, one player or two in split screen. D-pad flies, A fires, L/R throttle. L or R on the title picks 1 or 2 players.
