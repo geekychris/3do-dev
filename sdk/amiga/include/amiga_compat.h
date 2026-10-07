@@ -9,6 +9,10 @@
 #include <string.h>
 #include "amiga_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ---- exec memory (no chip/fast distinction on the 3DO) ---- */
 #define MEMF_ANY     0
 #define MEMF_PUBLIC  (1L << 0)
@@ -78,5 +82,9 @@ struct Interrupt;
 struct IORequest;
 
 #define SysBase   ((struct ExecBase *)0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

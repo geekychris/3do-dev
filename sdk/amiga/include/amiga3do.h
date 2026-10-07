@@ -30,6 +30,10 @@
 #include "amiga_compat.h"     /* AllocMem, files, amiga_load_file */
 #include <graphics/rastport.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define GFX_WIDTH      320
 
 #define GFX_PAL32      0     /* 8-bit pens, 32-entry hardware palette (OCS/ECS games) */
@@ -55,6 +59,9 @@ ULONG gfx_frame(void);                 /* frames shown since gfx_init */
  * real speed while the screen updates less often. Logs
  * "AMIGA3DO: steps=N" every 250 steps (tests measure game speed from it). */
 int   gfx_steps(void);
+/* catch-up limit for gfx_steps() (default 4): raise it for games that draw
+ * below 12 fps so their logic still keeps time */
+void  gfx_set_max_steps(int n);
 int   gfx_height(void);
 /* 8x8-font text scaled by `scale`, top-left at x,y, in the RastPort's APen */
 void  gfx_text_big(struct RastPort *rp, LONG x, LONG y, const char *s, int scale);
@@ -79,6 +86,7 @@ GfxSprite *gfx_sprite_make(const UBYTE *img, int w, int h);
 void  gfx_sprite_draw(struct RastPort *rp, const GfxSprite *s, LONG x, LONG y, int pen);
 void  gfx_sprite_free(GfxSprite *s);
 UWORD *gfx_pixels16(void);             /* GFX_RGB16 buffer */
+UWORD gfx_pen_rgb16(int pen);         /* palette pen -> 16-bit pixel value */
 
 /* ---- input ---- */
 #define PAD_UP     0x0001
@@ -100,5 +108,9 @@ int   amiga_quit_requested(void);      /* X pressed on pad 0 */
 /* ---- misc ---- */
 void  amiga_set_progdir(const char *dir);   /* where "PROGDIR:" / relative files live on disc */
 void  amiga_log(const char *fmt, ...);      /* tdo_log with the game's prefix */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

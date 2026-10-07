@@ -21,6 +21,10 @@
 
 #include "amiga_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define PAULA_CLOCK_PAL 3546895L   /* period = clock / sample rate */
 
 struct AudChannel {
@@ -52,5 +56,9 @@ void  paula_set_tick_rate(int num, int den);       /* tick at num/den Hz */
 UWORD paula_lock(void);                            /* no-op: single-threaded */
 void  paula_unlock(UWORD sr);
 void  paula_master_volume(int vol);                /* 0..64 */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

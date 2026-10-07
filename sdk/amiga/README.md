@@ -125,6 +125,17 @@ In order of preference:
 - **`gfx_steps()`** when it still can't draw at 50 fps: run the game logic as
   many 50 Hz steps as are due, draw once, and test with
   `check_game_speed()` - the game keeps its real speed at a lower frame rate.
+  Games that draw below 12 fps call `gfx_set_max_steps(n)` so the catch-up
+  limit (default 4 steps per frame) doesn't slow their logic down. Logic
+  tuned for 25 fps runs one tick per two steps (projects/fractalus/main.cpp).
+- **Hidden samples by compare, not divide**: a front-to-back raycaster only
+  needs the perspective divide for samples that draw. Keep the "would this
+  draw" threshold as `k * dist`, advance it by addition, and find the new
+  strip top by stepping up a row at a time (fractalus/render.cpp).
+- **Assembly for the one hot loop** when the compiler spills its state to the
+  stack every iteration (look with `emu_disasm`): fractalus/fracmarch.s
+  halves the per-sample cost of the terrain march. Prove it exact by
+  running the old and new code side by side in a debug build.
 - The C library `memmove` is not safe for overlapping copies to a higher
   address; copy through a temporary buffer.
 
@@ -136,6 +147,15 @@ In order of preference:
   reciprocal tables).
 - `Text` and `Draw` have fast paths for unclipped, non-COMPLEMENT drawing.
 - Measure with `./3do profile`, which samples at random points inside frames.
+
+## C++ games
+
+`.cpp` files build with `armcpp` (cfront-era C++: classes, references,
+`extern "C"`; no lambdas, templates are limited). The layer headers have
+`extern "C"` guards. Rewrite lambdas as static functions. A block-scope
+`extern` declaration of a layer function inside a `.cpp` gets C++ linkage
+and fails to link: declare it in a header instead (or at file scope inside
+`extern "C" { }`). See projects/fractalus.
 
 ## Not supported
 

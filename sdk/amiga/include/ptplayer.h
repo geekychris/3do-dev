@@ -8,6 +8,10 @@
 
 #include "amiga_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
 	APTR sfx_ptr;       /* sample start */
 	WORD sfx_len;       /* length in words */
@@ -32,5 +36,9 @@ int  mt_sound_ok(void);   /* 0 = sound available */
 extern UBYTE mt_Enable;
 extern UBYTE mt_E8Trigger;
 extern UBYTE mt_MusicChannels;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
