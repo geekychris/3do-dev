@@ -54,8 +54,29 @@ def strip_code(line):
     return line.split("//")[0]
 
 
+def split_decl_statements(lines):
+    """`LONG env = 256 - t; if (env < 0) env = 0;` -> declaration and the
+    statement on separate lines, so the statement isn't hidden in the
+    declaration section."""
+    out = []
+    for line in lines:
+        m = DECL.match(line)
+        code = strip_code(line)
+        if m and "for" not in code.split("(")[0] and code.count(";") >= 2:
+            parts = split_top(code, ";")
+            if len(parts) >= 3 and parts[-1] == "" and re.match(r"^" + TYPES + r"[\s*]+[A-Za-z_]", parts[0].strip()):
+                ind = m.group("ind")
+                first = parts[0].strip() + ";"
+                rest = line[line.index(parts[0].strip()) + len(parts[0].strip()):].lstrip()[1:].strip()
+                out.append(ind + first)
+                out.append(ind + rest)
+                continue
+        out.append(line)
+    return out
+
+
 def fix(path):
-    lines = open(path).read().split("\n")
+    lines = split_decl_statements(open(path).read().split("\n"))
     # stack of blocks: [line index of '{', seen_statement, insert_at, depth]
     stack = []
     hoists = {}          # line index -> list of declarations to insert after it
