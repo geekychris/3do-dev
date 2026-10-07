@@ -3,7 +3,14 @@
   Used to derive the constants in tools/tdo/src/tdo/kernel.py:
       bin/3do-make -C tools/probe && .venv/bin/tdo log tools/probe/build/probe.iso --frames 400
 */
+#include "device.h"
+#include "driver.h"
 #include "folio.h"
+#include "graphics.h"
+#include "io.h"
+#include "mem.h"
+#include "msgport.h"
+#include "semaphore.h"
 #include "kernel.h"
 #include "list.h"
 #include "task.h"
@@ -35,6 +42,29 @@ main(void)
           OFF(Task,t_ElapsedTime), OFF(Task,t_NumTaskLaunch), OFF(Task,t_Flags),
           OFF(Task,t_TasksLinkNode), (int)sizeof(Task));
   tdo_log("PROBE: List.ListAnchor=%d sizeof(List)=%d\n", OFF(List,ListAnchor), (int)sizeof(List));
+  tdo_log("PROBE: ItemNode=%d Node=%d ItemEntry=%d kb_MemFreeLists=%d kb_MemHdrList=%d kb_Drivers=%d kb_Semaphores=%d\n",
+          (int)sizeof(ItemNode), (int)sizeof(Node), (int)sizeof(ItemEntry),
+          OFF(struct KernelBase,kb_MemFreeLists), OFF(struct KernelBase,kb_MemHdrList),
+          OFF(struct KernelBase,kb_Drivers), OFF(struct KernelBase,kb_Semaphores));
+  tdo_log("PROBE: MsgPort.mp_Signal=%d mp_Msgs=%d mp_UserData=%d Message.msg_ReplyPort=%d msg_DataPtr=%d msg_DataSize=%d msg_MsgPort=%d\n",
+          OFF(MsgPort,mp_Signal), OFF(MsgPort,mp_Msgs), OFF(MsgPort,mp_UserData),
+          OFF(Message,msg_ReplyPort), OFF(Message,msg_DataPtr), OFF(Message,msg_DataSize), OFF(Message,msg_MsgPort));
+  tdo_log("PROBE: Semaphore.sem_bit=%d sem_Owner=%d sem_NestCnt=%d sem_TaskWaitingList=%d\n",
+          OFF(Semaphore,sem_bit), OFF(Semaphore,sem_Owner), OFF(Semaphore,sem_NestCnt), OFF(Semaphore,sem_TaskWaitingList));
+  tdo_log("PROBE: MemHdr.memh_Types=%d memh_PageSize=%d memh_FreePageBits=%d memh_MemBase=%d memh_MemTop=%d memh_FreePageBitsSize=%d memh_PageShift=%d\n",
+          OFF(MemHdr,memh_Types), OFF(MemHdr,memh_PageSize), OFF(MemHdr,memh_FreePageBits),
+          OFF(MemHdr,memh_MemBase), OFF(MemHdr,memh_MemTop), OFF(MemHdr,memh_FreePageBitsSize), OFF(MemHdr,memh_PageShift));
+  tdo_log("PROBE: MemList.meml_Types=%d meml_OwnBits=%d meml_MemHdr=%d meml_OwnBitsSize=%d\n",
+          OFF(MemList,meml_Types), OFF(MemList,meml_OwnBits), OFF(MemList,meml_MemHdr), OFF(MemList,meml_OwnBitsSize));
+  tdo_log("PROBE: Device.dev_Driver=%d dev_OpenCnt=%d dev_MaxUnitNum=%d Driver.drv_OpenCnt=%d Folio.f_OpenCount=%d f_MaxSwiFunctions=%d\n",
+          OFF(Device,dev_Driver), OFF(Device,dev_OpenCnt), OFF(Device,dev_MaxUnitNum), OFF(Driver,drv_OpenCnt),
+          OFF(Folio,f_OpenCount), OFF(Folio,f_MaxSwiFunctions));
+  tdo_log("PROBE: IOReq.io_Dev=%d io_Info=%d io_Actual=%d io_Flags=%d io_Error=%d io_MsgItem=%d IOInfo.ioi_Command=%d ioi_Flags=%d ioi_Unit=%d ioi_Offset=%d\n",
+          OFF(IOReq,io_Dev), OFF(IOReq,io_Info), OFF(IOReq,io_Actual), OFF(IOReq,io_Flags), OFF(IOReq,io_Error),
+          OFF(IOReq,io_MsgItem), OFF(IOInfo,ioi_Command), OFF(IOInfo,ioi_Flags), OFF(IOInfo,ioi_Unit), OFF(IOInfo,ioi_Offset));
+  tdo_log("PROBE: Bitmap.bm_Buffer=%d bm_Width=%d bm_Height=%d Screen.scr_ScreenGroupPtr=%d scr_VDLItem=%d scr_BitmapCount=%d scr_BitmapList=%d\n",
+          OFF(Bitmap,bm_Buffer), OFF(Bitmap,bm_Width), OFF(Bitmap,bm_Height),
+          OFF(Screen,scr_ScreenGroupPtr), OFF(Screen,scr_VDLItem), OFF(Screen,scr_BitmapCount), OFF(Screen,scr_BitmapList));
   tdo_log("PROBE: done\n");
   for(;;) Yield();
   return 0;

@@ -46,10 +46,10 @@ gdb `monitor <cmd> key=value`, or raw JSON lines on the control port:
 |---|---|
 | session | `status` `run(speed)` `pause` `step(frames)` `run_until(text,max_frames)` `reset` `reboot(iso)` `load(iso)` `set_option` `options` `events` `quit` |
 | input | `press(buttons,hold_frames,release_frames,port)` `hold` `release` `sequence(steps)` `set_device(port,device)` `analog(port,lx,ly,rx,ry)` `mouse(port,dx,dy,buttons)` `lightgun(port,x,y,buttons,offscreen)` |
-| output | `screenshot(scale,path)` `record_gif(path,frames,every)` `log(since)` |
-| OS | `ps` (tasks), `folios`, `devices` |
+| output | `screenshot(scale,path)` `record_gif(path,frames,every)` `log(since)` `crashes` |
+| OS | `ps` (tasks), `folios`, `devices`, `os_summary` `os_items(type)` `os_item(item)` `os_tasks` `os_ports` `os_semaphores` `os_devices` `os_folios` `os_graphics` `os_audio` `os_files` `os_memory(per_page)` `os_snapshot(name)` `os_diff(a,b)` – see [devbench.md](devbench.md) |
 | symbols | `symbols(pattern)` `addr2sym(addr)` `disasm(addr,count)` |
-| debugger | `regs` `set_reg` `halt` `continue(max_frames)` `stepi(count)` `stop_info` `break(addr)` `delete` `watch(addr,length,kind)` `unwatch` `tracepoint(action,addr)` `swi_trace` `swi_calls` |
+| debugger | `regs` `set_reg` `halt` `continue(max_frames)` `stepi(count)` `stop_info` `break(addr)` `delete` `watch(addr,length,kind)` `unwatch` `breakpoints` `tracepoint(action,addr)` `swi_trace` `swi_calls` (named system calls) `profile(frames,interval,top)` |
 | memory | `read_mem` `read_u32` `write_mem` `write_u32` `find_mem(text|hex)` |
 | states | `save_state(name)` `load_state(name)` |
 
@@ -60,6 +60,9 @@ Anywhere an address is expected you can pass a number, a symbol (`main`,
 plus `FIRE`), `mouse` (relative motion), `lightgun`/`arcade_lightgun` (screen
 pixels), `orbatak_trackball`, `none`. Pad buttons: `A B C P X L R UP DOWN LEFT
 RIGHT`.
+
+The same commands are available over HTTP from [DevBench](devbench.md)
+(`POST /api/cmd/<name>` with a JSON body), along with an OpenAPI spec.
 
 ## GDB
 

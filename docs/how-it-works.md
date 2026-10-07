@@ -139,6 +139,25 @@ then walks the task, ready and wait queues. The structure offsets come from
 `tools/probe`, a 3DO program that prints `offsetof()` values for the SDK
 structs, so they're right by construction for Portfolio 2.5.
 
+<a id="os-introspection"></a>
+**OS introspection.** `tdo.osinspect` goes further and walks the **item
+table**. Every Portfolio object is an *item*: a number whose low 12 bits index
+`kb_ItemTable` (blocks of 128 `{address, info}` entries) and whose high bits
+are a generation count, so a stale number never matches a reused slot. Each
+item starts with an `ItemNode` that gives its subsystem (kernel, graphics,
+filesystem, audio...), type, name, owner task and size. From there,
+type-specific readers decode message ports and their queued messages,
+semaphores (owner, waiters), devices and drivers, I/O requests (command,
+unit, state, bytes transferred), screens and their framebuffers, and so on.
+Memory ownership comes from the two `MemHdr`s (DRAM in 32 KB pages, VRAM in
+16 KB pages). Each has a free-page bitmap; each task's `MemList` has an
+ownership bitmap. Both are LSB-first, and privileged tasks share one list.
+Snapshots record items, tasks and free memory so two points in time can be
+diffed. System-call names for the SWI trace are parsed from the SDK's
+`__swi(...)` declarations. All of this reads RAM through the harness, so it
+works on a halted or crashed program and costs the guest nothing. The UI and
+REST surface for it is [DevBench](devbench.md).
+
 **Disassembly** uses Capstone (ARM, big-endian), annotated with symbols.
 
 ## 6. Debug info and Norcroft's quirks
@@ -164,11 +183,11 @@ breakpoints and resumes.
 
 ## 8. Agents: the MCP server
 
-`tdo.mcp_server` is an MCP server (Model Context Protocol, stdio) registered
-in `.mcp.json`. It spawns or attaches to sessions and exposes ~40 tools:
+`tdo.mcp_server` is an MCP server (Model Context Protocol; stdio, and HTTP at `/mcp` via DevBench) registered
+in `.mcp.json`. It spawns or attaches to sessions and exposes ~50 tools:
 build/test, session lifecycle, run control, input for every peripheral,
 screenshots (returned as images), GIF capture, logs, process list, symbols,
-breakpoints/watchpoints, memory, snapshots, and `gdb_run`, which runs gdb
+breakpoints/watchpoints, memory, snapshots, OS introspection (`os_*`), and `gdb_run`, which runs gdb
 commands and returns the transcript. `CLAUDE.md` tells Claude the workflow
 and the 3DO pitfalls found while building this.
 

@@ -17,6 +17,7 @@ trapexit's 3do-devkit; it runs in a patched Opera emulator we can script.
 ./3do new <name>             # from sdk/template
 ./3do selftest               # build + test everything (do this before saying "done")
 ./3do doctor                 # environment problems
+./3do devbench               # web UI + REST (/api) + MCP over HTTP (/mcp) on :3330
 ```
 
 ## MCP tools (server "3do", .mcp.json)
@@ -32,6 +33,12 @@ Debugging: `emu_break("func")` + `emu_continue(max_frames)`, `emu_watch("global"
 `emu_stepi`, `emu_regs`, `emu_disasm`, `emu_symbols`, `emu_read_mem("sym", as_u32=True)`,
 `emu_trace` (tracepoints, SWI trace), `gdb_run([...])` for source-level gdb
 (break file:line, bt, info locals, p *ptr). `emu_cmd("help")` lists everything.
+
+OS introspection (reads Portfolio structures from RAM, works while halted/crashed):
+`os_overview`, `os_inspect("tasks"|"items"|"ports"|"semaphores"|"devices"|"folios"|
+"graphics"|"audio"|"files")`, `os_item(n)`, `os_memory_map`, `os_snapshot` then
+`os_diff` (leaked items, CPU per task), `emu_syscalls("start")`/`("fetch")` (named SWIs),
+`emu_profile(frames)`, `emu_crashes`. See docs/devbench.md.
 Details: docs/emulator-harness.md.
 
 - Frames are 1/60 s of guest time; headless runs ~15x real time.

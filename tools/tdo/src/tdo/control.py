@@ -77,6 +77,43 @@ class Controller:
             raise ValueError(f"unknown command {cmd!r}; try 'help'")
         return fn(**(args or {}))
 
+    @classmethod
+    def describe(cls) -> list[dict]:
+        """Machine-readable command catalogue (drives the REST API docs / OpenAPI)."""
+        out = []
+        for name in sorted(n for n in dir(cls) if n.startswith("cmd_")):
+            fn = getattr(cls, name)
+            params = []
+            for p in list(inspect.signature(fn).parameters.values())[1:]:
+                if p.annotation is inspect.Parameter.empty:
+                    ann = "any"
+                else:
+                    ann = p.annotation if isinstance(p.annotation, str) else getattr(p.annotation, "__name__", "any")
+                params.append({"name": p.name, "type": str(ann).replace("'", ""),
+                               "required": p.default is inspect.Parameter.empty,
+                               "default": None if p.default is inspect.Parameter.empty else p.default})
+            doc = inspect.getdoc(fn) or ""
+            out.append({"name": name[4:], "doc": doc, "summary": doc.split("\n")[0], "params": params,
+                        "group": cls._group(name[4:])})
+        return out
+
+    @staticmethod
+    def _group(n: str) -> str:
+        if n.startswith("os_") or n in ("ps", "folios", "devices"):
+            return "os"
+        if n in ("press", "hold", "release", "sequence", "set_device", "analog", "mouse", "lightgun"):
+            return "input"
+        if n in ("screenshot", "record_gif", "log", "events", "crashes"):
+            return "output"
+        if n in ("regs", "set_reg", "halt", "continue", "stepi", "stop_info", "break", "delete", "watch",
+                 "unwatch", "breakpoints", "tracepoint", "swi_trace", "swi_calls", "disasm", "symbols", "addr2sym", "profile"):
+            return "debug"
+        if n in ("read_mem", "read_u32", "write_mem", "write_u32", "find_mem"):
+            return "memory"
+        if n in ("save_state", "load_state"):
+            return "states"
+        return "session"
+
     def help_text(self) -> str:
         lines = []
         for name in sorted(n for n in dir(self) if n.startswith("cmd_")):
@@ -302,6 +339,10 @@ class Controller:
             self.log_cursor = nxt
         return {"lines": lines, "next": nxt, "truncated": truncated, "partial": e._debug_partial}
 
+    def cmd_crashes(self):
+        """Aborts/exceptions the OS reported on the debug console (with registers at detection)."""
+        return {"crashes": self.s.crashes}
+
     def cmd_events(self, since: int = 0):
         """Session event log (gdb attach/detach, reboots, breakpoint stops...)."""
         return {"events": self.s.events[int(since):], "next": len(self.s.events)}
@@ -318,6 +359,76 @@ class Controller:
     def cmd_devices(self):
         """OS device list."""
         return {"devices": self.s.kernel.devices()}
+
+    # ================================================================ OS introspection (Portfolio)
+    def _os(self):
+        from .osinspect import OS
+        return OS(self.emu, self.s.symbolize)
+
+    def cmd_os_summary(self):
+        """OS overview: kernel base, current task, item counts by type, free/used memory."""
+        return self._os().summary()
+
+    def cmd_os_items(self, type: str | None = None):
+        """Every live OS item (task, port, semaphore, device, ioreq, screen, sample...). type: filter by type or subsystem."""
+        items = self._os().items(type)
+        return {"count": len(items), "items": items}
+
+    def cmd_os_item(self, item):
+        """One item in detail (type-specific fields + raw node bytes)."""
+        return self._os().item(int(str(item), 0))
+
+    def cmd_os_tasks(self):
+        """Tasks: state, priority, parent, signals, wait item, stacks, CPU ms, owned memory pages."""
+        return {"tasks": self._os().tasks()}
+
+    def cmd_os_ports(self):
+        """Message ports with queued messages."""
+        return {"ports": self._os().ports()}
+
+    def cmd_os_semaphores(self):
+        """Semaphores: owner, nest count, waiters."""
+        return {"semaphores": self._os().semaphores()}
+
+    def cmd_os_devices(self):
+        """Devices + drivers (open counts) and I/O requests (device, command, state)."""
+        o = self._os()
+        return {"devices": o.devices(), "drivers": o.drivers(), "ioreqs": o.ioreqs()}
+
+    def cmd_os_folios(self):
+        """Loaded folios (shared libraries) with open counts and SWI table sizes."""
+        return {"folios": self._os().folios()}
+
+    def cmd_os_graphics(self):
+        """Graphics items: screen groups, screens (with bitmaps/framebuffers), bitmaps, VDLs."""
+        return self._os().graphics()
+
+    def cmd_os_audio(self):
+        """Audio folio items: templates, instruments, knobs, samples, attachments."""
+        return self._os().audio()
+
+    def cmd_os_files(self):
+        """Filesystem items: mounted filesystems, open files, aliases."""
+        return self._os().files()
+
+    def cmd_os_memory(self, per_page: bool = True):
+        """Memory regions (DRAM/VRAM): page size, free/used, per-page map of owning task ('.' free, '?' system)."""
+        return self._os().memory(per_page=bool(per_page))
+
+    def cmd_os_snapshot(self, name: str = "snap"):
+        """Record the OS state (items, tasks, memory) under NAME for os_diff."""
+        snap = self._os().snapshot()
+        self.s.os_snapshots[name] = snap
+        return {"name": name, "items": len(snap["items"]), "frame": snap["frame"],
+                "snapshots": sorted(self.s.os_snapshots)}
+
+    def cmd_os_diff(self, a: str = "snap", b: str | None = None):
+        """Compare two OS snapshots (b defaults to 'now'): items created/deleted, CPU per task, memory delta."""
+        from .osinspect import diff
+        if a not in self.s.os_snapshots:
+            raise ValueError(f"no snapshot {a!r}; take one with os_snapshot")
+        sb = self.s.os_snapshots[b] if b else self._os().snapshot()
+        return diff(self.s.os_snapshots[a], sb)
 
     # ================================================================ symbols
     def cmd_symbols(self, pattern: str = ".", limit: int = 50):
@@ -410,6 +521,12 @@ class Controller:
         self.s.breakpoints.add(a)
         return {"breakpoints": [f"{_h(x)} {self.s.symbolize(x) or ''}".strip() for x in sorted(self.s.breakpoints)]}
 
+    def cmd_breakpoints(self):
+        """List halting breakpoints, watchpoints and tracepoint count."""
+        return {"breakpoints": [{"addr": _h(x), "where": self.s.symbolize(x)} for x in sorted(self.s.breakpoints)],
+                "watchpoints": [{"addr": _h(x), "len": l, "kind": k, "where": self.s.symbolize(x)}
+                                for x, l, k in sorted(self.s.watchpoints)]}
+
     def cmd_delete(self, addr=None):
         """Remove a breakpoint (or all if no addr)."""
         if addr is None:
@@ -459,6 +576,27 @@ class Controller:
              "sp": _h(h.sp), "lr": _h(h.lr), "caller": self.s.symbolize(h.lr), "hit": h.hits}
             for h in hits[-int(max_entries):]]}
 
+    def cmd_profile(self, frames: int = 300, interval: int = 1500, top: int = 25):
+        """Sample the PC every ~INTERVAL instructions while running FRAMES frames; per-function %."""
+        import collections
+        e = self.emu
+        self.s.apply_input()
+        e.prof_enable(int(interval))
+        e.step(int(frames))
+        samples = e.prof_samples()
+        e.prof_enable(0)
+
+        def name(pc):
+            s = self.s.symbolize(pc)
+            if s:
+                return s.split("+")[0]
+            return "[idle: waiting for VBL]" if 0x28000 <= pc < 0x29000 else f"[OS/ROM 0x{pc & ~0xFFF:x}]"
+        funcs = collections.Counter(name(pc) for pc, _ in samples)
+        total = max(1, len(samples))
+        return {"samples": len(samples), "frames": int(frames),
+                "functions": [{"name": n, "percent": round(100 * c / total, 1), "samples": c}
+                              for n, c in funcs.most_common(int(top))]}
+
     def cmd_swi_trace(self, enable: bool = True):
         """Start/stop recording SWI (system call) invocations."""
         self.emu.swi_trace(bool(enable))
@@ -466,12 +604,15 @@ class Controller:
 
     def cmd_swi_calls(self, max_entries: int = 200):
         """Drain recorded SWIs: per-number counts + the latest calls."""
+        from .swinames import name as swi_name
         calls = self.emu.swi_calls(4096)
         counts: dict[str, int] = {}
         for c in calls:
-            counts[f"0x{c.swi:x}"] = counts.get(f"0x{c.swi:x}", 0) + 1
-        return {"total": len(calls), "counts": counts, "last": [
-            {"frame": c.frame, "swi": f"0x{c.swi:x}", "pc": _h(c.pc), "where": self.s.symbolize(c.pc),
+            k = f"0x{c.swi:x} {swi_name(c.swi)}"
+            counts[k] = counts.get(k, 0) + 1
+        return {"total": len(calls), "counts": dict(sorted(counts.items(), key=lambda x: -x[1])), "last": [
+            {"frame": c.frame, "swi": f"0x{c.swi:x}", "name": swi_name(c.swi),
+             "pc": _h(c.pc), "where": self.s.symbolize(c.pc),
              "r0": _h(c.r0), "r1": _h(c.r1), "r2": _h(c.r2), "r3": _h(c.r3)}
             for c in calls[-int(max_entries):]]}
 

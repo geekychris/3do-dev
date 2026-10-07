@@ -89,6 +89,37 @@ def test_control():
         names = [t["name"] for t in ps["tasks"]]
         check("ps lists kernel + our task", "Operator" in names and "LaunchMe" in names, str(names))
         check("folios include graphics", any(f["name"] == "Graphics" for f in c.call("folios")["folios"]))
+        summ = c.call("os_summary")
+        check("os_summary counts items", summ["items"] > 50 and summ["items_by_type"].get("Task", 0) >= 8, str(summ)[:200])
+        items = c.call("os_items")["items"]
+        check("item table walk finds tasks, ports, semaphores, devices",
+              {"Task", "MsgPort", "Semaphore", "Device", "IOReq", "Screen"} <= {i["type"] for i in items})
+        me = next(t for t in c.call("os_tasks")["tasks"] if t["name"] == "LaunchMe")
+        check("os_tasks: our task owns pages and used CPU", me["owned_pages"] > 0 and me["cpu_ms"] > 0, str(me)[:200])
+        it = c.call("os_item", item=me["item"])
+        check("os_item returns detail + raw node", it["type"] == "Task" and len(it["raw"]) >= 72)
+        devs = c.call("os_devices")
+        check("devices name their drivers", any(d["name"] == "CD-ROM" and d["detail"]["driver"] for d in devs["devices"]))
+        scr = [g for g in c.call("os_graphics")["items"] if g["type"] == "Screen"]
+        check("screens list their 320x240 bitmaps",
+              any(b["width"] == 320 for g in scr for b in g["detail"]["bitmaps"]), str(scr)[:200])
+        mm = c.call("os_memory")
+        dram = mm["regions"][0]
+        page = (0x70000 - int(dram["base"], 16)) // dram["page_size"]     # demo loads at 0x70000
+        owner = dram["map"][page]
+        check("memory map: program pages owned by LaunchMe", mm["task_names"].get(str(owner), mm["task_names"].get(owner)) == "LaunchMe",
+              f"page {page} owner {owner} {mm['task_names']}")
+        c.call("os_snapshot", name="t")
+        c.call("step", frames=30)
+        d = c.call("os_diff", a="t")
+        check("os_diff reports per-task CPU", d["frames"] == 30 and any(t["name"] == "LaunchMe" and t["cpu_ms"] > 0 for t in d["tasks"]))
+        c.call("swi_trace", enable=True)
+        c.call("step", frames=3)
+        sw = c.call("swi_calls")
+        c.call("swi_trace", enable=False)
+        check("SWI snoop names system calls", any("kernel.WaitSignal" in k or "graphics.DrawCels" in k for k in sw["counts"]), str(sw["counts"])[:200])
+        pr = c.call("profile", frames=30)
+        check("profile attributes samples", pr["samples"] > 0 and pr["functions"])
 
         section("symbols + memory")
         sy = c.call("symbols", pattern="^update_plasma$")["symbols"]
@@ -216,9 +247,82 @@ def test_mcp():
                 await call("emu_break", location="all", remove=True)
                 res = await call("emu_ps")
                 check("MCP emu_ps", "LaunchMe" in res.content[0].text)
+                res = await call("os_inspect", view="semaphores")
+                check("MCP os_inspect", "DevList" in res.content[0].text)
+                res = await call("os_memory_map")
+                check("MCP os_memory_map", "LaunchMe" in res.content[0].text and "DRAM" in res.content[0].text)
                 await call("emu_stop")
 
     asyncio.run(asyncio.wait_for(run(), 300))
+
+
+def test_devbench():
+    section("DevBench REST + SSE + MCP over HTTP")
+    import socket
+    import urllib.error
+    import urllib.request
+    sk = socket.socket()
+    sk.bind(("127.0.0.1", 0))
+    port = sk.getsockname()[1]
+    sk.close()
+    base = f"http://127.0.0.1:{port}"
+    srv = subprocess.Popen([str(ROOT / ".venv" / "bin" / "tdo"), "devbench", "--port", str(port)],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def req(method, path, body=None, raw=False):
+        r = urllib.request.Request(base + path, method=method,
+                                   data=json.dumps(body).encode() if body is not None else None,
+                                   headers={"content-type": "application/json"} if body is not None else {})
+        try:
+            with urllib.request.urlopen(r, timeout=120) as resp:
+                data = resp.read()
+                return resp.status, (data if raw else json.loads(data))
+        except urllib.error.HTTPError as ex:
+            return ex.code, json.loads(ex.read() or b"{}")
+
+    pid = None
+    try:
+        for _ in range(50):
+            try:
+                if req("GET", "/api/health")[1]["ok"]:
+                    break
+            except OSError:
+                time.sleep(0.2)
+        check("devbench serves /api/health", req("GET", "/api/health")[0] == 200)
+        st, ui = req("GET", "/", raw=True)
+        check("devbench serves the web UI", st == 200 and b"3DO DevBench" in ui)
+        cmds = req("GET", "/api/commands")[1]["commands"]
+        check("command catalogue lists OS commands", {"os_tasks", "os_memory", "regs"} <= {c["name"] for c in cmds})
+        check("openapi spec", len(req("GET", "/api/openapi.json")[1]["paths"]) > 100)
+        st, r = req("POST", "/api/sessions", {"target": "demo"})
+        pid = r.get("pid")
+        check("POST /api/sessions starts a session", st == 201 and pid, str(r))
+        st, r = req("POST", f"/api/sessions/{pid}/cmd/run_until", {"text": "DEMO: ready", "max_frames": 1500})
+        check("REST command run_until", st == 200 and r["found"], str(r))
+        st, png = req("GET", f"/api/sessions/{pid}/screen.png?scale=1", raw=True)
+        check("screen.png is a PNG", st == 200 and png[:4] == b"\x89PNG")
+        st, r = req("GET", "/api/cmd/os_tasks")
+        check("GET on the current session (query params)", st == 200 and any(t["name"] == "LaunchMe" for t in r["tasks"]))
+        check("unknown command -> 404", req("GET", "/api/cmd/nope")[0] == 404)
+        check("bad arguments -> 400", req("POST", "/api/cmd/break", {})[0] == 400)
+        check("bad session -> 404", req("GET", "/api/sessions/1/cmd/status")[0] == 404)
+        with urllib.request.urlopen(f"{base}/api/events?session={pid}", timeout=10) as ev:
+            got = b""
+            t0 = time.time()
+            while b"event: log" not in got and time.time() - t0 < 8:
+                got += ev.read1(4096)
+        check("SSE stream sends status + log events", b"event: status" in got and b"event: log" in got)
+        init = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+            "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}}
+        r = urllib.request.Request(base + "/mcp", data=json.dumps(init).encode(), method="POST", headers={
+            "content-type": "application/json", "accept": "application/json, text/event-stream"})
+        with urllib.request.urlopen(r, timeout=20) as resp:
+            check("MCP over HTTP at /mcp", b'"serverInfo"' in resp.read())
+    finally:
+        if pid:
+            req("DELETE", f"/api/sessions/{pid}")
+        srv.terminate()
+        srv.wait(10)
 
 
 def main():
@@ -231,6 +335,7 @@ def main():
     finally:
         c.close(stop=True)
     test_mcp()
+    test_devbench()
     print(f"{'FAIL' if failures else 'PASS'}: remote control ({len(failures)} failure(s))")
     return 1 if failures else 0
 

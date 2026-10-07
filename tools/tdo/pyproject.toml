@@ -1,7 +1,7 @@
 [project]
 name = "tdo"
 version = "0.1.0"
-description = "3DO dev harness: scriptable Opera emulator host, CLI and MCP server"
+description = "3DO dev harness: scriptable Opera emulator host, CLI, MCP server and DevBench (web UI + REST)"
 requires-python = ">=3.10"
 dependencies = [
   "numpy>=1.26",
@@ -9,6 +9,8 @@ dependencies = [
   "pygame-ce>=2.4",
   "mcp>=2.3,<3",
   "capstone>=5",
+  "starlette>=0.40",
+  "uvicorn>=0.30",
 ]
 
 [project.scripts]

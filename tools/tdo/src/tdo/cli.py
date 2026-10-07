@@ -11,6 +11,7 @@ GAME is an ISO path or a project name (projects/<name>).
   tdo log      GAME [--frames N]                  dump debug console output
   tdo test     GAME [--frames N] [--expect TEXT]  run on-target tests (TDO:DONE)
   tdo info                                        core / harness / BIOS info
+  tdo devbench [--port 3330]                      web UI + REST API + MCP over HTTP
   tdo mcp                                         MCP server (stdio) for Claude
 """
 from __future__ import annotations
@@ -299,6 +300,12 @@ def cmd_info(a):
     return 0
 
 
+def cmd_devbench(a):
+    from .devbench import main as devbench_main
+    devbench_main(port=a.port, host=a.host, open_browser=a.open)
+    return 0
+
+
 def cmd_mcp(a):
     from .mcp_server import main as mcp_main
     mcp_main()
@@ -392,6 +399,12 @@ def main(argv=None):
 
     s = sub.add_parser("info", help="show core/harness/BIOS info")
     s.set_defaults(fn=cmd_info)
+
+    s = sub.add_parser("devbench", help="web UI + REST API + MCP over HTTP (default :3330)")
+    s.add_argument("--port", type=int, default=3330)
+    s.add_argument("--host", default="127.0.0.1", help="bind address (0.0.0.0 to expose on the LAN)")
+    s.add_argument("--open", action="store_true", help="open the UI in a browser")
+    s.set_defaults(fn=cmd_devbench)
 
     s = sub.add_parser("mcp", help="run the MCP server on stdio")
     s.set_defaults(fn=cmd_mcp)

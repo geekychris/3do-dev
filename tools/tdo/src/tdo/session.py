@@ -60,6 +60,9 @@ class Session:
         self.breakpoints: set[int] = set()
         self.watchpoints: set[tuple] = set()
         self.events: list[str] = []
+        self.os_snapshots: dict = {}
+        self.crashes: list[dict] = []
+        self._crash_scan = 0
         self.quit = False
         self.verbose_log = verbose_log
         self._load_symbols()
@@ -113,6 +116,27 @@ class Session:
         if self.symbols:
             self.load_base()
         return resolve_addr(spec, self.symbols, self.emu)
+
+    CRASH_WORDS = ("abort", "exception", "undefined instruction", "prefetch", "illegal", "panic")
+
+    def _scan_crashes(self):
+        """Kernel abort/exception reports on the debug console -> crash records."""
+        log = self.emu.debug_log
+        for line in log[self._crash_scan:]:
+            low = line.lower()
+            if any(w in low for w in self.CRASH_WORDS) and not low.startswith(("amiga3do", "tdo:")):
+                regs = {}
+                try:
+                    r = self.emu.regs()
+                    regs = {k: f"0x{v:08x}" for k, v in r.items()}
+                    regs["pc_sym"] = self.symbolize(r["pc"])
+                except Exception:  # noqa: BLE001
+                    pass
+                self.crashes.append({"frame": self.emu.frame_count, "line": line, "regs": regs,
+                                     "context": log[max(0, len(log) - 12):]})
+                del self.crashes[:-50]
+                self.note(f"crash reported: {line}")
+        self._crash_scan = len(log)
 
     def settle_halt(self):
         """After requesting a halt, run until the CPU actually stops (<= 1 instruction)."""
@@ -185,6 +209,8 @@ class Session:
                     info = self.ctl.cmd_stop_info()
                     self.note(f"CPU stopped: {info['reason']} at {info['pc']} {info['where'] or ''}")
                 was_halted = e.halted
+
+                self._scan_crashes()
 
                 if self.verbose_log:
                     for line in e.debug_log[printed:]:

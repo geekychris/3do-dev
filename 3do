@@ -10,6 +10,7 @@
 #   ./3do gdb <project> [--attach] [--window]                  gdb with symbols, connected
 #   ./3do ctl [--port N] <cmd> [key=value ...]                 remote-control a session (ctl help)
 #   ./3do sessions                                             list running sessions
+#   ./3do devbench [--open]                                    web UI + REST API (:3330)
 #   ./3do test <project> [tdo test args]                  headless test run
 #   ./3do shot <project|iso> [tdo shot args]               headless screenshot
 #   ./3do log <project|iso> [--frames N]                   debug console dump
@@ -56,6 +57,8 @@ case "$cmd" in
            p="$1"; shift; exec "$ROOT/bin/3do-make" -C "$ROOT/projects/$p" "$@" ;;
   clean)   [ $# -ge 1 ] || die "usage: ./3do clean <project>"
            exec "$ROOT/bin/3do-make" -C "$ROOT/projects/$1" clean ;;
+  devbench)
+           need_tdo; exec "$TDO" devbench "$@" ;;
   ctl|sessions)
            need_tdo; exec "$TDO" "$cmd" "$@" ;;
   run|shot|log|serve|gdb|profile)
@@ -102,6 +105,6 @@ case "$cmd" in
              || { tail -30 "$ROOT/build/selftest-remote.log"; warn "remote control suite failed"; fails=$((fails+1)); }
            [ "$fails" -eq 0 ] && ok "all projects pass" || die "$fails project(s) failed" ;;
   tdo)     need_tdo; exec "$TDO" "$@" ;;
-  help|-h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' ;;
+  help|-h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
   *)       die "unknown command '$cmd' (./3do help)" ;;
 esac

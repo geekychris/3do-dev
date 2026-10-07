@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3DO DevBench</title>
+<style>
+:root {
+  --bg: #0f1117; --panel: #171a23; --panel2: #1e2230; --line: #2a2f40; --text: #d8dbe5;
+  --dim: #8a90a6; --accent: #e07a5f; --accent2: #f2cc8f; --ok: #6cc28b; --warn: #e9b44c;
+  --bad: #e5645b; --blue: #6aa7e8; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 -apple-system, system-ui, sans-serif; }
+header { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+header h1 { font-size: 16px; margin: 0; color: var(--accent2); letter-spacing: .5px; }
+header h1 b { color: var(--accent); }
+header button { padding: 3px 8px; font-size: 13px; }
+.pill { padding: 2px 8px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); font-size: 12px; font-family: var(--mono); }
+.pill.ok { color: var(--ok); } .pill.bad { color: var(--bad); border-color: var(--bad); } .pill.warn { color: var(--warn); }
+nav { display: flex; gap: 2px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+nav button { background: none; border: none; color: var(--dim); padding: 9px 14px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; }
+nav button.on { color: var(--text); border-bottom-color: var(--accent); }
+main { padding: 14px; }
+section.tab { display: none; } section.tab.on { display: block; }
+.row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 14px; min-width: 260px; }
+.card h3 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--dim); display: flex; align-items: center; gap: 8px; }
+.card h3 .sp { flex: 1; }
+button, select, input { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 4px 9px; }
+button { cursor: pointer; } button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
+button.small { padding: 1px 7px; font-size: 12px; }
+input[type=text], input[type=number] { min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--dim); font-weight: 500; position: sticky; top: 0; background: var(--panel); cursor: pointer; }
+tr.click:hover td { background: var(--panel2); cursor: pointer; }
+td.mono, .mono { font-family: var(--mono); font-size: 12px; }
+.scroll { max-height: 520px; overflow: auto; }
+pre { margin: 0; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+.dim { color: var(--dim); } .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+.subnav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.subnav button.on { background: var(--accent); color: #111; border-color: var(--accent); }
+.bar { height: 14px; background: var(--panel2); border-radius: 3px; overflow: hidden; display: flex; }
+.bar > div { height: 100%; }
+#screen { image-rendering: pixelated; border: 1px solid var(--line); background: #000; display: block; cursor: crosshair; }
+.pad { display: grid; grid-template-columns: repeat(3, 44px); gap: 4px; }
+.pad button, .btns button { height: 40px; font-weight: 600; user-select: none; }
+.pad button.held, .btns button.held { background: var(--accent); color: #111; }
+.btns { display: flex; gap: 6px; flex-wrap: wrap; }
+#log { height: 560px; overflow: auto; background: #0b0d12; border: 1px solid var(--line); padding: 8px; border-radius: 6px; }
+#log div { font-family: var(--mono); font-size: 12px; white-space: pre-wrap; }
+.toast { position: fixed; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
+.toast div { background: var(--panel2); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: 8px 12px; border-radius: 6px; max-width: 460px; box-shadow: 0 4px 18px #0008; }
+.toast div.bad { border-left-color: var(--bad); }
+.banner { background: #3b1f1f; border: 1px solid var(--bad); padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; display: none; }
+.memmap { display: grid; gap: 2px; }
+.memmap div { height: 16px; border-radius: 2px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; font-size: 12px; }
+.legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; font-size: 13px; }
+.kv b { color: var(--dim); font-weight: 500; }
+details summary { cursor: pointer; padding: 4px 0; }
+.cmd { border-bottom: 1px solid var(--line); padding: 8px 0; }
+.cmd .name { font-family: var(--mono); color: var(--accent2); }
+.cmd form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.hint { font-size: 12px; color: var(--dim); }
+</style>
+</head>
+<body>
+<header>
+  <h1><b>3DO</b> DevBench</h1>
+  <select id="sessSel" title="session"></select>
+  <span id="stMode" class="pill">no session</span>
+  <span id="stFrame" class="pill">frame –</span>
+  <span id="stCpu" class="pill">CPU –</span>
+  <span style="flex:1"></span>
+  <button onclick="cmd('run',{speed:1})">▶ Run</button>
+  <button onclick="cmd('run',{speed:0})">⏩ Turbo</button>
+  <button onclick="cmd('pause')">⏸ Pause</button>
+  <button onclick="cmd('step',{frames:1})">+1 frame</button>
+  <button onclick="cmd('step',{frames:60})">+60</button>
+  <button id="haltBtn" onclick="toggleHalt()">CPU halt</button>
+  <button onclick="cmd('reset')">Reset</button>
+  <button onclick="if(confirm('Power-cycle the console?')) cmd('reboot')">Reboot</button>
+</header>
+<nav id="nav"></nav>
+<main>
+  <div id="stopBanner" class="banner"></div>
+
+  <!-- ================= Dashboard ================= -->
+  <section class="tab" data-tab="Dashboard">
+    <div class="row">
+      <div class="card" style="flex:1 1 520px">
+        <h3>Sessions <span class="sp"></span><button class="small" onclick="loadSessions()">refresh</button></h3>
+        <table id="sessTable"></table>
+        <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap; align-items:center">
+          <select id="newTarget"></select>
+          <label><input type="checkbox" id="newWindow"> window</label>
+          <select id="newMode"><option value="paused">paused</option><option value="running">running</option></select>
+          <select id="newBios"><option>panafz10.bin</option><option>panafz1.bin</option><option>panafz10-norsa.bin</option></select>
+          <button class="primary" onclick="startSession()">Start session</button>
+        </div>
+      </div>
+      <div class="card" style="flex:1 1 360px">
+        <h3>OS summary <span class="sp"></span><button class="small" onclick="loadSummary()">refresh</button></h3>
+        <div id="summary" class="dim">–</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Projects <span class="sp"></span><button class="small" onclick="loadProjects()">refresh</button></h3>
+      <table id="projTable"></table>
+      <pre id="buildOut" class="dim" style="margin-top:8px; max-height:260px; overflow:auto"></pre>
+    </div>
+  </section>
+
+  <!-- ================= Screen ================= -->
+  <section class="tab" data-tab="Screen">
+    <div class="row">
+      <div class="card">
+        <h3>Display <span class="sp"></span>
+          <select id="scrScale"><option value="2" selected>2×</option><option value="1">1×</option><option value="3">3×</option></select>
+          <label class="dim"><input type="checkbox" id="scrLive" checked> live</label>
+        </h3>
+        <img id="screen" width="640" height="480" alt="3DO screen">
+        <div class="hint" id="scrInfo">Click the screen to fire the light gun (port device = lightgun).</div>
+      </div>
+      <div class="card" style="min-width:320px">
+        <h3>Control pad (port <select id="padPort"><option>0</option><option>1</option></select>)</h3>
+        <div class="row" style="gap:20px">
+          <div class="pad">
+            <span></span><button data-b="UP">▲</button><span></span>
+            <button data-b="LEFT">◀</button><span></span><button data-b="RIGHT">▶</button>
+            <span></span><button data-b="DOWN">▼</button><span></span>
+          </div>
+          <div class="btns" style="width:150px">
+            <button data-b="A">A</button><button data-b="B">B</button><button data-b="C">C</button>
+            <button data-b="L">L</button><button data-b="R">R</button>
+            <button data-b="P">P</button><button data-b="X">X</button>
+          </div>
+        </div>
+        <p class="hint">Hold a button with the mouse. With "keyboard" on: arrows, Z/X/C = A/B/C, Enter = P, Backspace = X, Q/W = L/R.
+          A paused session needs Run (or steps) to react.</p>
+        <label><input type="checkbox" id="kbd"> keyboard controls this pad</label>
+        <h3 style="margin-top:14px">Peripherals</h3>
+        <div class="kv">
+          <b>port 0</b><select id="dev0" onchange="setDev(0)"></select>
+          <b>port 1</b><select id="dev1" onchange="setDev(1)"></select>
+        </div>
+        <div style="margin-top:8px" class="hint">Flightstick / analog (port <span id="anPortLbl">0</span>):</div>
+        <div class="kv">
+          <b>lx</b><input type="range" min="-32768" max="32767" value="0" id="anlx" oninput="analog()">
+          <b>ly</b><input type="range" min="-32768" max="32767" value="0" id="anly" oninput="analog()">
+          <b>ry (throttle)</b><input type="range" min="-32768" max="32767" value="0" id="anry" oninput="analog()">
+        </div>
+        <h3 style="margin-top:14px">Capture</h3>
+        <div class="btns">
+          <button onclick="saveShot()">Screenshot</button>
+          <input type="number" id="gifFrames" value="120" style="width:70px"> frames
+          <button onclick="recordGif()">Record GIF</button>
+        </div>
+        <div id="capOut" class="hint"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= OS ================= -->
+  <section class="tab" data-tab="OS">
+    <div class="subnav" id="osNav"></div>
+    <div class="card">
+      <h3><span id="osTitle">Tasks</span><span class="sp"></span>
+        <input type="text" id="osFilter" placeholder="filter" style="width:160px" oninput="renderOs()">
+        <label class="dim"><input type="checkbox" id="osAuto"> auto-refresh</label>
+        <button class="small" onclick="loadOs()">refresh</button></h3>
+      <div id="osBody"></div>
+    </div>
+    <div class="card" id="osDetailCard" style="display:none">
+      <h3>Item detail <span class="sp"></span><button class="small" onclick="osDetailCard.style.display='none'">close</button></h3>
+      <div id="osDetail"></div>
+    </div>
+  </section>
+
+  <!-- ================= Debug ================= -->
+  <section class="tab" data-tab="Debug">
+    <div class="row">
+      <div class="card" style="flex:0 0 300px">
+        <h3>Registers <span class="sp"></span><button class="small" onclick="loadRegs()">refresh</button></h3>
+        <div id="regs" class="kv mono"></div>
+        <div class="btns" style="margin-top:10px">
+          <button onclick="cmd('halt').then(dbgRefresh)">Halt</button>
+          <button onclick="cmd('continue',{max_frames:600}).then(dbgRefresh)">Continue→stop</button>
+          <button onclick="cmd('continue').then(dbgRefresh)">Continue</button>
+          <button onclick="cmd('stepi',{count:1}).then(dbgRefresh)">Step instr</button>
+          <button onclick="cmd('stepi',{count:10}).then(dbgRefresh)">×10</button>
+        </div>
+      </div>
+      <div class="card" style="flex:1 1 520px">
+        <h3>Disassembly <span class="sp"></span>
+          <input type="text" id="disAddr" value="pc" style="width:150px">
+          <button class="small" onclick="loadDis()">go</button></h3>
+        <div class="hint">Click a line to toggle a breakpoint.</div>
+        <div id="dis" class="scroll mono" style="max-height:360px"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="card" style="flex:1 1 380px">
+        <h3>Breakpoints / watchpoints / tracepoints</h3>
+        <div class="btns">
+          <input type="text" id="bpAddr" placeholder="symbol or address" style="width:170px">
+          <button onclick="addBp()">+ break</button>
+          <button onclick="addTp()">+ trace</button>
+          <select id="wpKind"><option>write</option><option>read</option><option>access</option></select>
+          <input type="number" id="wpLen" value="4" style="width:55px">
+          <button onclick="addWp()">+ watch</button>
+          <button onclick="cmd('delete').then(()=>cmd('unwatch')).then(()=>cmd('tracepoint',{action:'clear'})).then(loadBps)">clear all</button>
+        </div>
+        <div id="bps" style="margin-top:8px"></div>
+      </div>
+      <div class="card" style="flex:1 1 380px">
+        <h3>Symbols <span class="sp"></span><input type="text" id="symQ" value="." style="width:150px" onkeydown="if(event.key=='Enter')loadSyms()"><button class="small" onclick="loadSyms()">search</button></h3>
+        <div id="syms" class="scroll" style="max-height:300px"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="card" style="flex:1 1 520px">
+        <h3>System calls (SWI snoop) <span class="sp"></span>
+          <button class="small" onclick="cmd('swi_trace',{enable:true}).then(()=>toast('SWI trace on'))">start</button>
+          <button class="small" onclick="cmd('swi_trace',{enable:false})">stop</button>
+          <button class="small" onclick="loadSwi()">fetch</button></h3>
+        <div id="swi" class="scroll" style="max-height:640px"></div>
+      </div>
+      <div class="card" style="flex:1 1 380px">
+        <h3>Profiler <span class="sp"></span><input type="number" id="profFrames" value="300" style="width:70px"> frames <button class="small" onclick="runProfile()">run</button></h3>
+        <div id="prof" class="scroll" style="max-height:380px"><span class="dim">Samples the CPU at random points inside frames.</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Crashes / aborts reported by the OS <span class="sp"></span><button class="small" onclick="loadCrashes()">refresh</button></h3>
+      <div id="crashes" class="dim">none</div>
+    </div>
+  </section>
+
+  <!-- ================= Memory ================= -->
+  <section class="tab" data-tab="Memory">
+    <div class="card">
+      <h3>Memory <span class="sp"></span>
+        <input type="text" id="memAddr" value="0x70000" style="width:160px" onkeydown="if(event.key=='Enter')loadMem()">
+        <input type="number" id="memLen" value="512" style="width:80px">
+        <button class="small" onclick="memStep(-1)">◀</button><button class="small" onclick="loadMem()">view</button><button class="small" onclick="memStep(1)">▶</button>
+      </h3>
+      <div class="hint">Address, symbol (e.g. s_palette) or symbol+offset. DRAM 0–0x1FFFFF, VRAM 0x200000–0x2FFFFF, ROM 0x3000000+.</div>
+      <pre id="mem" style="margin-top:8px"></pre>
+    </div>
+    <div class="row">
+      <div class="card" style="flex:1">
+        <h3>Search DRAM</h3>
+        <div class="btns"><input type="text" id="findTxt" placeholder="text"><button onclick="findMem('text')">find text</button>
+          <input type="text" id="findHex" placeholder="hex bytes"><button onclick="findMem('hex')">find hex</button></div>
+        <div id="findOut" class="mono" style="margin-top:8px"></div>
+      </div>
+      <div class="card" style="flex:1">
+        <h3>Write</h3>
+        <div class="btns"><input type="text" id="wAddr" placeholder="address/symbol"><input type="text" id="wVal" placeholder="u32 value"><button onclick="writeU32()">write u32</button></div>
+        <div class="hint">Writes go straight into guest DRAM/VRAM.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Console ================= -->
+  <section class="tab" data-tab="Console">
+    <div class="row">
+      <div class="card" style="flex:3 1 600px">
+        <h3>3DO debug console <span class="sp"></span>
+          <input type="text" id="logFilter" placeholder="filter" style="width:160px" oninput="refilterLog()">
+          <label class="dim"><input type="checkbox" id="logFollow" checked> follow</label>
+          <button class="small" onclick="logEl.innerHTML='';logLines=[]">clear</button></h3>
+        <div id="log"></div>
+      </div>
+      <div class="card" style="flex:1 1 300px">
+        <h3>Session events</h3>
+        <div id="events" class="scroll mono" style="max-height:560px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= API ================= -->
+  <section class="tab" data-tab="API">
+    <div class="card">
+      <h3>REST API <span class="sp"></span><a href="/api/openapi.json" target="_blank" style="color:var(--blue)">openapi.json</a></h3>
+      <p class="hint">Every command below is <code>POST /api/sessions/{pid}/cmd/{name}</code> with a JSON body
+        (or <code>GET</code> with query parameters); <code>/api/cmd/{name}</code> targets the current session.
+        Also: <code>/api/sessions</code>, <code>/api/projects</code>, <code>/api/screen.png</code>,
+        <code>/api/events</code> (SSE), and MCP at <code>/mcp</code>.</p>
+      <input type="text" id="apiFilter" placeholder="filter commands" oninput="renderApi()" style="width:240px">
+      <div id="api" style="margin-top:8px"></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toasts"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const TABS = ["Dashboard", "Screen", "OS", "Debug", "Memory", "Console", "API"];
+let pid = null, status = null, es = null, logLines = [], logEl = $("log");
+const PAL = ["#e07a5f","#6aa7e8","#f2cc8f","#6cc28b","#c38be0","#e9b44c","#5fc9c9","#e58fb0","#9fb36a","#b39a6a","#7f8fe0","#d96a6a"];
+
+// ---------------------------------------------------------------- basics
+function toast(msg, bad) {
+  const d = document.createElement("div"); d.textContent = msg; if (bad) d.className = "bad";
+  $("toasts").appendChild(d); setTimeout(() => d.remove(), bad ? 7000 : 3500);
+}
+async function http(method, url, body) {
+  const r = await fetch(url, {method, headers: body ? {"content-type": "application/json"} : {}, body: body ? JSON.stringify(body) : undefined});
+  const ct = r.headers.get("content-type") || "";
+  const data = ct.includes("json") ? await r.json() : await r.text();
+  if (!r.ok) throw new Error((data && data.error) || (r.status + " " + r.statusText));
+  return data;
+}
+async function cmd(name, args) {
+  if (!pid) { toast("No session: start one on the Dashboard", true); throw new Error("no session"); }
+  try { return await http("POST", `/api/sessions/${pid}/cmd/${name}`, args || {}); }
+  catch (e) { toast(`${name}: ${e.message}`, true); throw e; }
+}
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function table(rows, cols, opts = {}) {
+  if (!rows || !rows.length) return '<span class="dim">none</span>';
+  const f = ($("osFilter")?.value || "").toLowerCase();
+  if (opts.filter && f) rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(f));
+  let h = "<table><tr>" + cols.map(c => `<th>${esc(c[1] ?? c[0])}</th>`).join("") + "</tr>";
+  for (const r of rows) {
+    h += `<tr class="${opts.click ? "click" : ""}" ${opts.click ? `onclick='${opts.click}(${JSON.stringify(r[opts.key || "item"])})'` : ""}>`;
+    for (const c of cols) {
+      let v = typeof c[2] === "function" ? c[2](r) : r[c[0]];
+      if (v && typeof v === "object") v = JSON.stringify(v);
+      h += `<td class="${c[3] || ""}">${c[2] && typeof c[2] === "function" ? (v ?? "") : esc(v)}</td>`;
+    }
+    h += "</tr>";
+  }
+  return h + "</table>";
+}
+
+// ---------------------------------------------------------------- tabs
+function showTab(t) {
+  document.querySelectorAll("section.tab").forEach(s => s.classList.toggle("on", s.dataset.tab === t));
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.textContent === t));
+  location.hash = t;
+  if (t === "Dashboard") { loadSessions(); loadProjects(); loadSummary(); }
+  if (t === "OS") loadOs();
+  if (t === "Debug") dbgRefresh();
+  if (t === "Memory" && !$("mem").textContent) loadMem();
+  if (t === "API") loadApi();
+}
+$("nav").innerHTML = TABS.map(t => `<button onclick="showTab('${t}')">${t}</button>`).join("");
+
+// ---------------------------------------------------------------- sessions / status
+async function loadSessions() {
+  const d = await http("GET", "/api/sessions");
+  const sel = $("sessSel");
+  if (!pid && d.sessions.length) pid = (d.sessions.find(s => s.current) || d.sessions[0]).pid;
+  sel.innerHTML = d.sessions.map(s => `<option value="${s.pid}" ${s.pid == pid ? "selected" : ""}>${s.pid} – ${esc(s.iso.split("/").pop())}${s.window ? " (window)" : ""}</option>`).join("") || "<option>no sessions</option>";
+  $("sessTable").innerHTML = table(d.sessions, [["pid"], ["iso", "disc", r => esc(r.iso.split("/").slice(-1)[0])],
+    ["control_port", "control"], ["gdb_port", "gdb"], ["window", "window", r => r.window ? "yes" : ""],
+    ["_", "", r => `<button class="small" onclick="selectSession(${r.pid})">${r.pid == pid ? "current" : "select"}</button> <button class="small" onclick="stopSession(${r.pid})">stop</button>`]]);
+  if (pid) connectEvents();
+}
+async function selectSession(p) { pid = p; await http("POST", `/api/sessions/${p}/select`); loadSessions(); }
+async function stopSession(p) {
+  if (!confirm("Stop session " + p + "?")) return;
+  await http("DELETE", `/api/sessions/${p}`); if (p == pid) pid = null; loadSessions();
+}
+async function startSession() {
+  try {
+    const d = await http("POST", "/api/sessions", {target: $("newTarget").value, window: $("newWindow").checked,
+      mode: $("newMode").value, bios: $("newBios").value});
+    pid = d.pid; toast("session " + pid + " started"); loadSessions();
+  } catch (e) { toast(e.message, true); }
+}
+$("sessSel").onchange = e => selectSession(+e.target.value);
+
+function connectEvents() {
+  if (es && es.pid === pid) return;
+  if (es) es.close();
+  es = new EventSource(`/api/events?session=${pid}`); es.pid = pid;
+  es.addEventListener("status", e => { status = JSON.parse(e.data); renderStatus(); });
+  es.addEventListener("log", e => { const d = JSON.parse(e.data); d.lines.forEach(addLog); });
+  es.addEventListener("stop", e => { const s = JSON.parse(e.data); showStop(s); });
+  es.addEventListener("run", () => showStop(null));
+  es.addEventListener("crash", e => { const c = JSON.parse(e.data); toast("CRASH: " + c.line, true); loadCrashes(); });
+  es.addEventListener("event", e => { const ev = $("events"); ev.innerHTML += `<div>${esc(JSON.parse(e.data))}</div>`; ev.scrollTop = 1e9; });
+  logEl.innerHTML = ""; logLines = [];
+}
+function renderStatus() {
+  const s = status;
+  $("stMode").textContent = `${s.mode}${s.mode === "running" ? " ×" + (s.speed || "max") : ""}`;
+  $("stMode").className = "pill " + (s.mode === "running" ? "ok" : "warn");
+  $("stFrame").textContent = "frame " + s.frame;
+  $("stCpu").textContent = s.halted ? "CPU HALTED" : "CPU running";
+  $("stCpu").className = "pill " + (s.halted ? "bad" : "ok");
+  $("haltBtn").textContent = s.halted ? "CPU continue" : "CPU halt";
+}
+function showStop(s) {
+  const b = $("stopBanner");
+  if (!s || !s.reason) { b.style.display = "none"; return; }
+  b.style.display = "block";
+  b.innerHTML = `CPU stopped: <b>${esc(s.reason)}</b> at <span class="mono">${esc(s.pc)}</span> ${esc(s.where || "")}
+    <button class="small" onclick="cmd('continue')">continue</button> <button class="small" onclick="showTab('Debug')">debug</button>`;
+}
+function toggleHalt() { (status && status.halted ? cmd("continue") : cmd("halt")).then(() => dbgRefresh()); }
+
+// ---------------------------------------------------------------- dashboard
+async function loadProjects() {
+  const d = await http("GET", "/api/projects");
+  $("newTarget").innerHTML = d.projects.filter(p => p.iso).map(p => `<option>${p.name}</option>`).join("");
+  $("projTable").innerHTML = table(d.projects, [["name"], ["title", "title", r => esc(r.title || "")],
+    ["built", "built", r => r.built ? new Date(r.built * 1000).toLocaleString() : '<span class="dim">not built</span>'],
+    ["_", "", r => `<button class="small" onclick="build('${r.name}')">build</button>
+      ${r.iso ? `<button class="small" onclick="quickRun('${r.name}')">run</button>` : ""}
+      <button class="small" onclick="testProj('${r.name}')">test</button>`]]);
+}
+async function build(n) {
+  $("buildOut").textContent = "building " + n + "…";
+  try { const r = await http("POST", `/api/projects/${n}/build`); $("buildOut").textContent = r.output.split("\n").filter(l => /error|built|Error|Serious|undefined/i.test(l)).join("\n") || "ok"; toast("built " + n); loadProjects(); }
+  catch (e) { $("buildOut").textContent = e.message; }
+}
+async function testProj(n) {
+  $("buildOut").textContent = "testing " + n + "…";
+  const r = await fetch(`/api/projects/${n}/test`, {method: "POST"}).then(r => r.json());
+  $("buildOut").textContent = r.output || r.error; toast(`test ${n}: exit ${r.exit}`, r.exit !== 0);
+}
+async function quickRun(n) { $("newTarget").value = n; startSession(); }
+async function loadSummary() {
+  if (!pid) return;
+  try {
+    const s = await cmd("os_summary");
+    const types = Object.entries(s.items_by_type); const max = Math.max(...types.map(t => t[1]));
+    let h = `<div class="kv"><b>kernel</b><span class="mono">${s.kernel_base}</span><b>current task</b><span>${esc(s.current_task)}</span>
+      <b>items</b><span>${s.items} / ${s.max_item}</span><b>frame</b><span>${s.frame}</span></div><div style="margin-top:10px">`;
+    for (const [r, m] of Object.entries(s.memory)) {
+      const tot = m.free_kb + m.used_kb;
+      h += `<div class="hint">${esc(r)}: ${m.used_kb} KB used / ${tot} KB</div><div class="bar"><div style="width:${100 * m.used_kb / tot}%;background:var(--accent)"></div></div>`;
+    }
+    h += `</div><div style="margin-top:10px">`;
+    for (const [t, n] of types) h += `<div style="display:flex;gap:6px;align-items:center;font-size:12px"><span style="width:90px">${esc(t)}</span><div class="bar" style="flex:1"><div style="width:${100 * n / max}%;background:var(--blue)"></div></div><span style="width:28px;text-align:right">${n}</span></div>`;
+    $("summary").innerHTML = h + "</div>";
+  } catch (e) { $("summary").textContent = e.message; }
+}
+
+// ---------------------------------------------------------------- screen + input
+const screen = $("screen");
+async function refreshScreen() {
+  const vis = document.querySelector('section.tab.on')?.dataset.tab === "Screen";
+  if (pid && vis && $("scrLive").checked) {
+    const sc = +$("scrScale").value;
+    try {
+      const r = await fetch(`/api/sessions/${pid}/screen.png?scale=${sc}`, {cache: "no-store"});
+      if (r.ok) { const b = await r.blob(); const u = URL.createObjectURL(b); const old = screen.src; screen.src = u; screen.width = 320 * sc; screen.height = 240 * sc; if (old.startsWith("blob:")) URL.revokeObjectURL(old); }
+    } catch (e) {}
+  }
+  setTimeout(refreshScreen, status && status.mode === "running" ? 80 : 250);
+}
+const held = {0: new Set(), 1: new Set()};
+function padPort() { return +$("padPort").value; }
+function pushHold(port) { cmd("hold", {buttons: [...held[port]].join("+"), port}); document.querySelectorAll("[data-b]").forEach(b => b.classList.toggle("held", held[padPort()].has(b.dataset.b))); }
+document.querySelectorAll("[data-b]").forEach(b => {
+  b.onpointerdown = e => { e.preventDefault(); held[padPort()].add(b.dataset.b); pushHold(padPort()); };
+  b.onpointerup = b.onpointerleave = () => { if (held[padPort()].delete(b.dataset.b)) pushHold(padPort()); };
+});
+const KEYS = {ArrowUp: "UP", ArrowDown: "DOWN", ArrowLeft: "LEFT", ArrowRight: "RIGHT", z: "A", x: "B", c: "C", Enter: "P", Backspace: "X", q: "L", w: "R"};
+document.addEventListener("keydown", e => {
+  if (!$("kbd").checked || e.target.tagName === "INPUT") return;
+  const b = KEYS[e.key]; if (!b) return; e.preventDefault();
+  if (!held[padPort()].has(b)) { held[padPort()].add(b); pushHold(padPort()); }
+});
+document.addEventListener("keyup", e => {
+  if (!$("kbd").checked) return; const b = KEYS[e.key];
+  if (b && held[padPort()].delete(b)) pushHold(padPort());
+});
+const DEVICES = ["joypad", "flightstick", "mouse", "lightgun", "arcade_lightgun", "orbatak_trackball", "none"];
+[0, 1].forEach(p => $("dev" + p).innerHTML = DEVICES.map(d => `<option>${d}</option>`).join(""));
+function setDev(p) { cmd("set_device", {port: p, device: $("dev" + p).value}); }
+function analog() { cmd("analog", {port: padPort(), lx: +$("anlx").value, ly: +$("anly").value, ry: +$("anry").value}); }
+$("padPort").onchange = () => $("anPortLbl").textContent = padPort();
+screen.onclick = e => {
+  const r = screen.getBoundingClientRect(); const x = Math.round((e.clientX - r.left) * 320 / r.width), y = Math.round((e.clientY - r.top) * 240 / r.height);
+  const port = $("dev1").value.includes("gun") ? 1 : 0;
+  if ($("dev" + port).value.includes("gun")) cmd("lightgun", {port, x, y, buttons: ["TRIGGER"], frames: 4}).then(() => cmd("lightgun", {port, buttons: [], frames: 1}));
+  $("scrInfo").textContent = `x ${x}, y ${y}`;
+};
+async function saveShot() {
+  const p = `build/devbench/shot-${Date.now()}.png`;
+  await cmd("screenshot", {scale: 2, path: p, inline: false});
+  $("capOut").innerHTML = `<a style="color:var(--blue)" target="_blank" href="/api/artifact?path=${p}">${p}</a>`;
+}
+async function recordGif() {
+  const p = `build/devbench/capture-${Date.now()}.gif`;
+  $("capOut").textContent = "recording…";
+  await cmd("record_gif", {path: p, frames: +$("gifFrames").value, every: 2});
+  $("capOut").innerHTML = `<a style="color:var(--blue)" target="_blank" href="/api/artifact?path=${p}">${p}</a>`;
+}
+
+// ---------------------------------------------------------------- OS
+const OSVIEWS = {
+  Tasks: ["os_tasks", d => table(d.tasks, [["item"], ["name"], ["state", "state", r => `<span class="${r.state === "running" ? "ok" : r.state === "ready" ? "warn" : "dim"}">${r.state}</span>`],
+    ["priority", "pri"], ["thread_of", "parent"], ["sig_bits", "signals", null, "mono"], ["wait_bits", "waiting for", null, "mono"],
+    ["wait_item_name", "wait item"], ["cpu_ms", "CPU ms"], ["owned_pages", "pages"], ["stack_size", "stack"], ["addr", "addr", null, "mono"]], {click: "osItem", filter: true})],
+  Items: ["os_items", d => table(d.items, [["item"], ["type"], ["subsys"], ["name"], ["owner_name", "owner"], ["priority", "pri"], ["size"], ["addr", "addr", null, "mono"]], {click: "osItem", filter: true})],
+  Ports: ["os_ports", d => table(d.ports, [["item"], ["name"], ["owner_name", "owner"], ["queued", "queued", r => r.detail.queued], ["signal", "signal", r => r.detail.signal, "mono"], ["addr", "addr", null, "mono"]], {click: "osItem", filter: true})],
+  Semaphores: ["os_semaphores", d => table(d.semaphores, [["item"], ["name"], ["owner_name", "creator"], ["locked", "locked", r => r.detail.locked ? `<span class="warn">by ${esc(r.detail.owner_name || r.detail.owner)}</span>` : "no"], ["nest", "nest", r => r.detail.nest_count], ["waiters", "waiters", r => r.detail.waiters]], {click: "osItem", filter: true})],
+  "Devices & I/O": ["os_devices", d => "<h4>Devices</h4>" + table(d.devices, [["item"], ["name"], ["driver", "driver", r => esc(r.detail.driver)], ["open", "open", r => r.detail.open_count], ["owner_name", "owner"]], {click: "osItem", filter: true})
+    + "<h4>Drivers</h4>" + table(d.drivers, [["item"], ["name"], ["open", "open", r => r.detail.open_count], ["owner_name", "owner"]], {click: "osItem", filter: true})
+    + "<h4>I/O requests</h4>" + table(d.ioreqs, [["item"], ["owner_name", "owner"], ["device", "device", r => esc(r.detail.device)], ["cmd", "command", r => r.detail.command], ["unit", "unit", r => r.detail.unit],
+      ["state", "state", r => `<span class="${r.detail.state === "done" ? "dim" : "warn"}">${r.detail.state}</span>`], ["actual", "actual", r => r.detail.actual], ["error", "error", r => r.detail.error]], {click: "osItem", filter: true})],
+  Folios: ["os_folios", d => table(d.folios, [["item"], ["name"], ["version"], ["open", "open count", r => r.detail.open_count], ["swi", "SWIs", r => r.detail.swi_functions], ["owner_name", "owner"], ["addr", "addr", null, "mono"]], {click: "osItem", filter: true})],
+  Graphics: ["os_graphics", d => table(d.items, [["item"], ["type"], ["name"], ["owner_name", "owner"], ["detail", "detail", r => r.detail ? (r.detail.buffer ? `${r.detail.width}×${r.detail.height} @ <a href="#" onclick="memAt('${r.detail.buffer}');return false">${r.detail.buffer}</a>` : r.detail.bitmaps ? r.detail.bitmaps.map(b => `bitmap ${b.item}: ${b.width}×${b.height} @ <a href="#" onclick="memAt('${b.buffer}');return false">${b.buffer}</a>`).join("<br>") : esc(JSON.stringify(r.detail))) : ""]], {click: "osItem", filter: true})],
+  Audio: ["os_audio", d => table(d.items, [["item"], ["type"], ["name"], ["owner_name", "owner"], ["size"], ["addr", "addr", null, "mono"]], {click: "osItem", filter: true})],
+  Files: ["os_files", d => table(d.items, [["item"], ["type"], ["name"], ["owner_name", "owner"], ["addr", "addr", null, "mono"]], {click: "osItem", filter: true})],
+  "Memory map": ["os_memory", renderMemMap],
+  Snapshots: [null, renderSnapUi],
+};
+let osView = "Tasks", osData = null;
+$("osNav").innerHTML = Object.keys(OSVIEWS).map(v => `<button onclick="setOs('${v}')">${v}</button>`).join("");
+function setOs(v) { osView = v; document.querySelectorAll("#osNav button").forEach(b => b.classList.toggle("on", b.textContent === v)); $("osTitle").textContent = v; loadOs(); }
+async function loadOs() {
+  const [c] = OSVIEWS[osView];
+  if (!c) { renderOs(); return; }
+  try { osData = await cmd(c); renderOs(); } catch (e) { $("osBody").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+}
+function renderOs() { $("osBody").innerHTML = OSVIEWS[osView][1](osData || {}); }
+async function osItem(n) {
+  const d = await cmd("os_item", {item: n});
+  $("osDetailCard").style.display = "block";
+  const raw = d.raw.match(/.{1,32}/g).map((l, i) => (i * 16).toString(16).padStart(4, "0") + "  " + l.match(/../g).join(" ")).join("\n");
+  $("osDetail").innerHTML = `<div class="kv">${Object.entries(d).filter(([k]) => !["raw", "detail"].includes(k)).map(([k, v]) => `<b>${esc(k)}</b><span>${esc(v)}</span>`).join("")}</div>
+    ${d.detail ? `<h4>Detail</h4><pre>${esc(JSON.stringify(d.detail, null, 1))}</pre>` : ""}
+    <h4>Raw node <a href="#" onclick="memAt('${d.addr}');return false" style="color:var(--blue)">(open in memory view)</a></h4><pre>${raw}</pre>`;
+  $("osDetailCard").scrollIntoView({behavior: "smooth"});
+}
+function renderMemMap(d) {
+  if (!d.regions) return "";
+  const owners = {}; let k = 0;
+  const color = o => o === "." ? "#252a38" : o === "?" ? "#5a5f73" : (owners[o] ??= PAL[k++ % PAL.length]);
+  let h = "";
+  for (const r of d.regions) {
+    h += `<h4>${esc(r.name)} <span class="dim">– ${r.pages} pages × ${r.page_size} bytes, ${r.free_pages} free (${(r.free_bytes / 1024) | 0} KB)</span></h4><div class="memmap" style="grid-template-columns:repeat(32,1fr)">`;
+    r.map.forEach((o, i) => {
+      const a = parseInt(r.base, 16) + i * r.page_size;
+      h += `<div style="background:${color(o)}" title="0x${a.toString(16)}: ${o === "." ? "free" : o === "?" ? "system" : esc(d.task_names[o] || o)}" onclick="memAt('0x${a.toString(16)}')"></div>`;
+    });
+    h += "</div>";
+  }
+  h += `<div class="legend" style="margin-top:10px"><span><i style="background:#252a38"></i>free</span><span><i style="background:#5a5f73"></i>system / kernel</span>`;
+  for (const [o, c] of Object.entries(owners)) h += `<span><i style="background:${c}"></i>${esc(d.task_names[o] || o)}</span>`;
+  return h + "</div><p class='hint'>Click a page to open it in the memory view.</p>";
+}
+let snapDiff = null;
+function renderSnapUi() {
+  let h = `<div class="btns"><input type="text" id="snapName" value="before" style="width:120px"><button onclick="takeSnap()">take snapshot</button>
+    <button onclick="diffSnap()">diff vs now</button></div><div class="hint" style="margin:6px 0">Take a snapshot, play a little, then diff: shows items created/deleted, CPU per task and memory changes.</div>`;
+  if (snapDiff) {
+    const d = snapDiff;
+    h += `<div class="kv"><b>frames</b><span>${d.frames}</span><b>free memory delta</b><span>${esc(JSON.stringify(d.free_bytes_delta))}</span></div>`;
+    h += "<h4>Net item change by type (owner)</h4>" + (Object.keys(d.net_by_type).length ? Object.entries(d.net_by_type).map(([k, v]) => `<div class="${v > 0 ? "warn" : "dim"}">${v > 0 ? "+" : ""}${v} ${esc(k)}</div>`).join("") : '<span class="dim">balanced: nothing leaked</span>');
+    h += "<h4>Items created</h4>" + table(d.items_created, [["item"], ["type"], ["name"], ["owner_name", "owner"]]);
+    h += "<h4>Items deleted</h4>" + table(d.items_deleted, [["item"], ["type"], ["name"], ["owner_name", "owner"]]);
+    h += "<h4>CPU time per task</h4>" + table(d.tasks.filter(t => t.cpu_ms || t.pages || t.state), [["name"], ["cpu_ms", "CPU ms"], ["pages", "page delta"], ["state", "new state"]]);
+  }
+  return h;
+}
+async function takeSnap() { const r = await cmd("os_snapshot", {name: $("snapName").value}); toast(`snapshot ${r.name}: ${r.items} items`); }
+async function diffSnap() { snapDiff = await cmd("os_diff", {a: $("snapName").value}); renderOs(); }
+setInterval(() => { if ($("osAuto").checked && document.querySelector('section.tab.on')?.dataset.tab === "OS" && osView !== "Snapshots") loadOs(); }, 2000);
+
+// ---------------------------------------------------------------- debug
+async function loadRegs() {
+  const r = await cmd("regs");
+  $("regs").innerHTML = Object.entries(r).map(([k, v]) => `<b>${k}</b><span>${esc(v)}</span>`).join("");
+}
+let bpSet = new Set();
+async function loadDis() {
+  const a = $("disAddr").value || "pc";
+  try {
+    const d = await cmd("disasm", {addr: a, count: 40});
+    $("dis").innerHTML = d.listing.split("\n").map(l => { const ad = l.slice(3, 11); return `<div onclick="toggleBp('0x${ad}')" style="cursor:pointer;${l.startsWith("=>") ? "background:#3a2f1a" : ""}">${bpSet.has("0x" + ad) ? '<span class="bad">●</span>' : "&nbsp;"} ${esc(l)}</div>`; }).join("");
+  } catch (e) {}
+}
+async function toggleBp(a) { if (bpSet.has(a)) await cmd("delete", {addr: a}); else await cmd("break", {addr: a}); await loadBps(); loadDis(); }
+async function loadBps() {
+  const b = await cmd("breakpoints");
+  const tp = await cmd("tracepoint", {action: "hits", max_entries: 50});
+  bpSet = new Set(b.breakpoints.map(x => x.addr));
+  $("bps").innerHTML = `<div class="hint">breakpoints</div>${b.breakpoints.map(x => `<div class="mono">${x.addr} ${esc(x.where || "")} <button class="small" onclick="toggleBp('${x.addr}')">x</button></div>`).join("") || '<span class="dim">none</span>'}
+    <div class="hint" style="margin-top:6px">watchpoints</div>${b.watchpoints.map(w => `<div class="mono">${w.kind} ${w.addr} len ${w.len} ${esc(w.where || "")} <button class="small" onclick="cmd('unwatch',{addr:'${w.addr}',length:${w.len},kind:'${w.kind}'}).then(loadBps)">x</button></div>`).join("") || '<span class="dim">none</span>'}
+    <div class="hint" style="margin-top:6px">tracepoint hits (${tp.total})</div>${table(tp.hits.slice(-20), [["frame"], ["where"], ["caller"], ["r0"], ["r1"], ["hit"]])}`;
+}
+async function addBp() { await cmd("break", {addr: $("bpAddr").value}); loadBps(); loadDis(); }
+async function addTp() { await cmd("tracepoint", {action: "add", addr: $("bpAddr").value}); toast("tracepoint added"); loadBps(); }
+async function addWp() { await cmd("watch", {addr: $("bpAddr").value, length: +$("wpLen").value, kind: $("wpKind").value}); toast("watchpoint added"); loadBps(); }
+async function loadSyms() {
+  const d = await cmd("symbols", {pattern: $("symQ").value, limit: 200});
+  $("syms").innerHTML = table(d.symbols, [["name"], ["addr", "address", r => `<a href="#" style="color:var(--blue)" onclick="$('disAddr').value='${r.name}';loadDis();return false">${r.addr}</a>`, "mono"],
+    ["_", "", r => `<button class="small" onclick="$('bpAddr').value='${r.name}';addBp()">break</button> <button class="small" onclick="memAt('${r.name}')">mem</button>`]]);
+}
+async function loadSwi() {
+  const d = await cmd("swi_calls", {max_entries: 200});
+  $("swi").innerHTML = `<div class="hint">${d.total} calls</div>` + table(Object.entries(d.counts).map(([k, v]) => ({call: k, n: v})), [["call", "system call", null, "mono"], ["n", "count"]])
+    + "<h4>latest</h4>" + table(d.last.slice(-60).reverse(), [["frame"], ["name"], ["where"], ["r0"], ["r1"], ["r2"]]);
+}
+async function runProfile() {
+  $("prof").innerHTML = "profiling…";
+  const d = await cmd("profile", {frames: +$("profFrames").value});
+  $("prof").innerHTML = `<div class="hint">${d.samples} samples over ${d.frames} frames</div>` + d.functions.map(f =>
+    `<div style="display:flex;gap:6px;align-items:center;font-size:12px"><span style="width:180px;overflow:hidden;text-overflow:ellipsis" class="mono">${esc(f.name)}</span><div class="bar" style="flex:1"><div style="width:${f.percent}%;background:var(--accent)"></div></div><span style="width:44px;text-align:right">${f.percent}%</span></div>`).join("");
+}
+async function loadCrashes() {
+  const d = await cmd("crashes");
+  $("crashes").innerHTML = d.crashes.length ? d.crashes.map(c => `<details><summary class="bad">frame ${c.frame}: ${esc(c.line)}</summary><pre>${esc(JSON.stringify(c.regs, null, 1))}\n\n${esc(c.context.join("\n"))}</pre></details>`).join("") : "none";
+}
+function dbgRefresh() { if (!pid) return; loadRegs(); loadDis(); loadBps(); }
+
+// ---------------------------------------------------------------- memory
+function memAt(a) { $("memAddr").value = a; showTab("Memory"); loadMem(); }
+async function loadMem() {
+  try { const d = await cmd("read_mem", {addr: $("memAddr").value, length: +$("memLen").value}); $("mem").textContent = d.hex; $("mem").dataset.addr = d.addr; } catch (e) {}
+}
+function memStep(dir) {
+  const a = parseInt($("mem").dataset.addr || $("memAddr").value, 16) + dir * +$("memLen").value;
+  $("memAddr").value = "0x" + Math.max(0, a).toString(16); loadMem();
+}
+async function findMem(kind) {
+  const d = await cmd("find_mem", kind === "text" ? {text: $("findTxt").value} : {hex: $("findHex").value});
+  $("findOut").innerHTML = d.hits.map(h => `<a href="#" style="color:var(--blue)" onclick="memAt('${h.addr}');return false">${h.addr}</a> ${esc(h.symbol || "")}`).join("<br>") || "no hits";
+}
+async function writeU32() { await cmd("write_u32", {addr: $("wAddr").value, value: $("wVal").value}); toast("written"); loadMem(); }
+
+// ---------------------------------------------------------------- console
+function addLog(line) {
+  logLines.push(line); if (logLines.length > 5000) logLines.shift();
+  const f = $("logFilter").value.toLowerCase();
+  if (f && !line.toLowerCase().includes(f)) return;
+  const d = document.createElement("div"); d.textContent = line;
+  if (/abort|exception|fail|error/i.test(line)) d.className = "bad";
+  else if (/^AMIGA3DO|^TDO:/.test(line)) d.className = "dim";
+  logEl.appendChild(d); if (logEl.children.length > 3000) logEl.firstChild.remove();
+  if ($("logFollow").checked) logEl.scrollTop = 1e9;
+}
+function refilterLog() { const all = logLines; logEl.innerHTML = ""; logLines = []; all.forEach(addLog); }
+
+// ---------------------------------------------------------------- API explorer
+let apiCmds = null;
+async function loadApi() { if (!apiCmds) apiCmds = (await http("GET", "/api/commands")).commands; renderApi(); }
+function renderApi() {
+  const f = $("apiFilter").value.toLowerCase(); const groups = {};
+  for (const c of apiCmds || []) if (!f || c.name.includes(f) || c.doc.toLowerCase().includes(f)) (groups[c.group] ??= []).push(c);
+  $("api").innerHTML = Object.entries(groups).map(([g, cs]) => `<details open><summary><b>${g}</b> <span class="dim">(${cs.length})</span></summary>` + cs.map(c => `
+    <div class="cmd"><span class="name">${c.name}</span> <span class="dim">${esc(c.summary)}</span>
+      <form onsubmit="apiCall(event,'${c.name}')">${c.params.map(p => `<input type="text" name="${p.name}" placeholder="${p.name}${p.required ? "*" : ""}${p.default !== null ? " = " + esc(JSON.stringify(p.default)) : ""}" title="${esc(p.type)}">`).join("")}
+        <button class="small">call</button><span class="hint mono">curl -X POST localhost:${location.port}/api/cmd/${c.name} -d '{…}'</span></form>
+      <pre class="out dim"></pre></div>`).join("") + "</details>").join("");
+}
+async function apiCall(e, name) {
+  e.preventDefault(); const args = {};
+  for (const el of e.target.elements) if (el.name && el.value !== "") { try { args[el.name] = JSON.parse(el.value); } catch { args[el.name] = el.value; } }
+  const out = e.target.nextElementSibling;
+  try { const r = await cmd(name, args); if (r && r.png_b64) { out.innerHTML = `<img src="data:image/png;base64,${r.png_b64}">`; return; } out.textContent = JSON.stringify(r, null, 1); }
+  catch (err) { out.textContent = err.message; }
+}
+
+// ---------------------------------------------------------------- boot
+loadSessions().then(() => { showTab(TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "Dashboard"); setOs("Tasks"); });
+refreshScreen();
+</script>
+</body>
+</html>

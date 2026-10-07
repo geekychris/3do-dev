@@ -22,6 +22,7 @@ loop that people, scripts and AI agents (Claude Code via MCP) can all drive.
 - [How it works (overview)](#how-it-works-overview)
 - [Everyday commands](#everyday-commands)
 - [Remote control and debugging](#remote-control-and-debugging)
+- [DevBench: web UI, REST API, OS introspection](#devbench-web-ui-rest-api-os-introspection)
 - [Working with Claude Code](#working-with-claude-code)
 - [Writing 3DO programs](#writing-3do-programs)
 - [Repository layout](#repository-layout)
@@ -142,6 +143,7 @@ work: **[docs/how-it-works.md](docs/how-it-works.md)**.
 ./3do ctl <command> key=value     # remote-control the newest session (./3do ctl help)
 ./3do gdb <project> [--attach]    # gdb with symbols and sources, connected
 ./3do sessions                    # running sessions
+./3do devbench --open             # web UI + REST API + OS inspector on :3330
 ```
 
 **Window keys:** arrows = D-pad · **Z/X/C** = A/B/C · **Enter** = P (play/pause) ·
@@ -165,7 +167,7 @@ listens on **127.0.0.1:7330** (control) and **:2330** (gdb):
 ./3do ctl read_u32 addr=s_speed ; ./3do ctl write_u32 addr=s_speed value=5
 ./3do ctl reboot iso=projects/hello/build/hello.iso   # power-cycle with another disc
 ./3do ctl save_state name=before-boss ; ./3do ctl load_state name=before-boss
-./3do ctl help                           # all ~50 commands
+./3do ctl help                           # all ~70 commands
 ./3do gdb demo --attach                  # source-level gdb on the same, live session
 ```
 
@@ -185,6 +187,33 @@ The protocol is plain JSON lines (`{"cmd":"press","args":{"buttons":"A"}}`),
 so any language or agent harness can drive the emulator. Reference:
 [docs/emulator-harness.md](docs/emulator-harness.md).
 
+## DevBench: web UI, REST API, OS introspection
+
+```sh
+./3do devbench --open        # http://127.0.0.1:3330/
+```
+
+![DevBench memory map](docs/images/devbench-os.png)
+
+A browser workbench and plain REST API for everything above, plus a
+**Portfolio OS inspector**. It reads the kernel's item table straight out of
+emulated RAM, so it needs no code on the 3DO and works even when the program
+has crashed:
+
+- **Tasks** (state, priority, signals, the item each is blocked on, stacks,
+  CPU time, memory), **message ports** and queued messages, **semaphores**,
+  **devices / drivers / in-flight I/O requests**, **folios**, **screens and
+  bitmaps**, audio and filesystem items, and any **item** in raw detail
+- a **memory map** of every DRAM/VRAM page by owning task, and **snapshots +
+  diff** to find leaked items and see where CPU time went
+- **system-call snoop** (every SWI, by name), a sampling **profiler**, crash capture
+- live screen with an on-screen pad, breakpoints from the disassembly,
+  registers, a memory editor, the debug console and an API explorer
+
+The REST API (`POST /api/cmd/os_tasks`, `GET /api/screen.png`, `GET /api/events`
+for Server-Sent Events, `/api/openapi.json`) and the MCP server over HTTP
+(`/mcp`) are served from the same port. Details: [docs/devbench.md](docs/devbench.md).
+
 ## Working with Claude Code
 
 Open the repo with `claude`. [`.mcp.json`](.mcp.json) registers the **3do** MCP
@@ -197,9 +226,10 @@ the workflow and the 3DO gotchas. Ask for things like:
   `emu_watch`, `emu_regs`, `emu_disasm` and `gdb_run(["bt", "info locals"])`.
 - *"Take over the window I'm watching."* Claude uses `emu_attach`.
 
-~40 tools in all: sessions (boot/attach/restart/reset/reboot), run control,
+~50 tools in all: sessions (boot/attach/restart/reset/reboot), run control,
 input for every 3DO peripheral, screenshots/GIFs, logs, OS task list, symbols,
-breakpoints/watchpoints/tracepoints, memory, snapshots and gdb.
+breakpoints/watchpoints/tracepoints, memory, snapshots, gdb, and OS introspection
+(tasks, items, ports, semaphores, I/O, memory map, snapshot diffs, named syscalls, profiler).
 
 ## Writing 3DO programs
 
@@ -252,6 +282,7 @@ third_party/ bios/ .venv/ build/   created by setup, not committed
 | [docs/how-it-works.md](docs/how-it-works.md) | The full story: toolchain, emulator, sessions, debugger, symbols, OS introspection, MCP |
 | [docs/writing-programs.md](docs/writing-programs.md) | Tutorial: display, cels, input, fixed point, logging, assets, testing, debugging |
 | [docs/emulator-harness.md](docs/emulator-harness.md) | Reference: sessions, every control command, gdb, C API, memory map |
+| [docs/devbench.md](docs/devbench.md) | Web UI, REST API, SSE events, OS introspection (tasks, items, memory map, snapshots) |
 | [docs/3do-notes.md](docs/3do-notes.md) | Verified facts and gotchas about the 3DO hardware, OS and compiler |
 | [docs/architecture.md](docs/architecture.md) | Component diagram and design decisions |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Problems and fixes |

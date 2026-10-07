@@ -33,8 +33,12 @@ server = MCPServer(
         "emu_boot(project) -> emu_run_until('<log line>') -> emu_look / emu_press / emu_log. "
         "Sessions start paused (frames advance only when you step/press); emu_run makes them "
         "free-run. Debugging: emu_break('func'), emu_continue(max_frames=...), emu_regs, "
-        "emu_disasm, emu_watch('global'), emu_ps for the OS task list, gdb_run for "
-        "source-level gdb. emu_cmd('help') lists every low-level command. "
+        "emu_disasm, emu_watch('global'), gdb_run for source-level gdb. "
+        "OS introspection (Portfolio kernel structures read from RAM): os_overview, "
+        "os_inspect('tasks'|'items'|'ports'|'semaphores'|'devices'|'folios'|'graphics'|'audio'|'files'), "
+        "os_item(n), os_memory_map, os_snapshot + os_diff (leaks / what changed), emu_syscalls "
+        "(SWI snoop), emu_profile (where CPU time goes), emu_crashes. "
+        "emu_cmd('help') lists every low-level command. "
         "Prefer tdo_log() over kprintf() in guest code (kprintf garbles >3 args)."
     ),
 )
@@ -47,6 +51,14 @@ def _j(obj) -> str:
 
 
 def _s() -> SessionClient:
+    global _session
+    if _session is None:
+        # Served over HTTP by DevBench, or a session started elsewhere: use the newest one.
+        from .control import list_sessions
+        ss = list_sessions()
+        if ss:
+            _session = SessionClient(ss[-1]["control_port"])
+            _session.info = ss[-1]
     if _session is None:
         raise ValueError("no emulator session; call emu_boot(project) or emu_attach() first")
     if not _session.alive:
@@ -334,6 +346,84 @@ def emu_ps(what: str = "tasks") -> str:
     if what == "devices":
         return _j(_call("devices"))
     return _j(_call("ps"))
+
+
+# ================================================================== OS introspection
+
+OS_VIEWS = {"tasks": "os_tasks", "items": "os_items", "ports": "os_ports", "semaphores": "os_semaphores",
+            "devices": "os_devices", "folios": "os_folios", "graphics": "os_graphics",
+            "audio": "os_audio", "files": "os_files"}
+
+
+@server.tool()
+def os_overview() -> str:
+    """Portfolio OS summary: kernel base, current task, live item counts by type, DRAM/VRAM used/free."""
+    return _j(_call("os_summary"))
+
+
+@server.tool()
+def os_inspect(view: str = "tasks", type_filter: str = "") -> str:
+    """Walk an OS data structure. view: tasks (state, priority, parent, signals, wait item,
+    stacks, CPU ms, pages) | items (every item; type_filter e.g. 'Semaphore' or 'audio') |
+    ports (message queues) | semaphores (owner/waiters) | devices (devices, drivers, I/O
+    requests in flight) | folios | graphics (screens, bitmaps, VDLs) | audio | files."""
+    if view not in OS_VIEWS:
+        raise ValueError(f"view must be one of {sorted(OS_VIEWS)}")
+    if view == "items":
+        return _j(_call("os_items", type=type_filter or None))
+    return _j(_call(OS_VIEWS[view]))
+
+
+@server.tool()
+def os_item(item: int) -> str:
+    """One OS item by number, with type-specific detail and its raw node bytes."""
+    return _j(_call("os_item", item=item))
+
+
+@server.tool()
+def os_memory_map() -> str:
+    """DRAM/VRAM page map: which task group owns each page ('.' free, '?' kernel)."""
+    m = _call("os_memory")
+    lines = [m["legend"]]
+    for r in m["regions"]:
+        lines.append(f"{r['name']}: {r['pages']} x {r['page_size']} B pages, {r['free_pages']} free")
+        lines.append("  " + "".join(str(x)[-1] if isinstance(x, int) else x for x in r["map"]))
+    lines += [f"  {k}: {v}" for k, v in m["task_names"].items()]
+    return "\n".join(lines)
+
+
+@server.tool()
+def os_snapshot(name: str = "snap") -> str:
+    """Record OS state (items, tasks, free memory) to compare later with os_diff."""
+    return _j(_call("os_snapshot", name=name))
+
+
+@server.tool()
+def os_diff(name: str = "snap") -> str:
+    """What changed since os_snapshot(name): net item count per type/owner (positive = possible
+    leak), items created/deleted, CPU ms per task, page ownership and free memory deltas."""
+    return _j(_call("os_diff", a=name))
+
+
+@server.tool()
+def emu_syscalls(action: str = "fetch", max_entries: int = 60) -> str:
+    """System-call snoop. action: start | stop | fetch (counts by call name + latest calls
+    with caller and r0-r3)."""
+    if action in ("start", "stop"):
+        return _j(_call("swi_trace", enable=action == "start"))
+    return _j(_call("swi_calls", max_entries=max_entries))
+
+
+@server.tool()
+def emu_profile(frames: int = 300, top: int = 20) -> str:
+    """Statistical CPU profile over FRAMES frames: % of samples per function (OS/idle bucketed)."""
+    return _j(_call("profile", frames=frames, top=top))
+
+
+@server.tool()
+def emu_crashes() -> str:
+    """Aborts / exceptions the 3DO OS reported, with registers and log context."""
+    return _j(_call("crashes"))
 
 
 # ================================================================== debugging
