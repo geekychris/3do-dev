@@ -32,6 +32,9 @@ static struct {
 	ULONG len;                 /* latched length in bytes */
 	ULONG pos;                 /* 16.16 position in bytes */
 	int   on;
+	const signed char *zbase;  /* cache: is block zbase/zlen all zero? */
+	ULONG zlen;
+	int   zero;
 } s_ch[4];
 
 static Item   s_out = -1, s_sampler = -1;
@@ -142,6 +145,58 @@ mix_run(long *acc, int count, const signed char *b, ULONG pos, ULONG step, int v
 	return pos;
 }
 
+/* Rest of a chunk for a channel looping one block (pos < len, step <= len):
+ * the same sample-by-sample rule as mix() - wrap at the start of a sample,
+ * leave pos unwrapped after the last - without re-latching. An all-zero
+ * block (ProTracker's idle loop) only advances pos. Stores pos in s_ch[c].
+ * Returns n. */
+static int
+mix_loop(int c, long *acc, int i, int n, int filled, const signed char *b,
+         ULONG pos, ULONG step, ULONG len, int vol)
+{
+	ULONG bytes = len >> 16, k;
+	int silent = (vol == 0);
+	if (!silent) {
+		if (s_ch[c].zbase != b || s_ch[c].zlen != bytes) {
+			s_ch[c].zbase = b;
+			s_ch[c].zlen = bytes;
+			s_ch[c].zero = 1;
+			for (k = 0; k < bytes; k++)
+				if (b[k]) { s_ch[c].zero = 0; break; }
+		}
+		silent = s_ch[c].zero;
+	}
+	if (silent) {
+		/* only the position moves: value after the last sample is
+		 * ((pos + (r-1)*step) mod len) + step */
+		ULONG r = (ULONG)(n - i);
+		if (r) {
+			ULONG v = pos + (r - 1) * step;
+			if (v >= len)
+				v %= len;
+			pos = v + step;
+		}
+		/* zero contribution: only samples not yet holding data need it */
+		for (; i < n; i++)
+			if (i >= filled)
+				acc[i] = 0;
+		s_ch[c].pos = pos;
+		return n;
+	}
+	for (; i < n && i < filled; i++) {
+		if (pos >= len) pos -= len;
+		acc[i] += (long)b[pos >> 16] * vol;
+		pos += step;
+	}
+	for (; i < n; i++) {
+		if (pos >= len) pos -= len;
+		acc[i] = (long)b[pos >> 16] * vol;
+		pos += step;
+	}
+	s_ch[c].pos = pos;
+	return n;
+}
+
 /* Mix n samples of all channels into out. */
 static void
 mix(short *out, int n)
@@ -177,9 +232,36 @@ mix(short *out, int n)
 				}
 				if (pos >= len)
 					pos = 0;
+				/* Registers can't change during one mix() call, so every
+				 * later reload in it re-latches this same block: loop it
+				 * in place (identical result, no per-block overhead). The
+				 * step <= len case keeps the wrap rule simple. */
+				if (step <= len) {
+					for (; filled < i; filled++)   /* close any gap first */
+						acc[filled] = 0;
+					i = mix_loop(c, acc, i, n, filled, b, pos, step, len, vol);
+					if (i > filled)
+						filled = i;
+					pos = s_ch[c].pos;
+					break;
+				}
 			}
-			/* samples left before the block ends: mix them without checks */
-			k = (int)((len - pos + step - 1) / step);
+			/* samples left before the block ends: mix them without checks.
+			 * ProTracker loops tiny blocks (often one silent word), so
+			 * avoid the (software) division when only a few fit. */
+			{
+				ULONG rem = len - pos;
+				if (rem <= (step << 3)) {
+					ULONG acc_step = step;
+					k = 1;
+					while (acc_step < rem) {
+						acc_step += step;
+						k++;
+					}
+				} else {
+					k = (int)((rem + step - 1) / step);
+				}
+			}
 			end = (k < n - i) ? i + k : n;
 			if (vol == 0) {
 				/* silent but running: just advance (block reloads still happen) */

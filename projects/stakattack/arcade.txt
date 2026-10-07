@@ -1,0 +1,4 @@
+title=StakAttack
+origin=Amiga
+order=40
+desc=Falling-block puzzle with ProTracker music. Fit the pieces together and clear lines before the stack reaches the top. LEFT/RIGHT move, A rotate, B drop, DOWN soft drop, P pause.
