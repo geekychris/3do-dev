@@ -911,7 +911,10 @@ amiga_WritePixel(struct RastPort *rp, LONG x, LONG y)
 {
   if(x < rp->clip_x0 || x > rp->clip_x1 || y < rp->clip_y0 || y > rp->clip_y1)
     return -1;
-  plot(rp, x, y, rp->apen);
+  if(s_pix8 && !(rp->DrawMode & COMPLEMENT))
+    s_pix8[y * W + x] = rp->apen;      /* the common case, without plot() */
+  else
+    plot(rp, x, y, rp->apen);
   return 0;
 }
 
