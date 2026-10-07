@@ -1,0 +1,3 @@
+-xc
+-std=c99
+-I../../third_party/opera-libretro/libopera

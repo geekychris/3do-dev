@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential gdb-multiarch python3-venv
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Setup (devkit, toolchain image, emulator, BIOS, python env) + selftest
+        run: ./setup.sh
+
+      - name: Doctor
+        run: ./3do doctor
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: |
+            build/*.log
+            build/sessions/*.log
+            third_party/opera-libretro/build.log
+          if-no-files-found: ignore

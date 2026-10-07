@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "3do": {
+      "type": "stdio",
+      "command": "./.venv/bin/tdo-mcp",
+      "args": []
+    }
+  }
+}

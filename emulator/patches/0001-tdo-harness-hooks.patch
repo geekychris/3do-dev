@@ -1,0 +1,305 @@
+diff --git a/Makefile.common b/Makefile.common
+index 259a465..d92fa22 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -50,7 +50,8 @@ SOURCES_C += \
+         $(OPERA_DIR)/opera_state.c \
+         $(OPERA_DIR)/opera_vdlp.c \
+         $(OPERA_DIR)/opera_xbus.c \
+-        $(OPERA_DIR)/opera_xbus_cdrom_plugin.c
++        $(OPERA_DIR)/opera_xbus_cdrom_plugin.c \
++        $(OPERA_DIR)/opera_harness.c
+ 
+ ifeq ($(HAVE_LIBNX), 1)
+ 	SOURCES_C += \
+diff --git a/libopera/opera_3do.c b/libopera/opera_3do.c
+index cbd5949..3b969b7 100644
+--- a/libopera/opera_3do.c
++++ b/libopera/opera_3do.c
+@@ -28,6 +28,7 @@
+   *  Felix Lazarev
+   */
+ 
++#include "opera_harness.h"
+ #include "opera_arm.h"
+ #include "opera_cdrom.h"
+ #include "opera_clio.h"
+@@ -62,6 +63,9 @@ extern int flagtime;
+ 
+ static int field = 0;
+ static int32_t g_FRAME_CYCLE_REMAINDER = 0;
++/* tdo harness: a frame interrupted by the debugger resumes from here */
++static int      g_MIDFRAME      = 0;
++static uint32_t g_MIDFRAME_LINE = 0;
+ 
+ static uint32_t opera_3do_runtime_state_size(void);
+ static uint32_t opera_3do_runtime_state_save(void *data);
+@@ -74,6 +78,8 @@ opera_3do_reset_runtime_state(void)
+ {
+   field = 0;
+   g_FRAME_CYCLE_REMAINDER = 0;
++  g_MIDFRAME = 0;
++  tdo_harness_on_reset();
+ 
+   opera_clock_reset();
+   opera_pbus_reset();
+@@ -198,23 +204,33 @@ opera_3do_internal_frame(uint32_t  cycles_,
+   opera_xbus_tick();
+ }
+ 
+-void
++/* Returns 1 when a full frame was emulated, 0 when the tdo debugger
++   stopped the CPU part-way through (the frame resumes on the next call). */
++int
+ opera_3do_process_frame(void)
+ {
+   int32_t cnt;
+   uint32_t line;
+   uint32_t scanlines;
+ 
+-  if(flagtime)
+-    flagtime--;
+-
+-  cnt  = g_FRAME_CYCLE_REMAINDER;
+-  line = 0;
+   scanlines = opera_region_scanlines();
+-  while((cnt >= OPERA_3DO_CLOCK_STEP) && (line < scanlines))
++  cnt = g_FRAME_CYCLE_REMAINDER;
++  if(g_MIDFRAME)
++    {
++      line = g_MIDFRAME_LINE;
++      g_MIDFRAME = 0;
++    }
++  else
+     {
+-      opera_3do_internal_frame(OPERA_3DO_CLOCK_STEP,&line,field);
+-      cnt -= OPERA_3DO_CLOCK_STEP;
++      if(flagtime)
++        flagtime--;
++
++      line = 0;
++      while((cnt >= OPERA_3DO_CLOCK_STEP) && (line < scanlines))
++        {
++          opera_3do_internal_frame(OPERA_3DO_CLOCK_STEP,&line,field);
++          cnt -= OPERA_3DO_CLOCK_STEP;
++        }
+     }
+ 
+   while(line < scanlines)
+@@ -225,11 +241,19 @@ opera_3do_process_frame(void)
+           opera_madam_fsm_set(FSM_IDLE);
+         }
+ 
++      if(g_tdo_exec_hooks && tdo_harness_before_exec(opera_arm_harness_reg(15)))
++        {
++          g_MIDFRAME = 1;
++          g_MIDFRAME_LINE = line;
++          g_FRAME_CYCLE_REMAINDER = cnt;
++          return 0;
++        }
++
+       cnt += opera_arm_execute();
+       if(opera_cdrom_ode_restart_requested())
+         {
+           g_FRAME_CYCLE_REMAINDER = cnt;
+-          return;
++          return 1;
+         }
+       while((cnt >= OPERA_3DO_CLOCK_STEP) && (line < scanlines))
+         {
+@@ -240,6 +264,7 @@ opera_3do_process_frame(void)
+ 
+   g_FRAME_CYCLE_REMAINDER = cnt;
+   field = !field;
++  return 1;
+ }
+ 
+ typedef uint32_t (*opera_3do_state_load_cb_t)(const void *data_, uint32_t size_);
+diff --git a/libopera/opera_3do.h b/libopera/opera_3do.h
+index e9d3867..18d7f8d 100644
+--- a/libopera/opera_3do.h
++++ b/libopera/opera_3do.h
+@@ -15,6 +15,6 @@ int      opera_3do_init(opera_ext_interface_t callback);
+ void     opera_3do_destroy(void);
+ 
+ void     opera_3do_soft_reset(void);
+-void     opera_3do_process_frame(void);
++int      opera_3do_process_frame(void);
+ 
+ #endif /* LIBOPERA_3DO_H_INCLUDED */
+diff --git a/libopera/opera_arm.c b/libopera/opera_arm.c
+index 2f385dc..344a6ec 100644
+--- a/libopera/opera_arm.c
++++ b/libopera/opera_arm.c
+@@ -45,6 +45,7 @@
+ #include "opera_sport.h"
+ #include "opera_state.h"
+ #include "opera_swi_hle_0x5XXXX.h"
++#include "opera_harness.h"
+ 
+ #include <stdint.h>
+ #include <stdlib.h>
+@@ -1026,6 +1027,8 @@ static void decode_swi(const uint32_t op_)
+ {
+   CYCLES -= (SCYCLE + NCYCLE);  // +2S+1N
+ 
++  tdo_harness_on_swi(op_);
++
+   if(g_SWI_HLE)
+   {
+     decode_swi_hle(op_);
+@@ -1862,6 +1865,8 @@ mwritew(uint32_t const addr_,
+ 
+    if(addr < RAM_SIZE)
+    {
++      if(g_tdo_watch_active)
++        tdo_harness_on_access(addr,4,1);
+       opera_mem_write32(addr,val_);
+       return;
+    }
+@@ -1915,7 +1920,11 @@ mreadw(uint32_t const addr_)
+   uint32_t const addr = (addr_ & ~3);
+ 
+   if(addr < RAM_SIZE)
+-    return opera_mem_read32(addr);
++    {
++      if(g_tdo_watch_active)
++        tdo_harness_on_access(addr,4,0);
++      return opera_mem_read32(addr);
++    }
+ 
+   index = (addr ^ 0x03300000);
+   if(!(index & ~0xFFFFF))
+@@ -1974,6 +1983,8 @@ mwriteb(uint32_t const addr_,
+ 
+   if(addr_ < RAM_SIZE)
+   {
++    if(g_tdo_watch_active)
++      tdo_harness_on_access(addr_,1,1);
+     opera_mem_write8(addr_,val_);
+     return;
+   }
+@@ -1996,7 +2007,11 @@ mreadb(uint32_t const addr_)
+   int32_t index;
+ 
+   if(addr_ < RAM_SIZE)
+-    return opera_mem_read8(addr_);
++    {
++      if(g_tdo_watch_active)
++        tdo_harness_on_access(addr_,1,0);
++      return opera_mem_read8(addr_);
++    }
+ 
+   /* Standard ROM */
+   index = (addr_ ^ 0x03000003);
+@@ -2087,3 +2102,57 @@ opera_io_write(uint32_t const addr_,
+ {
+   mwritew(addr_,val_);
+ }
++
++/* ---- tdo harness accessors (see opera_harness.h) ---- */
++uint32_t
++opera_arm_harness_reg(int n_)
++{
++  return CPU.USER[n_ & 0xF];
++}
++
++uint32_t
++opera_arm_harness_cpsr(void)
++{
++  return CPU.CPSR;
++}
++
++void
++opera_arm_harness_set_reg(int n_, uint32_t v_)
++{
++  CPU.USER[n_ & 0xF] = v_;
++}
++
++void
++opera_arm_harness_set_cpsr(uint32_t v_)
++{
++  arm_cpsr_set(v_);   /* swaps register banks if the mode changes */
++}
++
++/* Side-effect free byte read: DRAM/VRAM and ROM only. */
++uint32_t
++opera_arm_harness_peek8(uint32_t  addr_,
++                        int      *ok_)
++{
++  uint32_t index;
++
++  *ok_ = 1;
++  if(addr_ < RAM_SIZE)
++    return opera_mem_read8(addr_);
++
++  index = (addr_ ^ 0x03000003);
++  if(!(index & ~ROM1_SIZE_MASK))
++    return ROM[index];
++
++  *ok_ = 0;
++  return 0;
++}
++
++int
++opera_arm_harness_poke8(uint32_t addr_,
++                        uint8_t  val_)
++{
++  if(addr_ >= RAM_SIZE)
++    return 0;
++  opera_mem_write8(addr_,val_);
++  return 1;
++}
+diff --git a/libopera/opera_madam.c b/libopera/opera_madam.c
+index 007980a..9338f93 100644
+--- a/libopera/opera_madam.c
++++ b/libopera/opera_madam.c
+@@ -28,6 +28,7 @@
+   *  Felix Lazarev
+   */
+ 
++#include "opera_harness.h"
+ #include "boolean.h"
+ #include "endianness.h"
+ #include "flags.h"
+@@ -932,6 +933,7 @@ opera_madam_poke(uint32_t addr_,
+   switch(addr_)
+     {
+     case MADAM_REG_ID:
++      tdo_harness_debug_putc((char)val_);
+       if(KPRINT)
+         fputc(val_,stderr);
+       return;
+diff --git a/libretro.c b/libretro.c
+index 27e7f9d..3f6a1f6 100644
+--- a/libretro.c
++++ b/libretro.c
+@@ -17,6 +17,7 @@
+ #include "libopera/opera_3do.h"
+ #include "libopera/opera_arm.h"
+ #include "libopera/opera_bios.h"
++#include "libopera/opera_harness.h"
+ #include "libopera/opera_cdrom.h"
+ #include "libopera/opera_clock.h"
+ #include "libopera/opera_core.h"
+@@ -755,7 +756,8 @@ retro_run(void)
+ 
+   lr_input_update(g_OPTS.active_devices);
+ 
+-  opera_3do_process_frame();
++  if(opera_3do_process_frame())
++    tdo_harness_on_frame();
+   if(ode_reset_if_requested())
+     return;
+ 
+diff --git a/link.T b/link.T
+index b0c262d..e48624e 100644
+--- a/link.T
++++ b/link.T
+@@ -1,5 +1,6 @@
+ {
+    global: retro_*;
++    tdo_*;
+    local: *;
+ };
+ 

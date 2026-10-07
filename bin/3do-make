@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Run `make` for a 3DO project using the devkit toolchain.
+#
+#   bin/3do-make [-C project_dir] [make args...]
+#
+# Default project dir is the current directory. Runs natively on x86_64 Linux
+# when the i386 compilers execute; otherwise inside the toolchain container.
+# Force a mode with TDO_NATIVE=1 or TDO_NATIVE=0.
+source "$(dirname "$0")/../scripts/lib.sh"
+
+proj="$PWD"
+if [ "${1:-}" = "-C" ]; then proj="$(cd "$2" && pwd)"; shift 2; fi
+[ -f "$proj/Makefile" ] || die "no Makefile in $proj"
+[ -d "$DEVKIT_DIR/bin" ] || die "devkit missing – run ./setup.sh"
+
+# armlink names ELF sections after the output file, which breaks gdb's
+# relocation of globals; rename them (see tools/tdo/src/tdo/elffix.py).
+post_build() {
+  local py="$TDO_ROOT/.venv/bin/python"
+  [ -x "$py" ] || return 0
+  local elfs=("$proj"/build/*.elf)
+  [ -e "${elfs[0]}" ] || return 0
+  PYTHONPATH="$TDO_ROOT/tools/tdo/src" "$py" -m tdo.elffix "${elfs[@]}" >/dev/null
+}
+
+native="${TDO_NATIVE:-auto}"
+if [ "$native" = auto ]; then
+  native=0
+  if [ "$(host_os)" = linux ] && [ "$(host_arch)" = x86_64 ] \
+     && "$DEVKIT_DIR/bin/compiler/linux/armcc" 2>&1 | grep -q Norcroft; then
+    native=1
+  fi
+fi
+
+if [ "$native" = 1 ]; then
+  export TDO_DEVKIT_PATH="$DEVKIT_DIR" TDO_ROOT
+  export PATH="$DEVKIT_DIR/bin/compiler/linux:$DEVKIT_DIR/bin/tools/linux:$PATH"
+  make -C "$proj" "$@"
+  post_build
+  exit 0
+fi
+
+# Container mode: mount the repo at /work. Projects outside the repo are
+# mounted at /project.
+mounts=(-v "$TDO_ROOT:/work")
+case "$proj/" in
+  "$TDO_ROOT"/*) cdir="/work/${proj#"$TDO_ROOT"/}" ;;
+  *)             cdir="/project"; mounts+=(-v "$proj:/project") ;;
+esac
+
+tty=(); [ -t 0 ] && [ -t 1 ] && tty=(-t)
+rc=0
+docker run --rm "${tty[@]}" --platform linux/amd64 \
+  -u "$(id -u):$(id -g)" "${mounts[@]}" \
+  -e TDO_ROOT=/work -e TDO_DEVKIT_PATH=/work/third_party/3do-devkit \
+  -w "$cdir" "$TOOLCHAIN_IMAGE" make "$@" || rc=$?
+[ "$rc" -eq 0 ] && post_build
+
+if [ "$rc" -ne 0 ]; then
+  # Most common non-code failure: the Docker VM restarted and lost its QEMU
+  # binfmt registration, so the i386 compilers no longer execute.
+  if ! docker run --rm --platform linux/amd64 "${mounts[@]}" "$TOOLCHAIN_IMAGE" \
+       sh -c 'armcc 2>&1 | grep -q Norcroft' >/dev/null 2>&1; then
+    warn "the devkit compilers can't execute in Docker (x86 emulation missing?)"
+    warn "fix: ./scripts/build-toolchain-image.sh"
+  fi
+fi
+exit "$rc"

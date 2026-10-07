@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# 3DO dev environment – single entry point.
+#
+#   ./3do setup                 install everything (idempotent)
+#   ./3do doctor                check the environment
+#   ./3do new <name>            create projects/<name> from the template
+#   ./3do build <project>       compile + pack + sign ISO -> projects/<p>/build/<p>.iso
+#   ./3do run <project|iso> [--port 7330] [--gdb-port 2330]   window + remote control + gdb
+#   ./3do serve <project|iso> [--window] [--mode running]      headless session server
+#   ./3do gdb <project> [--attach] [--window]                  gdb with symbols, connected
+#   ./3do ctl [--port N] <cmd> [key=value ...]                 remote-control a session (ctl help)
+#   ./3do sessions                                             list running sessions
+#   ./3do test <project> [tdo test args]                  headless test run
+#   ./3do shot <project|iso> [tdo shot args]               headless screenshot
+#   ./3do log <project|iso> [--frames N]                   debug console dump
+#   ./3do clean <project>
+#   ./3do selftest              build + test every project (CI entry point)
+#   ./3do tdo ...               raw access to the tdo CLI
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+source "$ROOT/scripts/lib.sh"
+
+TDO="$ROOT/.venv/bin/tdo"
+
+# Build quietly; show the compiler output only if it fails.
+quiet_build() {
+  mkdir -p "$ROOT/build"
+  local log="$ROOT/build/last-build.log"
+  "$ROOT/bin/3do-make" -C "$1" >"$log" 2>&1 || { cat "$log"; die "build failed"; }
+}
+need_tdo() { [ -x "$TDO" ] || die "python env missing – run ./3do setup"; }
+
+# project name or ISO path -> ISO path
+iso_of() {
+  local t="$1"
+  case "$t" in
+    *.iso|*.bin|*.cue|*.chd) [ -f "$t" ] || die "$t not found"; echo "$t"; return ;;
+  esac
+  local d="$ROOT/projects/$t"
+  [ -f "$d/Makefile" ] || die "no project '$t' (see: ls projects/)"
+  local iso
+  iso="$(ls "$d"/build/*.iso 2>/dev/null | head -1 || true)"
+  if [ -z "$iso" ]; then
+    "$ROOT/bin/3do-make" -C "$d" >&2
+    iso="$(ls "$d"/build/*.iso | head -1)"
+  fi
+  echo "$iso"
+}
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  setup)   exec "$ROOT/setup.sh" "$@" ;;
+  doctor)  exec "$ROOT/scripts/doctor.sh" "$@" ;;
+  build)   [ $# -ge 1 ] || die "usage: ./3do build <project>"
+           p="$1"; shift; exec "$ROOT/bin/3do-make" -C "$ROOT/projects/$p" "$@" ;;
+  clean)   [ $# -ge 1 ] || die "usage: ./3do clean <project>"
+           exec "$ROOT/bin/3do-make" -C "$ROOT/projects/$1" clean ;;
+  ctl|sessions)
+           need_tdo; exec "$TDO" "$cmd" "$@" ;;
+  run|shot|log|serve|gdb)
+           need_tdo; [ $# -ge 1 ] || die "usage: ./3do $cmd <project|iso>"
+           t="$1"; shift
+           # rebuild projects so you always run what you just edited
+           if [ -f "$ROOT/projects/$t/Makefile" ]; then quiet_build "$ROOT/projects/$t"; fi
+           exec "$TDO" "$cmd" "$(iso_of "$t")" "$@" ;;
+  test)    need_tdo; [ $# -ge 1 ] || die "usage: ./3do test <project>"
+           t="$1"; shift
+           if [ -f "$ROOT/projects/$t/Makefile" ]; then
+             quiet_build "$ROOT/projects/$t"
+             # projects can ship a host-side test script with richer checks
+             if [ -f "$ROOT/projects/$t/test.py" ] && [ $# -eq 0 ]; then
+               exec "$ROOT/.venv/bin/python" "$ROOT/projects/$t/test.py"
+             fi
+           fi
+           exec "$TDO" test "$(iso_of "$t")" "$@" ;;
+  new)     [ $# -ge 1 ] || die "usage: ./3do new <name>"
+           name="$1"
+           [[ "$name" =~ ^[a-z][a-z0-9_]*$ ]] || die "name must be lowercase [a-z0-9_]"
+           dest="$ROOT/projects/$name"
+           [ ! -e "$dest" ] || die "$dest already exists"
+           cp -R "$ROOT/sdk/template" "$dest"
+           for f in Makefile src/main.c test.py; do
+             sed -i.bak "s/__NAME__/$name/g" "$dest/$f" && rm -f "$dest/$f.bak"
+           done
+           ok "created projects/$name  –  ./3do run $name" ;;
+  selftest)
+           need_tdo
+           mkdir -p "$ROOT/build"
+           fails=0
+           for d in "$ROOT"/projects/*/; do
+             p="$(basename "$d")"; [ -f "$d/Makefile" ] || continue
+             step "$p"
+             if ! "$ROOT/bin/3do-make" -C "$d" >"$ROOT/build/selftest-$p.log" 2>&1; then
+               warn "build failed (build/selftest-$p.log)"; fails=$((fails+1)); continue
+             fi
+             "$0" test "$p" || fails=$((fails+1))
+           done
+           step "remote control / debugger / MCP"
+           "$ROOT/.venv/bin/python" "$ROOT/tools/tdo/tests/test_remote.py" >"$ROOT/build/selftest-remote.log" 2>&1 \
+             && ok "remote control suite ($(grep -c '  PASS' "$ROOT/build/selftest-remote.log") checks)" \
+             || { tail -30 "$ROOT/build/selftest-remote.log"; warn "remote control suite failed"; fails=$((fails+1)); }
+           [ "$fails" -eq 0 ] && ok "all projects pass" || die "$fails project(s) failed" ;;
+  tdo)     need_tdo; exec "$TDO" "$@" ;;
+  help|-h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *)       die "unknown command '$cmd' (./3do help)" ;;
+esac
