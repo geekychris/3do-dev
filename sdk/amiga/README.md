@@ -72,7 +72,10 @@ projects/<game>/
    Dash, Uranus Lander, Jump Quest): keep `main.c` and put its AmigaOS-only
    parts (OpenLibrary, OpenScreen, IDCMP window, Ctrl-C, `WaitTOF()` before the
    swap - `gfx_swap()` already paces) under `#ifndef AMIGA3DO`, then provide
-   `gfx_3do.c` / `input_3do.c` for the game's own gfx/input API. If the game's
+   `gfx_3do.c` / `input_3do.c` for the game's own gfx/input API.
+   `python3 sdk/amiga/tools/amigamain.py src/main.c <game>` does the usual
+   main.c conversions (display functions, libraries, IDCMP loop, Ctrl-C,
+   back buffer, WaitTOF, DH2: paths) and lists what it changed. If the game's
    functions are called `gfx_init`/`gfx_swap` like the layer's, rename them
    with `#define gfx_init xx_gfx_init` in the game header (and call the layer
    from a file that doesn't include that header).
