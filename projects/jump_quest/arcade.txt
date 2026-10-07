@@ -1,0 +1,4 @@
+title=Jump Quest
+origin=Amiga
+order=100
+desc=Side-scrolling platformer for one or two players taking turns. Pick RJ or Dale, jump on the enemies and reach the end of three levels. D-pad moves, A jumps.
