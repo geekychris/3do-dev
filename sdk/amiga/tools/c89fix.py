@@ -166,7 +166,9 @@ def fix(path):
             if top[1]:
                 ind, typ = m.group("ind"), (m.group("type") + m.group("ptr").rstrip())
                 decls = split_top(m.group("rest"))
-                if m.group("const") or "static" in line or any("{" in d for d in decls) or \
+                # "const T *p = x" is a pointer to const: p itself can be assigned
+                const_object = m.group("const") and "*" not in m.group("ptr")
+                if const_object or "static" in line or any("{" in d for d in decls) or \
                         any("[" in d.split("=")[0] and "=" in d for d in decls):
                     manual.append((i + 1, line.strip()))
                 else:
@@ -178,7 +180,7 @@ def fix(path):
                         names.append(stars + nm)          # arrays keep their [N]
                         if init.strip():
                             assigns.append(f"{nm} = {init.strip()};")
-                    base = m.group("type")
+                    base = (m.group("const") or "") + m.group("type")
                     ptr = m.group("ptr").replace(" ", "")
                     decl = f"{base} " + ", ".join(ptr + n for n in names) + ";"
                     hoists.setdefault(top[2], []).append((top[3], decl))

@@ -1,0 +1,4 @@
+title=RJ Birthday
+origin=Amiga
+order=170
+desc=Birthday party adventure with ProTracker music. Run around the party rooms, greet the guests, find the cake. D-pad moves, A acts, B help, C guest list.
