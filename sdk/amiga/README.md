@@ -68,11 +68,23 @@ projects/<game>/
      tests and agents rely on these lines.
    - On exit: free what you allocated and call `gfx_exit()`, then return from
      `main`. The arcade menu runs again after the game exits, so leaks add up.
+   *Alternative for games whose `main.c` holds the game logic* (Bullion
+   Dash, Uranus Lander, Jump Quest): keep `main.c` and put its AmigaOS-only
+   parts (OpenLibrary, OpenScreen, IDCMP window, Ctrl-C, `WaitTOF()` before the
+   swap - `gfx_swap()` already paces) under `#ifndef AMIGA3DO`, then provide
+   `gfx_3do.c` / `input_3do.c` for the game's own gfx/input API. If the game's
+   functions are called `gfx_init`/`gfx_swap` like the layer's, rename them
+   with `#define gfx_init xx_gfx_init` in the game header (and call the layer
+   from a file that doesn't include that header).
 3. Fix what Norcroft (C89) rejects: **declarations after statements**,
    `for (int i ...)`, `inline`, compound literals `(T){...}`, variadic macros,
    and `long long` arithmetic (it compiles but the runtime helpers are missing:
    rewrite with 32-bit maths). `//` comments are fine. Plain `char` is
    unsigned, so use `BYTE`/`signed char` for signed samples.
+   `python3 sdk/amiga/tools/c89fix.py src/*.c` hoists late declarations and
+   `for (int ...)` automatically and lists what it can't move; compound
+   literals and other cases still need hand edits. The 3DO headers define
+   `Item`; a game type with that name needs `#define Item xx_Item`.
 4. Height: screens are 256 lines tall and are scaled to 240 by default. Use
    `gfx_set_view(GFX_VIEW_CROP, y0)` to show 240 lines 1:1 instead, if the game
    leaves the top/bottom 16 lines empty.
@@ -81,7 +93,36 @@ projects/<game>/
    `projects/rock_blaster/test.py`) and make `./3do test <game>` pass.
    `./3do profile <game> --press P@400` shows where time goes if it's slow.
 
+7. Audio: code that writes `custom.aud[n]` keeps working; replace writes to
+   `custom.dmacon` / `DMACON` with `paula_dmacon(...)` and point raw register
+   macros (`0xDFF0A0`...) at `&custom.aud[n]`. Data files go in
+   `takeme/<game>/` and load via `PROGDIR:` after `amiga_set_progdir()`.
+   Don't ship third-party music (covers of commercial songs): load it if
+   present and run with sound effects only otherwise.
+
 ## Performance notes (ARM60 @ 12.5 MHz)
+
+The ARM60 has no cache and no divide or halfword instructions, so code that
+the Amiga's blitter made cheap (hundreds of small RectFills, per-pixel
+WritePixel loops, redrawing static tiles every frame) is the usual problem.
+In order of preference:
+
+- **Measure**: `./3do profile <game> --press A@450`.
+- **Layer helpers**: `gfx_sprite_make`/`gfx_sprite_draw` (pre-rendered
+  run-length sprites/glyphs instead of per-pixel drawing), `gfx_fill_columns`
+  (height-map scenery as row spans), `gfx_blit8`.
+- **Cache what doesn't change**: if a background depends only on a few
+  inputs (tile ids, scroll column), draw it once per change and `memcpy` it
+  afterwards (see bullion_dash/render.c, jump_quest/level.c,
+  pea_shooter_blast/draw.c). Verify the cache by rendering both ways in a
+  debug build and comparing every pixel.
+- **Remove divisions** from per-column/per-pixel loops (step indices, tables).
+- **`gfx_steps()`** when it still can't draw at 50 fps: run the game logic as
+  many 50 Hz steps as are due, draw once, and test with
+  `check_game_speed()` - the game keeps its real speed at a lower frame rate.
+- The C library `memmove` is not safe for overlapping copies to a higher
+  address; copy through a temporary buffer.
+
 
 - A full-screen `SetRast`/`RectFill` clear costs about a quarter of a 50 fps
   frame. Don't clear more than once per frame.

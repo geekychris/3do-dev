@@ -533,8 +533,32 @@ Draw(struct RastPort *rp, LONG x1, LONG y1)
         }
       return;
     }
-  if(!clip_line(rp, &x0, &y0, &x1, &y1))
-    return;
+  if(x0 < rp->clip_x0 || x0 > rp->clip_x1 || y0 < rp->clip_y0 || y0 > rp->clip_y1 ||
+     x1 < rp->clip_x0 || x1 > rp->clip_x1 || y1 < rp->clip_y0 || y1 > rp->clip_y1)
+    {
+      /* crosses the clip edge: rasterise the whole line and drop the
+       * outside pixels, like the Amiga - clipping the endpoints first
+       * would start Bresenham elsewhere and shift the visible pixels */
+      LONG ox0 = x0, oy0 = y0, ox1 = x1, oy1 = y1;
+      if(!clip_line(rp, &ox0, &oy0, &ox1, &oy1))
+        return;                     /* entirely outside */
+      dx = x1 - x0;
+      dy = y1 - y0;
+      if(dx < 0) { dx = -dx; sx = -1; }
+      if(dy < 0) { dy = -dy; sy = -1; }
+      err = dx - dy;
+      for(;;)
+        {
+          if(x0 >= rp->clip_x0 && x0 <= rp->clip_x1 && y0 >= rp->clip_y0 && y0 <= rp->clip_y1)
+            plot(rp, x0, y0, pen);
+          if(x0 == x1 && y0 == y1)
+            break;
+          e2 = err * 2;
+          if(e2 > -dy) { err -= dy; x0 += sx; }
+          if(e2 <  dx) { err += dx; y0 += sy; }
+        }
+      return;
+    }
   dx = x1 - x0;
   dy = y1 - y0;
   if(dx < 0) { dx = -dx; sx = -1; }
