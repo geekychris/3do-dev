@@ -61,6 +61,7 @@ def fix(path):
     hoists = {}          # line index -> list of declarations to insert after it
     manual = []
     in_comment = False
+    prev_end = ";"          # last character of the previous code line
     out = list(lines)
     for i, line in enumerate(lines):
         code = line
@@ -76,12 +77,15 @@ def fix(path):
         bare = strip_code(code).strip()
         if not bare or bare.startswith("#"):
             continue
+        # a declaration can only start a new statement: after ; { } or a label
+        starts_statement = prev_end in ";{}:"
+        prev_end = bare[-1]
         top = stack[-1] if stack else None
         if top is not None and top[4]:
             top = None          # inside a struct body / initializer: leave alone
         m = DECL.match(line)
         is_decl = False
-        if m and top is not None and m.group("type").split()[-1] not in KEYWORDS \
+        if m and starts_statement and top is not None and m.group("type").split()[-1] not in KEYWORDS \
                 and not re.match(r"\s*(return|else|case)\b", line):
             first = split_top(m.group("rest"))[0]
             # "Foo bar = ..." / "Foo *bar" / "Foo bar;" but not "x = y" or calls "foo(bar);"
