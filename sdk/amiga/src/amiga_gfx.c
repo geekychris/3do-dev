@@ -601,6 +601,44 @@ RectFill(struct RastPort *rp, LONG x0, LONG y0, LONG x1, LONG y1)
         }
       return;
     }
+  if(s_pix8 && !(rp->DrawMode & COMPLEMENT) && x1 - x0 < 128)
+    {
+      /* medium rectangles (tiles, cells): inline stores per row instead of
+       * span() -> memset() calls; 32-bit stores once aligned */
+      UBYTE pen = (UBYTE)rp->apen;
+      ULONG pw = (ULONG)pen * 0x01010101UL;
+      UBYTE *row = s_pix8 + y0 * W + x0;
+      LONG n = x1 - x0 + 1, h = y1 - y0 + 1;
+      while(h--)
+        {
+          UBYTE *p = row;
+          LONG k = n;
+          while(((ULONG)p & 3) && k)
+            {
+              *p++ = pen;
+              k--;
+            }
+          {
+            ULONG *q = (ULONG *)p;
+            while(k >= 16)
+              {
+                q[0] = pw; q[1] = pw; q[2] = pw; q[3] = pw;
+                q += 4;
+                k -= 16;
+              }
+            while(k >= 4)
+              {
+                *q++ = pw;
+                k -= 4;
+              }
+            p = (UBYTE *)q;
+          }
+          while(k--)
+            *p++ = pen;
+          row += W;
+        }
+      return;
+    }
   for(y = y0; y <= y1; y++)
     span(rp, x0, x1, y, rp->apen);
 }
