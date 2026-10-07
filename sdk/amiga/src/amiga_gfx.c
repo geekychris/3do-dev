@@ -1217,6 +1217,88 @@ InitBitMap(struct BitMap *bm, LONG depth, LONG width, LONG height)
 PLANEPTR AllocRaster(ULONG w, ULONG h) { return (PLANEPTR)calloc(1, ((w + 15) >> 4) * 2 * h); }
 void FreeRaster(PLANEPTR p, ULONG w, ULONG h) { (void)w; (void)h; free(p); }
 
+/* ---- planar BitMap -> chunky cache (for BltBitMapRastPort) ---- */
+#define CHUNKY_SLOTS 8
+static struct {
+  const struct BitMap *bm;
+  PLANEPTR planes[8];
+  ULONG sum;
+  UBYTE *pix;
+  ULONG size;
+} s_chunky[CHUNKY_SLOTS];
+static int s_chunky_next;
+
+static ULONG
+planes_sum(const struct BitMap *bm)
+{
+  ULONG sum = 0x9E3779B9UL, n = (ULONG)bm->BytesPerRow * bm->Rows;
+  int d;
+  for(d = 0; d < bm->Depth && d < 8; d++)
+    {
+      const UBYTE *p = bm->Planes[d];
+      ULONG i;
+      if(!p)
+        continue;
+      for(i = 0; i < n; i++)
+        sum = (sum << 5 | sum >> 27) ^ p[i];
+    }
+  return sum;
+}
+
+static const UBYTE *
+chunky_of(const struct BitMap *bm)
+{
+  int i, d, slot = -1;
+  ULONG sum, size, x, y, bw;
+  if(!bm || bm->Depth < 1 || bm->Depth > 8 || bm->BytesPerRow == 0 || bm->Rows == 0)
+    return 0;
+  sum = planes_sum(bm);
+  for(i = 0; i < CHUNKY_SLOTS; i++)
+    if(s_chunky[i].bm == bm && s_chunky[i].pix)
+      {
+        for(d = 0; d < 8; d++)
+          if(s_chunky[i].planes[d] != (d < bm->Depth ? bm->Planes[d] : 0))
+            break;
+        if(d == 8 && s_chunky[i].sum == sum)
+          return s_chunky[i].pix;
+        slot = i;
+        break;
+      }
+  bw = (ULONG)bm->BytesPerRow * 8;
+  size = bw * bm->Rows;
+  if(slot < 0)
+    {
+      slot = s_chunky_next;
+      s_chunky_next = (s_chunky_next + 1) % CHUNKY_SLOTS;
+    }
+  if(s_chunky[slot].pix && s_chunky[slot].size != size)
+    {
+      FreeMem(s_chunky[slot].pix, s_chunky[slot].size);
+      s_chunky[slot].pix = 0;
+    }
+  if(!s_chunky[slot].pix)
+    {
+      s_chunky[slot].pix = (UBYTE *)AllocMem(size, 0);
+      s_chunky[slot].size = size;
+      if(!s_chunky[slot].pix)
+        return 0;
+    }
+  for(y = 0; y < bm->Rows; y++)
+    for(x = 0; x < bw; x++)
+      {
+        int pen = 0;
+        for(d = 0; d < bm->Depth; d++)
+          if(bm->Planes[d] && (bm->Planes[d][y * bm->BytesPerRow + (x >> 3)] & (0x80 >> (x & 7))))
+            pen |= 1 << d;
+        s_chunky[slot].pix[y * bw + x] = (UBYTE)pen;
+      }
+  s_chunky[slot].bm = bm;
+  for(d = 0; d < 8; d++)
+    s_chunky[slot].planes[d] = d < bm->Depth ? bm->Planes[d] : 0;
+  s_chunky[slot].sum = sum;
+  return s_chunky[slot].pix;
+}
+
 void
 BltBitMapRastPort(const struct BitMap *src, LONG sx, LONG sy, struct RastPort *rp,
                   LONG dx, LONG dy, LONG w, LONG h, ULONG minterm)
@@ -1224,6 +1306,27 @@ BltBitMapRastPort(const struct BitMap *src, LONG sx, LONG sy, struct RastPort *r
   LONG x, y;
   int d;
   (void)minterm;
+  if(s_pix8 && !(rp->DrawMode & COMPLEMENT))
+    {
+      /* planar -> chunky once per bitmap (re-checked by a checksum of the
+       * plane data, so bitmaps a game redraws are converted again), then
+       * plain clipped row copies */
+      const UBYTE *chunky = chunky_of(src);
+      if(chunky)
+        {
+          LONG bw = (LONG)src->BytesPerRow * 8, x0 = 0, y0 = 0, x1 = w, y1 = h;
+          if(dx < rp->clip_x0) x0 = rp->clip_x0 - dx;
+          if(dy < rp->clip_y0) y0 = rp->clip_y0 - dy;
+          if(dx + x1 - 1 > rp->clip_x1) x1 = rp->clip_x1 - dx + 1;
+          if(dy + y1 - 1 > rp->clip_y1) y1 = rp->clip_y1 - dy + 1;
+          if(sx + x1 > bw) x1 = bw - sx;
+          if(sy + y1 > src->Rows) y1 = src->Rows - sy;
+          for(y = y0; y < y1; y++)
+            if(x1 > x0)
+              memcpy(s_pix8 + (dy + y) * W + dx + x0, chunky + (sy + y) * bw + sx + x0, x1 - x0);
+          return;
+        }
+    }
   for(y = 0; y < h; y++)
     for(x = 0; x < w; x++)
       {
