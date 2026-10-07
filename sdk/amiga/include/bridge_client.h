@@ -11,6 +11,10 @@
 
 #include "amiga_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define AB_TYPE_I32 0
 #define AB_TYPE_U32 1
 #define AB_TYPE_I16 2
@@ -34,5 +38,9 @@ void ab_register_memregion(const char *name, void *ptr, ULONG size);
 void ab_heartbeat(void);
 void ab_push_var(const char *name);
 int  ab_is_connected(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

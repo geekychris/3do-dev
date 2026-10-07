@@ -7,6 +7,10 @@
 
 #include "amiga_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef UBYTE *PLANEPTR;
 
 /* The shims don't use these; they exist so pointers to them compile. */
@@ -153,5 +157,9 @@ void  WaitBlit(void);
 void  OwnBlitter(void);
 void  DisownBlitter(void);
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

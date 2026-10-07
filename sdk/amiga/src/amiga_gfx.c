@@ -246,10 +246,14 @@ gfx_exit(void)
 void gfx_set_view(int mode, int y0) { s_view = mode; s_view_y0 = y0; update_view(); }
 void gfx_set_rate(int hz)          { s_rate = (hz == 60) ? 60 : 50; }
 ULONG gfx_frame(void)              { return g_amiga_frame; }
+UWORD gfx_pen_rgb16(int pen)       { return s_pal[pen & 255]; }
 
 static u32   s_step_base;
 static ULONG s_steps_done, s_steps_logged;
 static int   s_steps_started;
+static int   s_max_steps = 4;
+
+void gfx_set_max_steps(int n) { s_max_steps = n < 1 ? 1 : n; }
 
 int
 gfx_steps(void)
@@ -269,10 +273,10 @@ gfx_steps(void)
   n = (int)(due - s_steps_done);
   if(n < 1)
     n = 1;
-  if(n > 4)
+  if(n > s_max_steps)
     {
       /* far behind (loading, debugger): don't fast-forward, re-sync */
-      n = 4;
+      n = s_max_steps;
       s_step_base = now;
       s_steps_done = 0;
       due = 0;
@@ -406,6 +410,14 @@ span(struct RastPort *rp, LONG x0, LONG x1, LONG y, int pen)
               n--;
             }
           q = (ULONG *)p;
+          if(n >= 64)
+            {
+              /* long spans (sky, panels): STM fill, 32 pixels per block */
+              ULONG blocks = (ULONG)n >> 5;
+              amiga_fill64(q, cc, blocks);
+              q += blocks << 4;
+              n &= 31;
+            }
           while(n >= 8)
             {
               q[0] = cc; q[1] = cc; q[2] = cc; q[3] = cc;
@@ -1112,18 +1124,39 @@ Text(struct RastPort *rp, CONST_STRPTR str, ULONG count)
       if(s_pix16 && !(rp->DrawMode & COMPLEMENT) &&
          x >= rp->clip_x0 && x + 7 <= rp->clip_x1 && top >= rp->clip_y0 && top + 7 <= rp->clip_y1)
         {
-          /* 16-bit mode: whole glyph on screen, direct stores (no plot()) */
+          /* 16-bit mode: whole glyph on screen. Aligned: each glyph row is
+           * four 32-bit stores built from per-pixel-pair masks */
           UWORD F = s_pal[fg & 255], B = s_pal[bg & 255];
           UWORD *d = s_pix16 + top * W + x;
-          for(row = 0; row < 8; row++, d += W)
+          if(!((ULONG)d & 3))
             {
-              unsigned bits = g[row];
-              for(col = 0; col < 8; col++)
-                if((bits >> col) & 1)
-                  d[col] = F;
-                else if(jam2)
-                  d[col] = B;
+              static ULONG pairmask[4] = { 0x00000000UL, 0xFFFF0000UL, 0x0000FFFFUL, 0xFFFFFFFFUL };
+              ULONG FF = ((ULONG)F << 16) | F, BB = ((ULONG)B << 16) | B;
+              for(row = 0; row < 8; row++, d += W)
+                {
+                  unsigned bits = g[row];
+                  ULONG *q = (ULONG *)d;
+                  int k;
+                  if(!jam2 && !bits)
+                    continue;
+                  for(k = 0; k < 4; k++, bits >>= 2)
+                    {
+                      /* pixel 2k is the high half (big endian), LSB = leftmost */
+                      ULONG m = pairmask[((bits & 1) ? 1 : 0) | ((bits & 2) ? 2 : 0)];
+                      q[k] = jam2 ? ((m & FF) | (~m & BB)) : ((q[k] & ~m) | (m & FF));
+                    }
+                }
             }
+          else
+            for(row = 0; row < 8; row++, d += W)
+              {
+                unsigned bits = g[row];
+                for(col = 0; col < 8; col++)
+                  if((bits >> col) & 1)
+                    d[col] = F;
+                  else if(jam2)
+                    d[col] = B;
+              }
           rp->cp_x = (WORD)(rp->cp_x + 8);
           continue;
         }

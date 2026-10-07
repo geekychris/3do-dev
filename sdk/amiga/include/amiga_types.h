@@ -5,6 +5,10 @@
 #ifndef AMIGA_TYPES_H
 #define AMIGA_TYPES_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef long            LONG;
 typedef unsigned long   ULONG;
 typedef short           WORD;
@@ -46,5 +50,9 @@ typedef unsigned long   Tag;
 
 /* C99 functions the 3DO libc lacks (implemented in amiga_sys.c) */
 int snprintf(char *buf, unsigned int size, const char *fmt, ...);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
