@@ -109,6 +109,21 @@ ab_init(const char *name)
 
 void ab_cleanup(void) { }
 void ab_poll(void) { }
+struct DateStamp *
+DateStamp(struct DateStamp *ds)
+{
+  /* from the display's field counter (60 Hz) as 50 Hz ticks */
+  u32 fields = 0;
+  ULONG ticks;
+  QueryGraphics(QUERYGRAF_TAG_FIELDCOUNT, &fields);
+  ticks = (ULONG)fields / 6 * 5 + ((ULONG)fields % 6) * 5 / 6;
+  ds->ds_Days = (LONG)(ticks / (50UL * 60 * 60 * 24));
+  ticks %= 50UL * 60 * 60 * 24;
+  ds->ds_Minute = (LONG)(ticks / (50UL * 60));
+  ds->ds_Tick = (LONG)(ticks % (50UL * 60));
+  return ds;
+}
+
 void ab_heartbeat(void) { }
 void ab_push_var(const char *n) { (void)n; }
 int  ab_is_connected(void) { return 1; }
