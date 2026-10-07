@@ -494,12 +494,147 @@ void
 RectFill(struct RastPort *rp, LONG x0, LONG y0, LONG x1, LONG y1)
 {
   LONG y;
+  /* clip inline: games call this for single font/sprite pixels thousands
+   * of times a frame, so the call overhead matters */
+  if(x0 < rp->clip_x0) x0 = rp->clip_x0;
+  if(y0 < rp->clip_y0) y0 = rp->clip_y0;
+  if(x1 > rp->clip_x1) x1 = rp->clip_x1;
+  if(y1 > rp->clip_y1) y1 = rp->clip_y1;
   if(x1 < x0 || y1 < y0)
     return;
-  if(!clip_rect(rp, &x0, &y0, &x1, &y1))
-    return;
+  if(s_pix8 && !(rp->DrawMode & COMPLEMENT) && x1 - x0 < 8)
+    {
+      /* small solid rectangle: plain byte stores, no per-row call */
+      UBYTE pen = (UBYTE)rp->apen;
+      UBYTE *row = s_pix8 + y0 * W + x0;
+      LONG n = x1 - x0 + 1, h = y1 - y0 + 1, i;
+      while(h--)
+        {
+          for(i = 0; i < n; i++)
+            row[i] = pen;
+          row += W;
+        }
+      return;
+    }
   for(y = y0; y <= y1; y++)
     span(rp, x0, x1, y, rp->apen);
+}
+
+void
+gfx_blit8(struct RastPort *rp, LONG x, LONG y, const UBYTE *img, int w, int h, int pen)
+{
+  LONG sx0 = 0, sy0 = 0, sx1 = w - 1, sy1 = h - 1, i, j;
+  if(x < rp->clip_x0) sx0 = rp->clip_x0 - x;
+  if(y < rp->clip_y0) sy0 = rp->clip_y0 - y;
+  if(x + sx1 > rp->clip_x1) sx1 = rp->clip_x1 - x;
+  if(y + sy1 > rp->clip_y1) sy1 = rp->clip_y1 - y;
+  if(sx1 < sx0 || sy1 < sy0)
+    return;
+  if(s_pix8)
+    {
+      for(j = sy0; j <= sy1; j++)
+        {
+          const UBYTE *s = img + j * w;
+          UBYTE *d = s_pix8 + (y + j) * W + x;
+          if(pen < 0)
+            {
+              for(i = sx0; i <= sx1; i++)
+                if(s[i]) d[i] = s[i];
+            }
+          else
+            {
+              for(i = sx0; i <= sx1; i++)
+                if(s[i]) d[i] = (UBYTE)pen;
+            }
+        }
+    }
+  else
+    {
+      for(j = sy0; j <= sy1; j++)
+        for(i = sx0; i <= sx1; i++)
+          if(img[j * w + i])
+            plot(rp, x + i, y + j, pen < 0 ? img[j * w + i] : pen);
+    }
+}
+
+/* ---- run-length sprites ---- */
+struct GfxSprite {
+  int w, h, nruns;
+  struct { ULONG off; UBYTE x, len, colour, y; } run[1];   /* off = y * W + x */
+};
+
+GfxSprite *
+gfx_sprite_make(const UBYTE *img, int w, int h)
+{
+  int x, y, n = 0;
+  GfxSprite *s;
+  if(w > 255 || h > 255)
+    return 0;
+  for(y = 0; y < h; y++)
+    for(x = 0; x < w; x++)
+      if(img[y * w + x] && (x == 0 || img[y * w + x - 1] != img[y * w + x]))
+        n++;
+  s = (GfxSprite *)AllocMem(sizeof(GfxSprite) + n * sizeof(s->run[0]), MEMF_CLEAR);
+  if(!s)
+    return 0;
+  s->w = w;
+  s->h = h;
+  for(y = 0; y < h; y++)
+    for(x = 0; x < w; )
+      {
+        UBYTE c = img[y * w + x];
+        int x0 = x;
+        if(!c) { x++; continue; }
+        while(x < w && img[y * w + x] == c)
+          x++;
+        s->run[s->nruns].off = (ULONG)(y * W + x0);
+        s->run[s->nruns].x = (UBYTE)x0;
+        s->run[s->nruns].y = (UBYTE)y;
+        s->run[s->nruns].len = (UBYTE)(x - x0);
+        s->run[s->nruns].colour = c;
+        s->nruns++;
+      }
+  return s;
+}
+
+void
+gfx_sprite_free(GfxSprite *s)
+{
+  if(s)
+    FreeMem(s, sizeof(GfxSprite) + s->nruns * sizeof(s->run[0]));
+}
+
+void
+gfx_sprite_draw(struct RastPort *rp, const GfxSprite *s, LONG x, LONG y, int pen)
+{
+  int r;
+  if(!s)
+    return;
+  if(s_pix8 && x >= rp->clip_x0 && y >= rp->clip_y0 &&
+     x + s->w - 1 <= rp->clip_x1 && y + s->h - 1 <= rp->clip_y1)
+    {
+      /* fully visible: no clipping per run */
+      UBYTE *base = s_pix8 + y * W + x;
+      for(r = 0; r < s->nruns; r++)
+        {
+          UBYTE *d = base + s->run[r].off;
+          UBYTE c = pen < 0 ? s->run[r].colour : (UBYTE)pen;
+          int n = s->run[r].len;
+          while(n--)
+            *d++ = c;
+        }
+      return;
+    }
+  for(r = 0; r < s->nruns; r++)
+    {
+      LONG ry = y + s->run[r].y, x0 = x + s->run[r].x, x1 = x0 + s->run[r].len - 1;
+      if(ry < rp->clip_y0 || ry > rp->clip_y1)
+        continue;
+      if(x0 < rp->clip_x0) x0 = rp->clip_x0;
+      if(x1 > rp->clip_x1) x1 = rp->clip_x1;
+      if(x0 <= x1)
+        span(rp, x0, x1, ry, pen < 0 ? s->run[r].colour : pen);
+    }
 }
 
 LONG

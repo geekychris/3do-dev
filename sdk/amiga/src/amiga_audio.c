@@ -105,15 +105,51 @@ paula_exit(void)
 	s_tick = 0;
 }
 
+/* Add (or, for the first channel, store) count samples of one channel
+ * into acc, with no end-of-block checks: the caller guarantees the block
+ * holds them. Unrolled because the ARM60 has no cache: every instruction
+ * and every acc[] access is a DRAM cycle. */
+static ULONG
+mix_run(long *acc, int count, const signed char *b, ULONG pos, ULONG step, int vol, int first)
+{
+	if (first) {
+		while (count >= 4) {
+			acc[0] = (long)b[pos >> 16] * vol; pos += step;
+			acc[1] = (long)b[pos >> 16] * vol; pos += step;
+			acc[2] = (long)b[pos >> 16] * vol; pos += step;
+			acc[3] = (long)b[pos >> 16] * vol; pos += step;
+			acc += 4;
+			count -= 4;
+		}
+		while (count--) {
+			*acc++ = (long)b[pos >> 16] * vol;
+			pos += step;
+		}
+	} else {
+		while (count >= 4) {
+			acc[0] += (long)b[pos >> 16] * vol; pos += step;
+			acc[1] += (long)b[pos >> 16] * vol; pos += step;
+			acc[2] += (long)b[pos >> 16] * vol; pos += step;
+			acc[3] += (long)b[pos >> 16] * vol; pos += step;
+			acc += 4;
+			count -= 4;
+		}
+		while (count--) {
+			*acc++ += (long)b[pos >> 16] * vol;
+			pos += step;
+		}
+	}
+	return pos;
+}
+
 /* Mix n samples of all channels into out. */
 static void
 mix(short *out, int n)
 {
 	int c, i;
+	int filled = 0;          /* acc[0..filled) holds data from earlier channels */
 	long acc[CHUNK];
 
-	for (i = 0; i < n; i++)
-		acc[i] = 0;
 	for (c = 0; c < 4; c++) {
 		ULONG pos, step, len;
 		const signed char *b;
@@ -126,7 +162,9 @@ mix(short *out, int n)
 		pos = s_ch[c].pos;
 		b = s_ch[c].base;
 		len = s_ch[c].len << 16;
-		for (i = 0; i < n; i++) {
+		i = 0;
+		while (i < n) {
+			int k, end;
 			if (pos >= len) {
 				/* end of block: reload the (possibly new) registers */
 				pos -= len;
@@ -140,14 +178,43 @@ mix(short *out, int n)
 				if (pos >= len)
 					pos = 0;
 			}
-			acc[i] += (long)b[pos >> 16] * vol;
-			pos += step;
+			/* samples left before the block ends: mix them without checks */
+			k = (int)((len - pos + step - 1) / step);
+			end = (k < n - i) ? i + k : n;
+			if (vol == 0) {
+				/* silent but running: just advance (block reloads still happen) */
+				pos += step * (ULONG)(end - i);
+				i = end;
+				continue;
+			}
+			if (i < filled) {
+				int add_end = end < filled ? end : filled;
+				pos = mix_run(acc + i, add_end - i, b, pos, step, vol, 0);
+				i = add_end;
+			}
+			if (i < end) {
+				pos = mix_run(acc + i, end - i, b, pos, step, vol, 1);
+				i = end;
+				filled = i;
+			}
 		}
 		s_ch[c].pos = pos;
+		/* a channel that stopped early leaves a gap: zero it once */
+		for (; filled < i; filled++)
+			acc[filled] = 0;
 	}
-	for (i = 0; i < n; i++) {
-		long v = (acc[i] * s_master) >> 6;   /* 4 x 127 x 64 x 64 >> 6 = 32512 fits */
-		out[i] = (short)(v > 32767 ? 32767 : v < -32768 ? -32768 : v);
+	for (i = filled; i < n; i++)
+		acc[i] = 0;
+	if (s_master == 64) {
+		for (i = 0; i < n; i++) {
+			long v = acc[i];         /* 4 x 127 x 64 = 32512 fits */
+			out[i] = (short)v;
+		}
+	} else {
+		for (i = 0; i < n; i++) {
+			long v = (acc[i] * s_master) >> 6;
+			out[i] = (short)(v > 32767 ? 32767 : v < -32768 ? -32768 : v);
+		}
 	}
 }
 

@@ -54,6 +54,18 @@ int   gfx_height(void);
 /* 8x8-font text scaled by `scale`, top-left at x,y, in the RastPort's APen */
 void  gfx_text_big(struct RastPort *rp, LONG x, LONG y, const char *s, int scale);
 UBYTE *gfx_pixels8(void);              /* GFX_PAL32 buffer, GFX_WIDTH bytes per row */
+/* Draw a w x h byte image at x,y (clipped to rp); 0 bytes are transparent.
+ * pen < 0: bytes are pens; pen >= 0: every non-zero byte is drawn in pen.
+ * The ARM60 has no cache, so pre-render sprites/glyphs that the original
+ * draws with many tiny RectFills and blit them with this instead. */
+void  gfx_blit8(struct RastPort *rp, LONG x, LONG y, const UBYTE *img, int w, int h, int pen);
+/* Faster for small images drawn often (sprites, font glyphs): convert once
+ * into horizontal runs, then each draw is ~one store per visible pixel.
+ * Same pen rule as gfx_blit8. */
+typedef struct GfxSprite GfxSprite;
+GfxSprite *gfx_sprite_make(const UBYTE *img, int w, int h);
+void  gfx_sprite_draw(struct RastPort *rp, const GfxSprite *s, LONG x, LONG y, int pen);
+void  gfx_sprite_free(GfxSprite *s);
 UWORD *gfx_pixels16(void);             /* GFX_RGB16 buffer */
 
 /* ---- input ---- */
