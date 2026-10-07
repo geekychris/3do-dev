@@ -171,4 +171,4 @@ if __name__ == "__main__":
         print(__doc__)
         sys.exit(2)
     convert(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "palette",
-            int(sys.argv[4]) if len(sys.argv) > 4 else 16)
+            sys.argv[4] if len(sys.argv) > 4 else "16")
