@@ -111,6 +111,8 @@ async def call(pid, cmd: str, args: dict):
             return None, err(msg, 404)
         if msg.startswith(("TypeError", "ValueError", "KeyError")):
             return None, err(msg, 400)
+        if msg.startswith("OSNotReady"):
+            return None, err(msg.split(": ", 1)[-1], 503)
         if "closed the connection" in msg or "connection failed" in msg:
             return None, err(msg, 502)
         return None, err(msg, 409)

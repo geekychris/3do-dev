@@ -98,7 +98,7 @@ details summary { cursor: pointer; padding: 4px 0; }
         <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap; align-items:center">
           <select id="newTarget"></select>
           <label><input type="checkbox" id="newWindow"> window</label>
-          <select id="newMode"><option value="paused">paused</option><option value="running">running</option></select>
+          <select id="newMode" title="paused sessions only advance when stepped (for scripts/agents)"><option value="running" selected>running</option><option value="paused">paused</option></select>
           <select id="newBios"><option>panafz10.bin</option><option>panafz1.bin</option><option>panafz10-norsa.bin</option></select>
           <button class="primary" onclick="startSession()">Start session</button>
         </div>
@@ -317,10 +317,15 @@ async function http(method, url, body) {
   if (!r.ok) throw new Error((data && data.error) || (r.status + " " + r.statusText));
   return data;
 }
-async function cmd(name, args) {
+async function cmd(name, args, quiet) {
   if (!pid) { toast("No session: start one on the Dashboard", true); throw new Error("no session"); }
   try { return await http("POST", `/api/sessions/${pid}/cmd/${name}`, args || {}); }
-  catch (e) { toast(`${name}: ${e.message}`, true); throw e; }
+  catch (e) { if (!quiet) toast(`${name}: ${e.message}`, true); throw e; }
+}
+const NOT_READY = /isn't running yet/;
+function notReadyHtml(msg) {
+  return `<div class="banner" style="display:block;background:#2b2a1a;border-color:var(--warn)">${esc(msg)}
+    <button class="small" onclick="cmd('run',{speed:1}).then(()=>setTimeout(loadOs,3000))">Run it</button></div>`;
 }
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -433,7 +438,7 @@ async function quickRun(n) { $("newTarget").value = n; startSession(); }
 async function loadSummary() {
   if (!pid) return;
   try {
-    const s = await cmd("os_summary");
+    const s = await cmd("os_summary", undefined, true);
     const types = Object.entries(s.items_by_type); const max = Math.max(...types.map(t => t[1]));
     let h = `<div class="kv"><b>kernel</b><span class="mono">${s.kernel_base}</span><b>current task</b><span>${esc(s.current_task)}</span>
       <b>items</b><span>${s.items} / ${s.max_item}</span><b>frame</b><span>${s.frame}</span></div><div style="margin-top:10px">`;
@@ -444,7 +449,7 @@ async function loadSummary() {
     h += `</div><div style="margin-top:10px">`;
     for (const [t, n] of types) h += `<div style="display:flex;gap:6px;align-items:center;font-size:12px"><span style="width:90px">${esc(t)}</span><div class="bar" style="flex:1"><div style="width:${100 * n / max}%;background:var(--blue)"></div></div><span style="width:28px;text-align:right">${n}</span></div>`;
     $("summary").innerHTML = h + "</div>";
-  } catch (e) { $("summary").textContent = e.message; }
+  } catch (e) { $("summary").innerHTML = NOT_READY.test(e.message) ? notReadyHtml(e.message) : esc(e.message); }
 }
 
 // ---------------------------------------------------------------- screen + input
@@ -525,7 +530,8 @@ function setOs(v) { osView = v; document.querySelectorAll("#osNav button").forEa
 async function loadOs() {
   const [c] = OSVIEWS[osView];
   if (!c) { renderOs(); return; }
-  try { osData = await cmd(c); renderOs(); } catch (e) { $("osBody").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+  try { osData = await cmd(c, undefined, true); renderOs(); }
+  catch (e) { $("osBody").innerHTML = NOT_READY.test(e.message) ? notReadyHtml(e.message) : `<span class="bad">${esc(e.message)}</span>`; }
 }
 function renderOs() { $("osBody").innerHTML = OSVIEWS[osView][1](osData || {}); }
 async function osItem(n) {
@@ -554,9 +560,9 @@ function renderMemMap(d) {
   for (const [o, c] of Object.entries(owners)) h += `<span><i style="background:${c}"></i>${esc(d.task_names[o] || o)}</span>`;
   return h + "</div><p class='hint'>Click a page to open it in the memory view.</p>";
 }
-let snapDiff = null;
+let snapDiff = null, snapName = "before";
 function renderSnapUi() {
-  let h = `<div class="btns"><input type="text" id="snapName" value="before" style="width:120px"><button onclick="takeSnap()">take snapshot</button>
+  let h = `<div class="btns"><input type="text" id="snapName" value="${esc(snapName)}" style="width:120px" oninput="snapName=this.value"><button onclick="takeSnap()">take snapshot</button>
     <button onclick="diffSnap()">diff vs now</button></div><div class="hint" style="margin:6px 0">Take a snapshot, play a little, then diff: shows items created/deleted, CPU per task and memory changes.</div>`;
   if (snapDiff) {
     const d = snapDiff;

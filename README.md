@@ -193,7 +193,7 @@ so any language or agent harness can drive the emulator. Reference:
 ./3do devbench --open        # http://127.0.0.1:3330/
 ```
 
-![DevBench memory map](docs/images/devbench-os.png)
+![DevBench debugging Nova Defense: stopped at a breakpoint, live system-call trace and profile](docs/images/devbench/06-debug.png)
 
 A browser workbench and plain REST API for everything above, plus a
 **Portfolio OS inspector**. It reads the kernel's item table straight out of
@@ -212,7 +212,8 @@ has crashed:
 
 The REST API (`POST /api/cmd/os_tasks`, `GET /api/screen.png`, `GET /api/events`
 for Server-Sent Events, `/api/openapi.json`) and the MCP server over HTTP
-(`/mcp`) are served from the same port. Details: [docs/devbench.md](docs/devbench.md).
+(`/mcp`) are served from the same port. **Annotated walkthrough with
+screenshots of every view:** [docs/devbench.md](docs/devbench.md#walkthrough).
 
 ## Working with Claude Code
 

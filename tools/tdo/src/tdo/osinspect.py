@@ -53,6 +53,10 @@ NODE_TYPES = {
 IO_COMMANDS = {0: "WRITE", 1: "READ", 2: "STATUS"}
 
 
+class OSNotReady(RuntimeError):
+    """Raised when Portfolio's kernel isn't in RAM yet (session not booted)."""
+
+
 def _h(v: int) -> str:
     return f"0x{v:06x}"
 
@@ -94,7 +98,10 @@ class OS:
     def kb(self) -> int:
         b = self.k.find_base()
         if b is None:
-            raise RuntimeError("Portfolio kernel not found in RAM (still booting?)")
+            frame = getattr(self.emu, "frame_count", 0)
+            raise OSNotReady(
+                f"the 3DO OS isn't running yet (frame {frame}): the session is still booting"
+                + (" or paused - run it (Run button / run command) for a few seconds" if frame < 300 else ""))
         return b
 
     def _list(self, list_addr: int, link_offset: int = 0, limit: int = 1024):
