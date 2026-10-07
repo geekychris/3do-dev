@@ -246,6 +246,47 @@ gfx_exit(void)
 void gfx_set_view(int mode, int y0) { s_view = mode; s_view_y0 = y0; update_view(); }
 void gfx_set_rate(int hz)          { s_rate = (hz == 60) ? 60 : 50; }
 ULONG gfx_frame(void)              { return g_amiga_frame; }
+
+static u32   s_step_base;
+static ULONG s_steps_done, s_steps_logged;
+static int   s_steps_started;
+
+int
+gfx_steps(void)
+{
+  u32 now;
+  ULONG due;
+  int n;
+  QueryGraphics(QUERYGRAF_TAG_FIELDCOUNT, &now);
+  if(!s_steps_started)
+    {
+      s_steps_started = 1;
+      s_step_base = now;
+      s_steps_done = 0;
+    }
+  /* logic steps due by now: 50 per second of 60 Hz fields (or 60 at 60 fps) */
+  due = (s_rate == 50) ? ((now - s_step_base) * 5) / 6 : (now - s_step_base);
+  n = (int)(due - s_steps_done);
+  if(n < 1)
+    n = 1;
+  if(n > 4)
+    {
+      /* far behind (loading, debugger): don't fast-forward, re-sync */
+      n = 4;
+      s_step_base = now;
+      s_steps_done = 0;
+      due = 0;
+    }
+  else
+    s_steps_done += n;
+  {
+    int i;
+    for(i = 0; i < n; i++)
+      if((++s_steps_logged % 250) == 0)
+        amiga_log("AMIGA3DO: steps=%d\n", (int)s_steps_logged);
+  }
+  return n;
+}
 int gfx_height(void)               { return s_h; }
 UBYTE *gfx_pixels8(void)           { return s_pix8; }
 UWORD *gfx_pixels16(void)          { return s_pix16; }
@@ -554,6 +595,152 @@ gfx_blit8(struct RastPort *rp, LONG x, LONG y, const UBYTE *img, int w, int h, i
         for(i = sx0; i <= sx1; i++)
           if(img[j * w + i])
             plot(rp, x + i, y + j, pen < 0 ? img[j * w + i] : pen);
+    }
+}
+
+void
+gfx_fill_columns(struct RastPort *rp, LONG x0, int ncols, int colw,
+                 const WORD *top, LONG bottom, int pen)
+{
+  /* Row sweep: a column joins when the sweep reaches its top and stays to
+   * `bottom`. Active columns are kept as runs (merged as neighbours join),
+   * so every row is a few long spans (memset) instead of per-byte column
+   * loops - the emulated ARM60 pays per instruction. */
+  /* int, not WORD: ARMv3 has no halfword loads/stores, so 16-bit arrays
+   * cost several instructions per access */
+  static int act[GFX_WIDTH], tops[GFX_WIDTH];
+  static int rs[GFX_WIDTH], re[GFX_WIDTH], idx[GFX_WIDTH];
+  static int order[GFX_WIDTH], start[GFX_WIDTH + 1];
+  static int rowcount[512];
+  static int px0[GFX_WIDTH], plen[GFX_WIDTH];   /* each run's clipped pixels */
+  LONG cx0 = rp->clip_x0, cx1 = rp->clip_x1;
+  int changed = 0, nspans = 0;
+  LONG y, miny = 0x7FFF, ymax;
+  int i, nr = 0, nused = 0, next = 0;
+  if(ncols <= 0)
+    return;
+  if(ncols > GFX_WIDTH)
+    ncols = GFX_WIDTH;
+  if(bottom > rp->clip_y1)
+    bottom = rp->clip_y1;
+  if(rp->DrawMode & COMPLEMENT)
+    {
+      /* XOR must touch each pixel once: plain per-column fills */
+      for(i = 0; i < ncols; i++)
+        {
+          LONG t = top[i] < rp->clip_y0 ? rp->clip_y0 : top[i];
+          LONG cx0 = x0 + i * colw, cx1 = cx0 + colw - 1;
+          if(cx0 < rp->clip_x0) cx0 = rp->clip_x0;
+          if(cx1 > rp->clip_x1) cx1 = rp->clip_x1;
+          if(t <= bottom && cx0 <= cx1)
+            for(y = t; y <= bottom; y++)
+              span(rp, cx0, cx1, y, pen);
+        }
+      return;
+    }
+  /* bucket the visible columns by (clipped) top row */
+  for(i = 0; i < ncols; i++)
+    {
+      LONG t = top[i] < rp->clip_y0 ? rp->clip_y0 : top[i];
+      tops[i] = (int)t;
+      if(t <= bottom && t < miny)
+        miny = t;
+    }
+  if(miny > bottom)
+    return;
+  ymax = bottom - miny + 1;
+  if(ymax > 511)
+    ymax = 511;
+  for(y = 0; y <= ymax; y++)
+    rowcount[y] = 0;
+  for(i = 0; i < ncols; i++)
+    {
+      LONG t = tops[i];
+      act[i] = 0;
+      if(t <= bottom && t - miny < ymax)
+        rowcount[t - miny]++;
+    }
+  start[0] = 0;
+  for(y = 0; y < ymax; y++)
+    start[y + 1] = start[y] + rowcount[y];
+  for(y = 0; y < ymax; y++)
+    rowcount[y] = start[y];
+  for(i = 0; i < ncols; i++)
+    {
+      LONG t = tops[i];
+      if(t <= bottom && t - miny < ymax)
+        order[rowcount[t - miny]++] = i;
+    }
+  nused = start[ymax];
+  for(y = miny; y <= bottom; y++)
+    {
+      int k;
+      /* columns starting on this row join the active runs */
+      if(y - miny < ymax)
+        for(; next < start[y - miny + 1] && next < nused; next++)
+          {
+            int c = order[next];
+            int l = c > 0 && act[c - 1], r = c + 1 < ncols && act[c + 1];
+            act[c] = 1;
+            changed = 1;
+            if(!l && !r)
+              { rs[nr] = re[nr] = c; idx[c] = nr; nr++; }
+            else if(l && !r)
+              { k = idx[c - 1]; re[k] = c; idx[c] = k; }
+            else if(!l && r)
+              { k = idx[c + 1]; rs[k] = c; idx[c] = k; }
+            else
+              {
+                int kl = idx[c - 1], kr = idx[c + 1], last = nr - 1;
+                re[kl] = re[kr];
+                idx[re[kl]] = kl;
+                if(kr != last)
+                  {
+                    rs[kr] = rs[last];
+                    re[kr] = re[last];
+                    idx[rs[kr]] = kr;
+                    idx[re[kr]] = kr;
+                    if(kl == last)
+                      kl = kr;
+                  }
+                nr--;
+              }
+          }
+      if(changed)
+        {
+          /* runs changed: recompute their clipped pixel extents once */
+          nspans = 0;
+          for(k = 0; k < nr; k++)
+            {
+              LONG sx0 = x0 + rs[k] * colw, sx1 = x0 + (re[k] + 1) * colw - 1;
+              if(sx0 < cx0) sx0 = cx0;
+              if(sx1 > cx1) sx1 = cx1;
+              if(sx0 <= sx1)
+                {
+                  px0[nspans] = (int)sx0;
+                  plen[nspans] = (int)(sx1 - sx0 + 1);
+                  nspans++;
+                }
+            }
+          changed = 0;
+        }
+      if(s_pix8)
+        {
+          UBYTE *row = s_pix8 + y * W;
+          for(k = 0; k < nspans; k++)
+            {
+              int n = plen[k];
+              UBYTE *p = row + px0[k];
+              if(n >= 8)
+                memset(p, pen, n);
+              else
+                while(n--)
+                  *p++ = (UBYTE)pen;
+            }
+        }
+      else
+        for(k = 0; k < nspans; k++)
+          span(rp, px0[k], px0[k] + plen[k] - 1, y, pen);
     }
 }
 

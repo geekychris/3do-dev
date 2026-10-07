@@ -1,0 +1,4 @@
+title=Lunar Rider
+origin=Amiga
+order=50
+desc=Moon Patrol-style buggy ride. Jump the craters and rocks while shooting UFOs and meteors on the way to each checkpoint. LEFT/RIGHT speed, UP or B jump, A shoot.

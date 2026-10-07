@@ -50,6 +50,11 @@ void  gfx_set_rgb4(int pen, UWORD rgb4);               /* $0RGB */
 void  gfx_set_rgb24(int pen, ULONG rgb24);              /* $RRGGBB */
 void  gfx_load_rgb4(const UWORD *rgb4, int n);
 ULONG gfx_frame(void);                 /* frames shown since gfx_init */
+/* For games too heavy to draw at 50 fps: call once per loop and run the
+ * game logic this many times (1..4) before drawing, so the game keeps its
+ * real speed while the screen updates less often. Logs
+ * "AMIGA3DO: steps=N" every 250 steps (tests measure game speed from it). */
+int   gfx_steps(void);
 int   gfx_height(void);
 /* 8x8-font text scaled by `scale`, top-left at x,y, in the RastPort's APen */
 void  gfx_text_big(struct RastPort *rp, LONG x, LONG y, const char *s, int scale);
@@ -62,6 +67,13 @@ void  gfx_blit8(struct RastPort *rp, LONG x, LONG y, const UBYTE *img, int w, in
 /* Faster for small images drawn often (sprites, font glyphs): convert once
  * into horizontal runs, then each draw is ~one store per visible pixel.
  * Same pen rule as gfx_blit8. */
+/* Fill ncols columns (column i spans x0+i*colw .. +colw-1) from top[i]
+ * down to bottom (inclusive; top[i] > bottom leaves it empty) in pen.
+ * Same pixels as one RectFill per column, but the rows every column
+ * covers are filled as whole spans: much faster for height-map scenery
+ * (mountains, terrain) on the cache-less ARM60. */
+void  gfx_fill_columns(struct RastPort *rp, LONG x0, int ncols, int colw,
+                       const WORD *top, LONG bottom, int pen);
 typedef struct GfxSprite GfxSprite;
 GfxSprite *gfx_sprite_make(const UBYTE *img, int w, int h);
 void  gfx_sprite_draw(struct RastPort *rp, const GfxSprite *s, LONG x, LONG y, int pen);

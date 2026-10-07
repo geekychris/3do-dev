@@ -88,6 +88,32 @@ class PortTest:
         fps = 250 * self.emu.fps / max(vbls, 1)
         return self.check(f"speed {fps:.1f} fps (>= {min_fps})", fps >= min_fps)
 
+    def check_game_speed(self, min_steps: float = 45.0, max_wait: int = 1800):
+        """For games using gfx_steps(): game logic steps/s, from two
+        consecutive 'AMIGA3DO: steps=' lines (250 steps apart)."""
+        c = self.emu.log_cursor()
+        if not self.emu.run_until_log("AMIGA3DO: steps=", max_wait, since=c):
+            return self.check("game speed measured", False, "no AMIGA3DO: steps= line")
+        f0 = self.emu.frame_count
+        c = self.emu.log_cursor()
+        if not self.emu.run_until_log("AMIGA3DO: steps=", max_wait, since=c):
+            return self.check("game speed measured", False, "only one steps= line")
+        rate = 250 * self.emu.fps / max(self.emu.frame_count - f0, 1)
+        return self.check(f"game speed {rate:.1f} steps/s (>= {min_steps})", rate >= min_steps)
+
+    def report_fps(self, max_wait: int = 1800) -> float:
+        """Drawn frames/s (informational, never fails)."""
+        c = self.emu.log_cursor()
+        if not self.emu.run_until_log("AMIGA3DO: frame=", max_wait, since=c):
+            return 0.0
+        f0 = self.emu.frame_count
+        c = self.emu.log_cursor()
+        if not self.emu.run_until_log("AMIGA3DO: frame=", max_wait, since=c):
+            return 0.0
+        fps = 250 * self.emu.fps / max(self.emu.frame_count - f0, 1)
+        print(f"  INFO drawing {fps:.1f} fps")
+        return fps
+
     def quit(self, max_frames: int = 300):
         c = self.emu.log_cursor()
         self.press("X")
