@@ -1,8 +1,10 @@
 /*
  * ProTracker MOD player on the Paula emulation, see ptplayer.h.
  *
- * From geekychris/hatari_augmented examples/st_port/ptplayer.c (the Atari
- * ST ports of the same games), made C89 for Norcroft.
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Chris Collins
+ * From the Atari ST ports of geekychris/amiga_games (st_port/ptplayer.c),
+ * made C89 for Norcroft.
  *
  * Written from the ProTracker replay semantics (as documented in the
  * ProTracker 2.3 player and the MOD format notes); ticks run from the

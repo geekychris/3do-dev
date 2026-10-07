@@ -134,7 +134,7 @@ static int menu(int sel)
         gfx_text_big(rp, 160 - 5 * 16 / 2 * 2, 9, "3DO", 3);
         SetAPen(rp, C_SKY);
         gfx_text_big(rp, 160 - 3 * 16 / 2 * 2 + 64, 13, "ARCADE", 2);
-        text_at(rp, 160 - 34 * 4, 40, "AMIGA & ATARI ORIGINALS BY GEEKYCHRIS", C_DIMSKY);
+        text_at(rp, 160 - 28 * 4, 40, "AMIGA CLASSICS BY GEEKYCHRIS", C_DIMSKY);
 
         /* list */
         SetAPen(rp, C_BAND1);
