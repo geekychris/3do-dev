@@ -77,6 +77,8 @@ def fix(path):
         if not bare or bare.startswith("#"):
             continue
         top = stack[-1] if stack else None
+        if top is not None and top[4]:
+            top = None          # inside a struct body / initializer: leave alone
         m = DECL.match(line)
         is_decl = False
         if m and top is not None and m.group("type").split()[-1] not in KEYWORDS \
@@ -117,12 +119,17 @@ def fix(path):
         closes = bare.count("}")
         if top is not None and not is_decl and bare not in ("{", "}") and not bare.startswith("}"):
             top[1] = True
-        for _ in range(closes):
-            if stack:
+        # braces in source order: "enum { A, B };" opens and closes on one line
+        ind = len(line) - len(line.lstrip())
+        data = bool(re.search(r"\b(struct|union|enum)\b[^;()]*\{|=\s*\{", bare)) or \
+            (bare.startswith("{") and i > 0 and
+             re.search(r"\b(struct|union|enum)\b[^;()]*$|=\s*$", strip_code(lines[i - 1]).strip()))
+        for ch in bare:
+            if ch == "{":
+                d = bool(data) or bool(stack and stack[-1][4])
+                stack.append([i, False, i, " " * (ind + 4), d])
+            elif ch == "}" and stack:
                 stack.pop()
-        for _ in range(opens):
-            ind = len(line) - len(line.lstrip())
-            stack.append([i, False, i, " " * (ind + 4)])
         if opens and stack and bare.endswith("{") and closes == 0 and top is not None and bare != "{":
             top[1] = True
     result = []
