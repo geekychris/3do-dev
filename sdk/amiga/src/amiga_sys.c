@@ -110,8 +110,10 @@ ab_init(const char *name)
 void ab_cleanup(void) { }
 void ab_poll(void) { }
 void ab_heartbeat(void) { }
+void ab_push_var(const char *n) { (void)n; }
+int  ab_is_connected(void) { return 1; }
 void ab_register_var(const char *n, int t, void *p) { (void)n; (void)t; (void)p; }
-void ab_register_hook(const char *n, const char *d, void *f) { (void)n; (void)d; (void)f; }
+void ab_register_hook(const char *n, const char *d, int (*f)()) { (void)n; (void)d; (void)f; }
 void ab_register_memregion(const char *n, void *p, ULONG s) { (void)n; (void)p; (void)s; }
 
 void ab_log(const char *level, const char *fmt, ...)

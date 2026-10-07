@@ -29,8 +29,10 @@ void AB_W(const char *fmt, ...);
 void AB_E(const char *fmt, ...);
 void AB_D(const char *fmt, ...);
 void ab_register_var(const char *name, int type, void *ptr);
-void ab_register_hook(const char *name, const char *desc, void *fn);
+void ab_register_hook(const char *name, const char *desc, int (*fn)());
 void ab_register_memregion(const char *name, void *ptr, ULONG size);
 void ab_heartbeat(void);
+void ab_push_var(const char *name);
+int  ab_is_connected(void);
 
 #endif

@@ -951,6 +951,47 @@ Text(struct RastPort *rp, CONST_STRPTR str, ULONG count)
         {
           /* fast path: whole glyph on screen, write rows directly */
           UBYTE *d = s_pix8 + top * W + x;
+          if(!((ULONG)d & 3))
+            {
+              /* word aligned (text on 4-pixel columns): each glyph row is
+               * two 32-bit stores built from expanded bit masks */
+              static ULONG expand[256][2];
+              static int expand_ready = 0;
+              ULONG F = (ULONG)(fg & 255) * 0x01010101UL, B = (ULONG)(bg & 255) * 0x01010101UL;
+              ULONG *d32 = (ULONG *)d;
+              if(!expand_ready)
+                {
+                  int v, k;
+                  for(v = 0; v < 256; v++)
+                    {
+                      ULONG m0 = 0, m1 = 0;
+                      for(k = 0; k < 4; k++)          /* big endian: byte 0 is leftmost */
+                        {
+                          if((v >> k) & 1)       m0 |= 0xFFUL << (24 - 8 * k);
+                          if((v >> (k + 4)) & 1) m1 |= 0xFFUL << (24 - 8 * k);
+                        }
+                      expand[v][0] = m0;
+                      expand[v][1] = m1;
+                    }
+                  expand_ready = 1;
+                }
+              for(row = 0; row < 8; row++, d32 += W / 4)
+                {
+                  const ULONG *m = expand[g[row]];
+                  if(jam2)
+                    {
+                      d32[0] = (m[0] & F) | (~m[0] & B);
+                      d32[1] = (m[1] & F) | (~m[1] & B);
+                    }
+                  else if(g[row])
+                    {
+                      d32[0] = (d32[0] & ~m[0]) | (m[0] & F);
+                      d32[1] = (d32[1] & ~m[1]) | (m[1] & F);
+                    }
+                }
+              rp->cp_x = (WORD)(rp->cp_x + 8);
+              continue;
+            }
           for(row = 0; row < 8; row++, d += W)
             {
               unsigned bits = g[row];
