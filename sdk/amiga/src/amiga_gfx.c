@@ -437,7 +437,7 @@ InitRastPort(struct RastPort *rp)
   rp->clip_x0 = 0;
   rp->clip_y0 = 0;
   rp->clip_x1 = W - 1;
-  rp->clip_y1 = (WORD)(s_h - 1);
+  rp->clip_y1 = s_h - 1;
 }
 
 void SetAPen(struct RastPort *rp, ULONG pen) { rp->apen = (UBYTE)pen; rp->FgPen = (BYTE)pen; }
