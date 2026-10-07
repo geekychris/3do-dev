@@ -82,7 +82,9 @@ projects/<game>/
    rewrite with 32-bit maths). `//` comments are fine. Plain `char` is
    unsigned, so use `BYTE`/`signed char` for signed samples.
    `python3 sdk/amiga/tools/c89fix.py src/*.c` hoists late declarations and
-   `for (int ...)` automatically and lists what it can't move; compound
+   `for (int ...)` automatically and lists what it can't move (run it
+   *before* adding `#ifdef AMIGA3DO` blocks: it doesn't follow the
+   preprocessor and may hoist into an `#else` branch); compound
    literals and other cases still need hand edits. The 3DO headers define
    `Item`; a game type with that name needs `#define Item xx_Item`.
 4. Height: screens are 256 lines tall and are scaled to 240 by default. Use
