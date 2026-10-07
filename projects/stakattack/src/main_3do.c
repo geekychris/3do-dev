@@ -151,7 +151,7 @@ static int read_pad(void)
 int main(void)
 {
     struct RastPort *rp;
-    int last_state = -1;
+    int last_state = -1, steps;
     LONG last_lines = 0;
 
     ab_init("STAK");
@@ -179,14 +179,20 @@ int main(void)
         if (amiga_quit_requested())
             break;
         in = read_pad();
-        game_update(&gs, in);
+        /* game logic at 50 steps/s even when drawing is slower (gfx_steps);
+         * one-shot presses (rotate, drop, start) go to the first step only */
+        steps = gfx_steps();
+        while (steps-- > 0) {
+            game_update(&gs, in);
+            in &= GINPUT_LEFT | GINPUT_RIGHT | GINPUT_DOWN;
 
-        if (gs.just_locked && sfx_lock_data)
-            mt_playfx(CUSTOM_BASE, &sfx_lock_sfx);
-        if (gs.just_cleared && sfx_clear_data)
-            mt_playfx(CUSTOM_BASE, &sfx_clear_sfx);
-        if (gs.just_dropped && sfx_drop_data)
-            mt_playfx(CUSTOM_BASE, &sfx_drop_sfx);
+            if (gs.just_locked && sfx_lock_data)
+                mt_playfx(CUSTOM_BASE, &sfx_lock_sfx);
+            if (gs.just_cleared && sfx_clear_data)
+                mt_playfx(CUSTOM_BASE, &sfx_clear_sfx);
+            if (gs.just_dropped && sfx_drop_data)
+                mt_playfx(CUSTOM_BASE, &sfx_drop_sfx);
+        }
 
         rp = gfx_back();
         draw_clear(rp);

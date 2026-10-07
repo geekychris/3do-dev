@@ -9,6 +9,10 @@
 #include <string.h>
 
 #include "draw.h"
+#ifdef AMIGA3DO
+#include <exec/memory.h>
+#include "amiga3do.h"
+#endif
 #include "game.h"
 
 /* 16-color palette: 4-bit RGB values */
@@ -166,6 +170,30 @@ static const UBYTE font_data[FONT_CHARS][FONT_H] = {
     { 0xF8, 0x08, 0x10, 0x20, 0x40, 0x80, 0xF8 }
 };
 
+#ifdef AMIGA3DO
+/* 3DO port: each glyph is rendered once per scale (1..3) into a run-length
+ * sprite and drawn with gfx_sprite_draw(); one WritePixel per font pixel
+ * is too slow on the ARM60. Same pixels on screen. */
+static GfxSprite *glyph_cache[3][FONT_CHARS];
+
+static const GfxSprite *glyph_sprite(int idx, int scale)
+{
+    GfxSprite **slot = &glyph_cache[scale - 1][idx];
+    if (!*slot) {
+        int w = FONT_W * scale, h = FONT_H * scale, row, col;
+        UBYTE *m = (UBYTE *)AllocMem(w * h, MEMF_CLEAR);
+        if (!m) return 0;
+        for (row = 0; row < h; row++)
+            for (col = 0; col < w; col++)
+                if (font_data[idx][row / scale] & (0x80 >> (col / scale)))
+                    m[row * w + col] = 1;
+        *slot = gfx_sprite_make(m, w, h);
+        FreeMem(m, w * h);
+    }
+    return *slot;
+}
+#endif
+
 static void draw_char(struct RastPort *rp, int x, int y, char c, int color, int scale)
 {
     const UBYTE *glyph;
@@ -181,6 +209,15 @@ static void draw_char(struct RastPort *rp, int x, int y, char c, int color, int 
     if (c < FONT_FIRST || c > FONT_LAST) return;
 
     glyph = font_data[c - FONT_FIRST];
+#ifdef AMIGA3DO
+    if (scale >= 1 && scale <= 3) {
+        const GfxSprite *g = glyph_sprite(c - FONT_FIRST, scale);
+        if (g) {
+            gfx_sprite_draw(rp, g, x, y, color);
+            return;
+        }
+    }
+#endif
     SetAPen(rp, color);
 
     for (row = 0; row < FONT_H; row++) {

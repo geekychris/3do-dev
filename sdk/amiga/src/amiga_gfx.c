@@ -350,6 +350,31 @@ clip_rect(struct RastPort *rp, LONG *x0, LONG *y0, LONG *x1, LONG *y1)
   return (*x0 <= *x1) && (*y0 <= *y1);
 }
 
+/* Byte fill: memset for short runs, the STM routine in fill.s for long ones. */
+extern void amiga_fill64(void *dst, ULONG pattern, ULONG blocks);
+
+static void
+fill8(UBYTE *p, int pen, long n)
+{
+  ULONG blocks;
+  if(n < 96)
+    {
+      memset(p, pen, n);
+      return;
+    }
+  while(((ULONG)p & 3) && n)
+    {
+      *p++ = (UBYTE)pen;
+      n--;
+    }
+  blocks = (ULONG)n >> 6;
+  amiga_fill64(p, (ULONG)(pen & 255) * 0x01010101UL, blocks);
+  p += blocks << 6;
+  n &= 63;
+  if(n)
+    memset(p, pen, n);
+}
+
 /* Horizontal span x0..x1 (inclusive, already clipped) in pen, honouring COMPLEMENT. */
 static void
 span(struct RastPort *rp, LONG x0, LONG x1, LONG y, int pen)
@@ -363,7 +388,7 @@ span(struct RastPort *rp, LONG x0, LONG x1, LONG y, int pen)
       else if(n < 8)
         while(n--) *p++ = (UBYTE)pen;
       else
-        memset(p, pen, n);      /* libc memset stores 32 bytes per loop (STM) */
+        fill8(p, pen, n);       /* long spans: STM fill (fill.s) */
     }
   else if(s_pix16)
     {
@@ -425,7 +450,7 @@ SetRast(struct RastPort *rp, ULONG pen)
 {
   (void)rp;
   if(s_pix8)
-    memset(s_pix8, (int)pen, W * s_h);
+    fill8(s_pix8, (int)pen, (long)W * s_h);
   else if(s_pix16)
     {
       UWORD c = s_pal[pen & 255];
@@ -487,6 +512,25 @@ Draw(struct RastPort *rp, LONG x1, LONG y1)
       LONG a = x0 < x1 ? x0 : x1, b = x0 < x1 ? x1 : x0, z0 = y0, z1 = y0;
       if(clip_rect(rp, &a, &z0, &b, &z1))
         span(rp, a, b, y0, pen);
+      return;
+    }
+  if(x0 == x1 && s_pix8 && !(rp->DrawMode & COMPLEMENT))
+    {
+      /* vertical: clip once, then one store per row */
+      LONG a = y0 < y1 ? y0 : y1, b = y0 < y1 ? y1 : y0;
+      UBYTE *p;
+      if(x0 < rp->clip_x0 || x0 > rp->clip_x1)
+        return;
+      if(a < rp->clip_y0) a = rp->clip_y0;
+      if(b > rp->clip_y1) b = rp->clip_y1;
+      if(a > b)
+        return;
+      p = s_pix8 + a * W + x0;
+      for(b -= a; b >= 0; b--)
+        {
+          *p = (UBYTE)pen;
+          p += W;
+        }
       return;
     }
   if(!clip_line(rp, &x0, &y0, &x1, &y1))

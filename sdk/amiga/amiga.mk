@@ -11,7 +11,9 @@ AMIGA_DIR := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 STACKSIZE ?= 16384
 
 AMIGA_SRCS := $(wildcard $(AMIGA_DIR)/src/*.c)
-EXTRA_OBJS += $(AMIGA_SRCS:$(AMIGA_DIR)/src/%.c=build/obj/amiga/%.c.o)
+AMIGA_ASRCS := $(wildcard $(AMIGA_DIR)/src/*.s)
+EXTRA_OBJS += $(AMIGA_SRCS:$(AMIGA_DIR)/src/%.c=build/obj/amiga/%.c.o) \
+              $(AMIGA_ASRCS:$(AMIGA_DIR)/src/%.s=build/obj/amiga/%.s.o)
 # -J: <stdio.h> etc. must resolve to the 3DO SDK headers (matching its libc),
 # not to Norcroft's built-in ANSI headers.
 EXTRA_CFLAGS += -I$(AMIGA_DIR)/include -J$(DEVKIT)/include/3do -DAMIGA3DO=1
@@ -24,5 +26,8 @@ build/obj/amiga:
 build/obj/amiga/%.c.o: $(AMIGA_DIR)/src/%.c | build/obj/amiga
 	armcc $(INCFLAGS) -I$(AMIGA_DIR)/include -I$(AMIGA_DIR)/src $(DEFFLAGS) $(CFLAGS) -M $< -o $@ > $(@:.o=.d)
 	armcc $(INCFLAGS) -I$(AMIGA_DIR)/include -I$(AMIGA_DIR)/src $(DEFFLAGS) $(CFLAGS) -c $< -o $@
+
+build/obj/amiga/%.s.o: $(AMIGA_DIR)/src/%.s | build/obj/amiga
+	armasm $(INCFLAGS) $(ASFLAGS) $< -o $@
 
 -include $(wildcard build/obj/amiga/*.d)
