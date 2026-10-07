@@ -13,6 +13,7 @@
 #   ./3do test <project> [tdo test args]                  headless test run
 #   ./3do shot <project|iso> [tdo shot args]               headless screenshot
 #   ./3do log <project|iso> [--frames N]                   debug console dump
+#   ./3do profile <project> [--press P@400]                where CPU time goes
 #   ./3do clean <project>
 #   ./3do selftest              build + test every project (CI entry point)
 #   ./3do tdo ...               raw access to the tdo CLI
@@ -57,7 +58,7 @@ case "$cmd" in
            exec "$ROOT/bin/3do-make" -C "$ROOT/projects/$1" clean ;;
   ctl|sessions)
            need_tdo; exec "$TDO" "$cmd" "$@" ;;
-  run|shot|log|serve|gdb)
+  run|shot|log|serve|gdb|profile)
            need_tdo; [ $# -ge 1 ] || die "usage: ./3do $cmd <project|iso>"
            t="$1"; shift
            # rebuild projects so you always run what you just edited
@@ -101,6 +102,6 @@ case "$cmd" in
              || { tail -30 "$ROOT/build/selftest-remote.log"; warn "remote control suite failed"; fails=$((fails+1)); }
            [ "$fails" -eq 0 ] && ok "all projects pass" || die "$fails project(s) failed" ;;
   tdo)     need_tdo; exec "$TDO" "$@" ;;
-  help|-h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//' ;;
+  help|-h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' ;;
   *)       die "unknown command '$cmd' (./3do help)" ;;
 esac

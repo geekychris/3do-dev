@@ -327,6 +327,10 @@ class Emulator:
                 L.tdo_wp_add.restype = C.c_int
                 L.tdo_wp_remove.argtypes = [C.c_uint32, C.c_uint32, C.c_int]
                 L.tdo_wp_remove.restype = C.c_int
+            if L.tdo_version() >= 3:
+                L.tdo_prof_enable.argtypes = [C.c_uint32]
+                L.tdo_prof_read.argtypes = [C.POINTER(C.c_uint32), C.c_uint32]
+                L.tdo_prof_read.restype = C.c_uint32
 
     def _setup_callbacks(self):
         env = ENV_CB(self._env)
@@ -848,6 +852,21 @@ def _wp_remove(self, addr, length=4, kind="write"):
     return self.lib.tdo_wp_remove(addr, length, WATCH_TYPES[kind]) == 0
 
 
+def _prof_enable(self, interval: int = 2000):
+    """Sample the PC every ~interval instructions (0 = off)."""
+    if not (self.has_harness and self.lib.tdo_version() >= 3):
+        raise RuntimeError("core lacks the profiler (rebuild: ./scripts/build-emulator.sh)")
+    self.lib.tdo_prof_enable(int(interval))
+
+
+def _prof_samples(self, max_entries: int = 65536) -> list[tuple[int, int]]:
+    out = (C.c_uint32 * (max_entries * 2))()
+    n = self.lib.tdo_prof_read(out, max_entries)
+    return [(out[2 * i], out[2 * i + 1]) for i in range(n)]
+
+
+Emulator.prof_enable = _prof_enable
+Emulator.prof_samples = _prof_samples
 Emulator.halted = property(_halted)
 Emulator.stop_info = _stop_info
 Emulator.halt = _halt

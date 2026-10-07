@@ -1,0 +1,16 @@
+-xc
+-std=gnu89
+-target
+armv4-none-eabi
+-mbig-endian
+-ffreestanding
+-Iinclude
+-Isrc
+-I../include
+-I../../third_party/3do-devkit/include/3do
+-I../../third_party/3do-devkit/include/community
+-D__swi(x)=
+-Wno-int-conversion
+-Wno-pointer-sign
+-Wno-incompatible-library-redeclaration
+-Wno-implicit-function-declaration

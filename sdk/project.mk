@@ -21,7 +21,8 @@
 #                              (for gdb / symbolization; see ./3do gdb)
 #           build/<NAME>.sym   armlink symbol table (name -> offset)
 #
-# Overridable: STACKSIZE, DEBUG=1, EXTRA_CFLAGS, EXTRA_LIBS, EXTRA_OBJS
+# Overridable: STACKSIZE, DEBUG=1, EXTRA_CFLAGS, EXTRA_LIBS, EXTRA_OBJS,
+#              EXTRA_DISC_DEPS (targets that add files to $(DISC) before packing)
 #
 # Run via bin/3do-make (or ./3do build), which supplies the toolchain.
 
@@ -131,7 +132,7 @@ $(LAUNCHME): $(OBJS) | $(DISC)/.base
 $(ELF): $(OBJS)
 	armlink -o $@ $(ELFFLAGS) -symbols $(SYM) $(STARTUP) $(LIBS) $(OBJS)
 
-$(ISO): $(LAUNCHME) $(DISC)/.data $(ASSET_CELS) $(BANNER_STAMP)
+$(ISO): $(LAUNCHME) $(DISC)/.data $(ASSET_CELS) $(BANNER_STAMP) $(EXTRA_DISC_DEPS)
 	3dt pack $(DISC) -o $@
 
 $(OBJDIR)/%.c.o: $(SRC_DIR)/%.c | $(OBJDIR)

@@ -57,6 +57,15 @@ static int      s_watch_type;
 static uint32_t s_fetch_pc;
 static uint32_t s_stop[4];
 
+/* ---- profiler ---- */
+#define PROF_RING 65536
+static uint32_t s_prof_interval;
+static uint32_t s_prof_count;
+static uint32_t s_prof_rng = 12345;
+static uint32_t s_prof[PROF_RING * 2];
+static uint32_t s_prof_head;
+static uint32_t s_prof_n;
+
 static void update_hooks(void);
 
 uint32_t tdo_version(void)     { return TDO_HARNESS_VERSION; }
@@ -368,6 +377,19 @@ tdo_harness_before_exec(uint32_t pc_)
       return stop(TDO_STOP_HALT, pc_);
     }
 
+  if(s_prof_interval && --s_prof_count == 0)
+    {
+      s_prof[s_prof_head * 2]     = pc_;
+      s_prof[s_prof_head * 2 + 1] = opera_arm_harness_reg(14);
+      s_prof_head = (s_prof_head + 1) % PROF_RING;
+      if(s_prof_n < PROF_RING)
+        s_prof_n++;
+      s_prof_rng = s_prof_rng * 1103515245u + 12345u;
+      s_prof_count = s_prof_interval / 2 + ((s_prof_rng >> 16) % (s_prof_interval + 1));
+      if(s_prof_count == 0)
+        s_prof_count = 1;
+    }
+
   for(i = 0; i < s_bp_n; i++)
     {
       if(s_bp[i] == pc_)
@@ -422,7 +444,7 @@ update_hooks(void)
 {
   g_tdo_watch_active = (s_wp_n > 0);
   g_tdo_exec_hooks = (s_halted || s_halt_req || s_step || s_watch_hit ||
-                      s_bp_n > 0 || s_tp_n > 0);
+                      s_bp_n > 0 || s_tp_n > 0 || s_prof_interval > 0);
 }
 
 void
@@ -521,6 +543,22 @@ tdo_wp_remove(uint32_t addr_, uint32_t len_, int type_)
 }
 
 void tdo_wp_clear(void) { s_wp_n = 0; update_hooks(); }
+
+void
+tdo_prof_enable(uint32_t interval_)
+{
+  s_prof_interval = interval_;
+  s_prof_count = interval_ ? interval_ : 0;
+  s_prof_head = 0;
+  s_prof_n = 0;
+  update_hooks();
+}
+
+uint32_t
+tdo_prof_read(uint32_t *out_, uint32_t max_)
+{
+  return ring_drain(s_prof, PROF_RING, 2, s_prof_head, &s_prof_n, out_, max_);
+}
 
 void
 tdo_set_reg(int n_, uint32_t v_)

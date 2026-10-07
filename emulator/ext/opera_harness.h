@@ -27,7 +27,7 @@
 
 EXTERN_C_BEGIN
 
-#define TDO_HARNESS_VERSION 2
+#define TDO_HARNESS_VERSION 3
 
 /* stop reasons (tdo_dbg_stop_info) */
 #define TDO_STOP_NONE      0
@@ -104,6 +104,12 @@ void     tdo_bp_clear(void);
 int      tdo_wp_add(uint32_t addr_, uint32_t len_, int type_);
 int      tdo_wp_remove(uint32_t addr_, uint32_t len_, int type_);
 void     tdo_wp_clear(void);
+
+/* Sampling profiler: every ~interval instructions (with jitter) record the
+   PC (and, while it is in user mode, the return address in lr) into a ring
+   of up to 65536 samples. interval 0 = off. Entries are 2 words: pc, lr. */
+void     tdo_prof_enable(uint32_t interval_);
+uint32_t tdo_prof_read(uint32_t *out_, uint32_t max_entries_);
 
 EXTERN_C_END
 

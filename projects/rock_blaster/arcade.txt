@@ -1,0 +1,4 @@
+title=Rock Blaster
+origin=Amiga
+order=10
+desc=Asteroids-style vector shooter. Rotate, thrust and blast the rocks before they smash your ship. LEFT/RIGHT rotate, UP or B thrust, A fire.

@@ -249,6 +249,43 @@ def cmd_test(a):
         return 1 if problems else 0
 
 
+def cmd_profile(a):
+    """Statistical profile from the core's sampling profiler (PC every ~N
+    instructions, at random points inside frames)."""
+    import collections
+    from .core import Emulator
+    from .symbols import Program, Symbols
+    with Emulator(bios=a.bios) as emu:
+        emu.load(a.game)
+        _run_scripted(emu, a.warmup, _parse_presses(a.press))
+        sy = Symbols(Program.from_iso(a.game))
+        sy.find_base(emu)
+        emu.prof_enable(a.interval)
+        emu.step(a.frames)
+        samples = emu.prof_samples()
+        emu.prof_enable(0)
+
+        def name(pc):
+            s = sy.symbolize(pc) if sy.base is not None else None
+            if s:
+                return s.split("+")[0]
+            if 0x28000 <= pc < 0x29000:
+                return "[idle: waiting for VBL]"
+            return f"[OS/ROM 0x{pc & ~0xFFF:x}]"
+
+        funcs = collections.Counter(name(pc) for pc, _ in samples)
+        callers = collections.defaultdict(collections.Counter)
+        for pc, lr in samples:
+            callers[name(pc)][name(lr)] += 1
+        total = max(1, len(samples))
+        print(f"{len(samples)} samples over {a.frames} frames (every ~{a.interval} instructions)")
+        for fn, n in funcs.most_common(a.top):
+            top_callers = ", ".join(f"{c} {100 * k // n}%" for c, k in callers[fn].most_common(3)
+                                    if not c.startswith("[")) if not fn.startswith("[") else ""
+            print(f"  {100 * n / total:5.1f}%  {fn}" + (f"   <- {top_callers}" if top_callers else ""))
+    return 0
+
+
 def cmd_info(a):
     from .core import Emulator, default_core_path, default_system_dir
     print(f"core:   {default_core_path()}")
@@ -343,6 +380,15 @@ def main(argv=None):
     s.add_argument("--screenshot", metavar="PNG", help="save final frame")
     s.add_argument("-v", "--verbose", action="store_true")
     s.set_defaults(fn=cmd_test)
+
+    s = sub.add_parser("profile", help="sample where CPU time goes (per-function %)")
+    s.add_argument("game")
+    s.add_argument("--frames", type=int, default=600, help="frames to sample")
+    s.add_argument("--warmup", type=int, default=600, help="frames to run first (boot, presses)")
+    s.add_argument("--interval", type=int, default=1500, help="instructions between samples")
+    s.add_argument("--press", action="append", help=press_help)
+    s.add_argument("--top", type=int, default=20)
+    s.set_defaults(fn=cmd_profile)
 
     s = sub.add_parser("info", help="show core/harness/BIOS info")
     s.set_defaults(fn=cmd_info)

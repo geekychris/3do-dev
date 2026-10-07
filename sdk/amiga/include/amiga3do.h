@@ -1,0 +1,79 @@
+/*
+ * amiga3do.h - the 3DO side of the Amiga compatibility layer.
+ *
+ * Ported games keep their game.c / draw.c (which call the Amiga graphics
+ * API: SetAPen, RectFill, Move/Draw, Text, ...) and replace main.c with a
+ * small main_3do.c that uses the functions below. See sdk/amiga/README.md.
+ *
+ * Rendering model
+ *   The game draws into an offscreen 320 x height (default 256) buffer,
+ *   exactly like an Amiga low-res screen. gfx_swap() shows it through one
+ *   hardware cel, scaled to the 3DO's 320x240 (or cropped, see
+ *   gfx_set_view). GFX_PAL32 mode stores 8-bit pens and uses the cel
+ *   engine's 32-entry palette, so palette changes recolour the whole screen
+ *   instantly, like Amiga colour registers. GFX_RGB16 mode (for 256-colour
+ *   AGA games) converts pens to 15-bit colour as it draws.
+ *
+ * Timing
+ *   gfx_swap() paces the game to 50 frames per second (PAL Amiga speed) on
+ *   the 60 Hz 3DO by showing 5 frames per 6 vertical blanks.
+ *   gfx_set_rate(60) runs one frame per VBL instead.
+ *
+ * Input
+ *   pad_held(port) / pad_pressed(port) return PAD_* bits. By convention the
+ *   X (stop) button quits back to the menu: check amiga_quit_requested().
+ */
+#ifndef AMIGA3DO_H
+#define AMIGA3DO_H
+
+#include "amiga_types.h"
+#include <graphics/rastport.h>
+
+#define GFX_WIDTH      320
+
+#define GFX_PAL32      0     /* 8-bit pens, 32-entry hardware palette (OCS/ECS games) */
+#define GFX_RGB16      1     /* 16-bit pixels, 256-entry software palette (AGA games) */
+
+#define GFX_VIEW_SCALE 0     /* scale the logical height onto 240 lines (default) */
+#define GFX_VIEW_CROP  1     /* show 240 lines starting at y0, 1:1 */
+
+/* ---- graphics ---- */
+int   gfx_init(const UWORD *rgb4_palette, int ncolors);      /* GFX_PAL32, 320x256 */
+int   gfx_init_mode(int mode, int height, const UWORD *rgb4_palette, int ncolors);
+void  gfx_exit(void);
+struct RastPort *gfx_back(void);       /* the RastPort to draw into */
+void  gfx_swap(void);                  /* show the frame, pace to 50 fps, poll input/audio */
+void  gfx_set_view(int view_mode, int y0);
+void  gfx_set_rate(int hz);            /* 50 (default) or 60 */
+void  gfx_set_rgb4(int pen, UWORD rgb4);               /* $0RGB */
+void  gfx_set_rgb24(int pen, ULONG rgb24);              /* $RRGGBB */
+void  gfx_load_rgb4(const UWORD *rgb4, int n);
+ULONG gfx_frame(void);                 /* frames shown since gfx_init */
+int   gfx_height(void);
+/* 8x8-font text scaled by `scale`, top-left at x,y, in the RastPort's APen */
+void  gfx_text_big(struct RastPort *rp, LONG x, LONG y, const char *s, int scale);
+UBYTE *gfx_pixels8(void);              /* GFX_PAL32 buffer, GFX_WIDTH bytes per row */
+UWORD *gfx_pixels16(void);             /* GFX_RGB16 buffer */
+
+/* ---- input ---- */
+#define PAD_UP     0x0001
+#define PAD_DOWN   0x0002
+#define PAD_LEFT   0x0004
+#define PAD_RIGHT  0x0008
+#define PAD_A      0x0010
+#define PAD_B      0x0020
+#define PAD_C      0x0040
+#define PAD_P      0x0080   /* play/pause (start) */
+#define PAD_X      0x0100   /* stop: quits to the menu by convention */
+#define PAD_L      0x0200
+#define PAD_R      0x0400
+
+ULONG pad_held(int port);              /* port 0 or 1: buttons currently down */
+ULONG pad_pressed(int port);           /* buttons that went down this frame */
+int   amiga_quit_requested(void);      /* X pressed on pad 0 */
+
+/* ---- misc ---- */
+void  amiga_set_progdir(const char *dir);   /* where "PROGDIR:" / relative files live on disc */
+void  amiga_log(const char *fmt, ...);      /* tdo_log with the game's prefix */
+
+#endif
