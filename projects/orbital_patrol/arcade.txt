@@ -1,0 +1,4 @@
+title=Orbital Patrol
+origin=Amiga
+order=80
+desc=Defender-style side scroller with ProTracker music. Fly over the planet, shoot the invaders and protect the humans. D-pad flies, A fire, B smart bomb, C hyperspace.

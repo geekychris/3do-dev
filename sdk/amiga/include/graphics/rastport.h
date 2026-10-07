@@ -86,7 +86,7 @@ struct RastPort {
 	APTR  *RP_User;
 	/* 3DO layer private */
 	UBYTE  apen, bpen;           /* full 8-bit pens (FgPen/BgPen are signed) */
-	WORD   clip_x0, clip_y0, clip_x1, clip_y1;
+	LONG   clip_x0, clip_y0, clip_x1, clip_y1;   /* LONG: ARMv3 has no halfword loads */
 };
 
 /* draw modes */
