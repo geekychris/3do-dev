@@ -26,11 +26,15 @@ Atari ports in hatari_augmented), all playable from the **arcade** disc
   maps to `$boot/<progdir>/x`, set with `amiga_set_progdir("<game>")`. Writes
   (`MODE_NEWFILE`) go to NVRAM (`/NVRAM/<name>`, 32 KB total, so keep them
   tiny). `amiga_load_file()` loads a whole file.
-- **Sound:** the Paula registers (`custom.aud[n]`, `paula_dmacon()`) and the
-  ptplayer API (`mt_init`, `mt_playfx`, ...) are provided. *Status: the API
-  is complete, and the mixer that streams it to the 3DO audio folio is being
-  added. Wire sound up as on the Amiga and it will play once the mixer
-  lands.*
+- **Sound:** a Paula emulation (`custom.aud[n]`, `paula_dmacon()`) mixed in
+  software at 22 kHz and streamed to the 3DO audio folio, plus a C ProTracker
+  player with the ptplayer API (`mt_install_cia`, `mt_init`, `mt_playfx`,
+  `mt_soundfx`, `mt_end`, ...). Music ticks run at 50 Hz of *audio* time, so
+  tempo holds even if a game draws slower. Load MODs with
+  `amiga_load_file("PROGDIR:x.mod", &len)`. Code that writes Paula registers
+  itself works too: start channels with `paula_dmacon(DMAF_SETCLR|DMAF_AUDn)`
+  (plain `custom.dmacon =` writes are applied once per frame), and use
+  `paula_init(tick, 50)` for a player tick.
 - **Debug bridge:** `ab_init`, `AB_I/W/E(fmt, ...)` (real functions here, since
   Norcroft has no variadic macros) print to the 3DO debug console with the name
   given to `ab_init` as prefix. `ab_register_var/hook` are no-ops.

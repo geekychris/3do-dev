@@ -27,6 +27,7 @@
 #define AMIGA3DO_H
 
 #include "amiga_types.h"
+#include "amiga_compat.h"     /* AllocMem, files, amiga_load_file */
 #include <graphics/rastport.h>
 
 #define GFX_WIDTH      320

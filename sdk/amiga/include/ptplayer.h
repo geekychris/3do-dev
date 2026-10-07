@@ -27,6 +27,7 @@ void mt_stopfx(void *custom, UBYTE channel);
 void mt_musicmask(void *custom, UBYTE mask);
 void mt_mastervol(void *custom, UWORD vol);
 void mt_music(void *custom);
+int  mt_sound_ok(void);   /* 0 = sound available */
 
 extern UBYTE mt_Enable;
 extern UBYTE mt_E8Trigger;
