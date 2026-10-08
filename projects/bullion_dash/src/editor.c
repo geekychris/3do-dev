@@ -97,6 +97,11 @@ void editor_init(GameState *gs, int level_num)
     move_delay = 0;
     status_msg[0] = '\0';
     status_timer = 0;
+#ifdef AMIGA3DO
+    /* 3DO port: the pad buttons, shown when the editor opens */
+    strcpy(status_msg, "L SAVE  R LOAD  X QUIT");
+    status_timer = 250;
+#endif
 }
 
 /* ------------------------------------------------------------------ */
@@ -303,14 +308,23 @@ void editor_draw(struct RastPort *rp, GameState *gs)
     for (i = 0; i < NUM_TILE_TYPES; i++) {
         draw_palette_swatch(rp, i, px, STATUS_Y + 3, (i == cur_idx));
 
+#ifndef AMIGA3DO
         /* Tile number label below swatch */
         SetAPen(rp, (long)COL_TEXT);
         sprintf(buf, "%ld", (long)((i + 1) % 10));
         Move(rp, (long)(px + 4), (long)(STATUS_Y + 21));
         Text(rp, (CONST_STRPTR)buf, (long)strlen(buf));
+#endif
 
         px += 16;
     }
+
+#ifdef AMIGA3DO
+    /* 3DO port: pad help where the number-key labels were */
+    SetAPen(rp, (long)COL_TEXT);
+    Move(rp, 4L, (long)(STATUS_Y + 21));
+    Text(rp, (CONST_STRPTR)"A PUT B TILE P TEST", 19L);
+#endif
 
     /* Current tile name */
     SetAPen(rp, (long)COL_GOLD);
@@ -335,8 +349,15 @@ void editor_draw(struct RastPort *rp, GameState *gs)
     if (status_timer > 0) {
         SetAPen(rp, (long)COL_GOLD_HI);
         SetBPen(rp, (long)COL_BG);
+#ifdef AMIGA3DO
+        /* 3DO port: baseline inside the screen (at PLAYFIELD_Y - 1 the
+         * glyphs sat above the top edge) */
+        Move(rp, (long)((SCREEN_W - (int)strlen(status_msg) * 8) / 2),
+             (long)(PLAYFIELD_Y + 7));
+#else
         Move(rp, (long)((SCREEN_W - (int)strlen(status_msg) * 8) / 2),
              (long)(PLAYFIELD_Y - 1));
+#endif
         Text(rp, (CONST_STRPTR)status_msg, (long)strlen(status_msg));
     }
 }
