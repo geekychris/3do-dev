@@ -127,6 +127,23 @@ While it runs, in another terminal:
 ./3do gdb demo --attach           # then: break update_plasma / continue / bt / p s_speed
 ```
 
+### Running on a real 3DO
+
+`./3do build <project>` produces `projects/<project>/build/<project>.iso`: a
+complete 3DO disc image (Opera file system, boot code, banner, `LaunchMe`),
+RSA-signed by `3dt pack` the same way retail discs were. A retail console
+boots a disc whose signature verifies; that check is the protection, so
+there's nothing to circumvent. The default emulator BIOS performs the same check, which is
+why every test here runs the signed image.
+
+To play on hardware, either burn the ISO to a CD-R as a single data track at
+the lowest speed (older 3DO lasers are picky about CD-R media), or copy it
+to an optical drive emulator. The games have been developed and tested in
+the emulator only. The hardware matches what the emulator models (2 MB
+DRAM, 1 MB VRAM, 12.5 MHz ARM60), but check on real hardware before relying
+on exact timing. `tdo_log`/`kprintf` output goes to the debug port, which
+retail consoles don't have; it's harmless there.
+
 ## 6. Your first program
 
 ```sh

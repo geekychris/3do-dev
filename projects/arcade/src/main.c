@@ -7,7 +7,6 @@
  *
  * Controls: UP/DOWN choose, A / C / P play. Inside a game, X returns here.
  */
-#include <stdio.h>
 #include <string.h>
 #include <exec/types.h>
 #include "amiga3do.h"
@@ -151,10 +150,16 @@ static int menu(int sel)
             text_at(rp, 296 - 8 * (LONG)strlen(GAMES[g].origin), y + 1, GAMES[g].origin,
                     g == sel ? C_GOLD : C_GREY);
         }
-        if (top > 0)
-            text_at(rp, 296, 46, "^", C_GREY);
-        if (top + VISIBLE < NUM_GAMES)
-            text_at(rp, 296, 54 + VISIBLE * 11 + 6, "v", C_GREY);
+        if (NUM_GAMES > VISIBLE) {
+            /* scrollbar right of the list so it's clear there are more games */
+            LONG track = VISIBLE * 11 + 3;
+            LONG th = track * VISIBLE / NUM_GAMES;
+            LONG ty = 54 + (track - th) * top / (NUM_GAMES - VISIBLE);
+            SetAPen(rp, C_BAND2);
+            RectFill(rp, 305, 54, 308, 54 + track);
+            SetAPen(rp, C_GOLD);
+            RectFill(rp, 305, ty, 308, ty + th - 1);
+        }
 
         /* description */
         if (NUM_GAMES) {
