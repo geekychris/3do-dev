@@ -94,8 +94,9 @@ point, logging and tests).
 
 ## The games and the arcade
 
-Eighteen Amiga games ported with the `sdk/amiga` compatibility layer, each on
-its own disc and all of them on the arcade disc behind a menu
+Eighteen Amiga games ported with the `sdk/amiga` compatibility layer, plus
+Planet Chomp (a Unity game rebuilt for the 3DO's cel engine), each on its own
+disc and all of them on the arcade disc behind a menu
 (`./3do build arcade && ./3do run arcade`; X in a game returns to the menu).
 
 ![The arcade menu](docs/images/games/arcade-menu.png)
@@ -104,6 +105,7 @@ its own disc and all of them on the arcade disc behind a menu
 ![Dot Chase](docs/images/games/dot_chase-play.png)
 ![Frank the Frog](docs/images/games/frank_the_frog-play.png)
 ![RJ Birthday](docs/images/games/rj_birthday-play.png)
+![Planet Chomp](docs/images/games/planet_chomp-play.png)
 
 Every game with screenshots, controls and measured speed:
 **[docs/games.md](docs/games.md)**. Porting guide: [sdk/amiga/README.md](sdk/amiga/README.md).
@@ -302,7 +304,7 @@ third_party/ bios/ .venv/ build/   created by setup, not committed
 | [docs/writing-programs.md](docs/writing-programs.md) | Tutorial: display, cels, input, fixed point, logging, assets, testing, debugging |
 | [docs/emulator-harness.md](docs/emulator-harness.md) | Reference: sessions, every control command, gdb, C API, memory map |
 | [docs/cheatsheet.md](docs/cheatsheet.md) | One page: start the arcade, keys, everyday commands, DevBench, troubleshooting |
-| [docs/games.md](docs/games.md) | The arcade and all 18 ported games: screenshots, controls, speed |
+| [docs/games.md](docs/games.md) | The arcade and all 19 games: screenshots, controls, speed |
 | [docs/devbench.md](docs/devbench.md) | Web UI, REST API, SSE events, OS introspection (tasks, items, memory map, snapshots) |
 | [docs/3do-notes.md](docs/3do-notes.md) | Verified facts and gotchas about the 3DO hardware, OS and compiler |
 | [docs/architecture.md](docs/architecture.md) | Component diagram and design decisions |

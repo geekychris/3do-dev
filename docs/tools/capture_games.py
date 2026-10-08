@@ -88,7 +88,8 @@ def main():
                         + " ".join(imgs) + "\n")
     page = ["# The games", "",
             "Ports of the Amiga games to the 3DO through the sdk/amiga compatibility",
-            "layer. Every game is its own disc (`./3do build <game>`), and the arcade",
+            "layer, and Planet Chomp, a Unity game rebuilt for the 3DO's cel engine.",
+            "Every game is its own disc (`./3do build <game>`), and the arcade",
             "disc (`./3do build arcade`) bundles all of them behind a menu.",
             "Screenshots are from the automated tests; regenerate this page with",
             "`docs/tools/capture_games.py`.", "",
