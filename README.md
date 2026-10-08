@@ -16,6 +16,7 @@ loop that people, scripts and AI agents (Claude Code via MCP) can all drive.
 
 ## Contents
 
+- [Cheatsheet](docs/cheatsheet.md) (one page: start, keys, commands)
 - [One-line install](#one-line-install)
 - [Manual install](#manual-install)
 - [First steps](#first-steps)
@@ -300,6 +301,7 @@ third_party/ bios/ .venv/ build/   created by setup, not committed
 | [docs/how-it-works.md](docs/how-it-works.md) | The full story: toolchain, emulator, sessions, debugger, symbols, OS introspection, MCP |
 | [docs/writing-programs.md](docs/writing-programs.md) | Tutorial: display, cels, input, fixed point, logging, assets, testing, debugging |
 | [docs/emulator-harness.md](docs/emulator-harness.md) | Reference: sessions, every control command, gdb, C API, memory map |
+| [docs/cheatsheet.md](docs/cheatsheet.md) | One page: start the arcade, keys, everyday commands, DevBench, troubleshooting |
 | [docs/games.md](docs/games.md) | The arcade and all 18 ported games: screenshots, controls, speed |
 | [docs/devbench.md](docs/devbench.md) | Web UI, REST API, SSE events, OS introspection (tasks, items, memory map, snapshots) |
 | [docs/3do-notes.md](docs/3do-notes.md) | Verified facts and gotchas about the 3DO hardware, OS and compiler |
