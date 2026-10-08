@@ -107,12 +107,12 @@ Every line should be a ✓. Each ✗ comes with the exact fix command.
 | arrows | D-pad |
 | Z / X / C | A / B / C |
 | Enter | P (play/pause) |
-| Backspace | X (stop) |
+| Esc / Backspace | X (stop: games return to the arcade menu) |
 | Q / W | L / R |
 
 Host keys: F1 screenshot (to `build/screenshots/`), F2 pause/run, F3 advance
 one frame, F5/F9 save/load state, F8 reset, F12 halt/continue the CPU, Tab
-fast-forward, Esc quit.
+fast-forward, Ctrl+Q / Cmd+Q (or closing the window) quits.
 
 The terminal shows the 3DO's debug console: kernel boot messages and
 everything the program prints.

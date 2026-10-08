@@ -26,18 +26,18 @@ Measured in the emulator by `./3do selftest`.
 | [Nova Defense](#nova-defense) | 50 | 50 |
 | [Dot Chase](#dot-chase) | 50 | 50 |
 | [StakAttack](#stakattack) | 50 | 50 |
-| [Lunar Rider](#lunar-rider) | 50 | 50 |
+| [Lunar Rider](#lunar-rider) | 52 | 50 |
 | [Frank the Frog](#frank-the-frog) | 50 | 50 |
 | [Sky Knights](#sky-knights) | 50 | 50 |
-| [Orbital Patrol](#orbital-patrol) | 50 | 49 |
+| [Orbital Patrol](#orbital-patrol) | 50 | 46 |
 | [Bullion Dash](#bullion-dash) | 50 | 50 |
 | [Jump Quest](#jump-quest) | 50 | 50 |
 | [Orb Hunter](#orb-hunter) | 50 | 50 |
 | [Uranus Lander](#uranus-lander) | 50 | 50 |
 | [Pea Shooter Blast](#pea-shooter-blast) | 50 | 50 |
 | [Ballblazer](#ballblazer) | 49 | 30 |
-| [Ace Pilot](#ace-pilot) | 50 | 45 |
-| [Void Trader](#void-trader) | 50 | 23 |
+| [Ace Pilot](#ace-pilot) | 50 | 27 |
+| [Void Trader](#void-trader) | 50 | 24 |
 | [RJ Birthday](#rj-birthday) | 50 | 50 |
 | [Fractalus](#fractalus) | 50 | 9 |
 

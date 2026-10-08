@@ -100,8 +100,10 @@ static int open_display(void)
         return 1;
     set_palette(0);
     /* the floor is drawn by the cel engine under the frame (pitch.c) */
-    if (fc_init(gfx_pen_rgb16(PEN_GRID_A), gfx_pen_rgb16(PEN_GRID_B)))
+    if (fc_init(gfx_pen_rgb16(PEN_GRID_A), gfx_pen_rgb16(PEN_GRID_B))) {
         gfx_set_transparent_pen(PEN_FLOOR_HW);
+        gfx_set_line_drop(0);   /* floor cels use gfx_display_y's 15/16 scaling */
+    }
     return 0;
 }
 static void close_display(void) { gfx_exit(); }

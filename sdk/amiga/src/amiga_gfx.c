@@ -106,6 +106,295 @@ void gfx_set_underlay(void *cels)   { s_underlay = cels; }
 /* An 8-bit pen buffer (w x h, rows `stride` bytes apart, stride a multiple
  * of 4) as a cel coloured by the screen's palette, for gfx_set_underlay():
  * e.g. a scrolling background drawn once into its own buffer. */
+/* ------------------------------------------------- 256 -> 240 lines
+ * A 256-line screen shows on 240 lines by leaving out 16. Scaling the
+ * frame cel by 15/16 drops every 16th line wherever it falls - often a
+ * row of a glyph. Instead, in each band of 16 lines we leave out one that
+ * repeats the line above it (blank space between text lines, flat sky,
+ * the inside of a fill), in the frame and in every layer buffer, and show
+ * the rest 1:1 as strips of the same cel. Only a band with no repeated
+ * line loses its last line, as before. gfx_set_line_drop(0) keeps plain
+ * scaling (for games whose underlay cels are placed with gfx_display_y). */
+#define MAX_DROPS  32
+#define MAX_STRIPS (MAX_DROPS + 1)
+#define MAX_LAYERS 4
+
+typedef struct {
+  CCB  *cel;                 /* as made by gfx_layer_cel*() */
+  UBYTE *src;
+  int   bpr;                 /* bytes per row */
+  int   h;
+  CCB   strip[MAX_STRIPS];
+} Layer;
+
+static Layer s_layers[MAX_LAYERS];
+static int   s_nlayers;
+static int   s_smart_drop = 1;
+static int   s_drop[MAX_DROPS], s_ndrop;
+static CCB   s_frame_strip[MAX_STRIPS];
+
+void gfx_set_line_drop(int smart) { s_smart_drop = smart; }
+
+static void
+layer_register(CCB *c, void *src, int bpr, int h)
+{
+  if(s_nlayers < MAX_LAYERS)
+    {
+      s_layers[s_nlayers].cel = c;
+      s_layers[s_nlayers].src = (UBYTE *)src;
+      s_layers[s_nlayers].bpr = bpr;
+      s_layers[s_nlayers].h = h;
+      s_nlayers++;
+    }
+}
+
+static int
+words_equal(const ULONG *a, const ULONG *b, int n)
+{
+  while(n >= 4)
+    {
+      if(a[0] != b[0] || a[1] != b[1] || a[2] != b[2] || a[3] != b[3])
+        return 0;
+      a += 4; b += 4; n -= 4;
+    }
+  while(n-- > 0)
+    if(*a++ != *b++)
+      return 0;
+  return 1;
+}
+
+/* every 4th word: a quick re-check of last frame's choice */
+static int
+words_equal_sparse(const ULONG *a, const ULONG *b, int n)
+{
+  int i;
+  for(i = 0; i < n; i += 4)
+    if(a[i] != b[i])
+      return 0;
+  return 1;
+}
+
+/* is row y the same as row y-1 everywhere it can show? */
+static int
+row_repeats(int y, int sparse)
+{
+  int i, bpr = s_pix16 ? W * 2 : W;
+  const UBYTE *f = s_pix16 ? (const UBYTE *)s_pix16 : s_pix8;
+  int (*eq)(const ULONG *, const ULONG *, int) = sparse ? words_equal_sparse : words_equal;
+  for(i = 0; i < s_nlayers; i++)
+    {
+      const Layer *L = &s_layers[i];
+      if(y < L->h &&
+         !eq((const ULONG *)(L->src + (LONG)y * L->bpr),
+             (const ULONG *)(L->src + (LONG)(y - 1) * L->bpr), L->bpr >> 2))
+        return 0;
+    }
+  return eq((const ULONG *)(f + (LONG)y * bpr), (const ULONG *)(f + (LONG)(y - 1) * bpr), bpr >> 2);
+}
+
+static UBYTE s_drop_rep[MAX_DROPS];   /* last frame's pick was a repeat */
+
+/* words in which row y differs from row y-1 (frame and layers), counting
+ * no further than `limit` */
+/* pixels in which two rows differ (bytes in GFX_PAL32, halfwords in
+ * GFX_RGB16), counting no further than `limit`: a star or two in a gap
+ * line counts less than the change between two rows of a line of text */
+static int
+words_differing(const ULONG *a, const ULONG *b, int n, int limit)
+{
+  int d = 0;
+  /* every other word: plenty to tell a star from a row of text */
+  for(; n > 0; n -= 2, a += 2, b += 2)
+    {
+      ULONG x = *a ^ *b;
+      if(x)
+        {
+          if(s_pix16)
+            d += ((x >> 16) != 0) + ((x & 0xFFFF) != 0);
+          else
+            d += ((x >> 24) != 0) + (((x >> 16) & 255) != 0) +
+                 (((x >> 8) & 255) != 0) + ((x & 255) != 0);
+          if(d >= limit)
+            break;
+        }
+    }
+  return d;
+}
+
+static int
+row_difference(int y, int limit)
+{
+  int i, d, bpr = s_pix16 ? W * 2 : W;
+  const UBYTE *f = s_pix16 ? (const UBYTE *)s_pix16 : s_pix8;
+  d = words_differing((const ULONG *)(f + (LONG)y * bpr), (const ULONG *)(f + (LONG)(y - 1) * bpr),
+                      bpr >> 2, limit);
+  for(i = 0; i < s_nlayers && d < limit; i++)
+    {
+      const Layer *L = &s_layers[i];
+      if(y < L->h)
+        d += words_differing((const ULONG *)(L->src + (LONG)y * L->bpr),
+                             (const ULONG *)(L->src + (LONG)(y - 1) * L->bpr), L->bpr >> 2, limit - d);
+    }
+  return d;
+}
+
+static int s_scan_next;                /* first band due a full search */
+
+static void
+choose_drops(void)
+{
+  int n = s_h - 240, band, b, k;
+  if(n <= 0 || n > MAX_DROPS)
+    {
+      s_ndrop = 0;
+      return;
+    }
+  band = s_h / n;
+  if(s_ndrop != n)
+    {
+      /* first frame: every band gets a pick (its last line) */
+      for(b = 0; b < n; b++)
+        {
+          s_drop[b] = b * band + band - 1;
+          s_drop_rep[b] = 0;
+        }
+      s_ndrop = n;
+    }
+  for(b = 0; b < n; b++)
+    {
+      int y0 = b * band, pick = y0 + band - 1;
+      /* most frames look like the last: keep a pick that still repeats
+       * (a sampled check) ... */
+      if(s_drop_rep[b] && row_repeats(s_drop[b], 1))
+        continue;
+      /* ... and search a band again only on its turn, one band a frame,
+       * so a screen with few repeated lines (a starfield, a scrolling
+       * landscape) costs one band search a frame, not sixteen */
+      if(b != s_scan_next)
+        continue;
+      s_drop_rep[b] = 0;
+      /* an exact repeat (sampled compare first, it rejects most rows at a
+       * quarter of the cost) */
+      for(k = 1; k < band; k++)
+        if(row_repeats(y0 + k, 1) && row_repeats(y0 + k, 0))
+          {
+            pick = y0 + k;
+            s_drop_rep[b] = 1;
+            break;
+          }
+      if(!s_drop_rep[b])
+        {
+          /* none: the line that differs least from the one above it - a
+           * star or two rather than a row of text */
+          int best = 0x7FFF;
+          for(k = 1; k < band; k++)
+            {
+              int d = row_difference(y0 + k, best);
+              if(d < best)
+                {
+                  best = d;
+                  pick = y0 + k;
+                }
+            }
+        }
+      s_drop[b] = pick;
+    }
+  s_scan_next = (s_scan_next + 1) % n;
+}
+
+/* strips of cel `base` (rows `bpr` bytes apart from `src`) leaving out the
+ * chosen rows, linked in order; returns the first, *last gets the last */
+static CCB *
+make_strips(CCB *base, CCB *strip, UBYTE *src, int bpr, int h, CCB **last)
+{
+  int i, y = 0, dy = 0, n = 0;
+  CCB *first = 0, *prev = 0;
+  for(i = 0; i <= s_ndrop; i++)
+    {
+      int end = (i < s_ndrop) ? s_drop[i] : h;      /* rows y .. end-1 */
+      if(end > h)
+        end = h;
+      if(end > y)
+        {
+          CCB *c = &strip[n++];
+          *c = *base;
+          c->ccb_Flags = (base->ccb_Flags | CCB_NPABS | CCB_SPABS) & ~CCB_LAST;
+          c->ccb_SourcePtr = (CelData *)(src + (LONG)y * bpr);
+          c->ccb_YPos = (LONG)dy << 16;
+          c->ccb_HDX = 1 << 20;
+          c->ccb_HDY = 0;
+          c->ccb_VDX = 0;
+          c->ccb_VDY = 1 << 16;
+          c->ccb_PRE0 = (c->ccb_PRE0 & ~PRE0_VCNT_MASK) |
+                        ((((ULONG)(end - y)) - PRE0_VCNT_PREFETCH) << PRE0_VCNT_SHIFT);
+          c->ccb_Height = end - y;
+          if(prev)
+            prev->ccb_NextPtr = c;
+          else
+            first = c;
+          prev = c;
+          dy += end - y;
+        }
+      y = end + 1;
+      if(y >= h)
+        break;
+    }
+  *last = prev;
+  return first;
+}
+
+static Layer *
+find_layer(CCB *c)
+{
+  int i;
+  for(i = 0; i < s_nlayers; i++)
+    if(s_layers[i].cel == c)
+      return &s_layers[i];
+  return 0;
+}
+
+/* the underlay list with each layer cel at y 0 replaced by its strips */
+static CCB *
+strip_underlay(CCB *list)
+{
+  CCB *head = 0, *tail = 0, *c = list;
+  while(c)
+    {
+      CCB *next = (c->ccb_Flags & CCB_LAST) ? 0 : (CCB *)c->ccb_NextPtr;
+      Layer *L = find_layer(c);
+      CCB *f, *l;
+      if(L && c->ccb_YPos == 0)
+        {
+          f = make_strips(c, L->strip, L->src, L->bpr, L->h, &l);
+          if(!f)
+            {
+              c = next;
+              continue;
+            }
+        }
+      else
+        f = l = c;
+      if(tail)
+        {
+          tail->ccb_Flags |= CCB_NPABS;
+          tail->ccb_Flags &= ~CCB_LAST;
+          tail->ccb_NextPtr = f;
+        }
+      else
+        head = f;
+      tail = l;
+      if(f == c)
+        {
+          /* a game cel stands for itself; keep its own successors */
+          tail = c;
+        }
+      c = next;
+    }
+  if(tail)
+    tail->ccb_Flags |= CCB_LAST;
+  return head;
+}
+
 void *
 gfx_layer_cel(UBYTE *pens, int w, int h, int stride)
 {
@@ -122,6 +411,7 @@ gfx_layer_cel(UBYTE *pens, int w, int h, int stride)
   c->ccb_PRE1 = (c->ccb_PRE1 & ~PRE1_TLHPCNT_MASK) |
                 (((ULONG)w - PRE1_TLHPCNT_PREFETCH) & PRE1_TLHPCNT_MASK);
   c->ccb_Width = w;
+  layer_register(c, pens, stride, h);
   return c;
 }
 
@@ -155,6 +445,7 @@ gfx_layer_cel16(UWORD *pix, int w, int h, int stride)
   c->ccb_PRE1 = (c->ccb_PRE1 & ~PRE1_TLHPCNT_MASK) |
                 (((ULONG)w - PRE1_TLHPCNT_PREFETCH) & PRE1_TLHPCNT_MASK);
   c->ccb_Width = w;
+  layer_register(c, pix, stride * 2, h);
   return c;
 }
 
@@ -353,6 +644,8 @@ gfx_init_mode(int mode, int height, const UWORD *pal, int n)
   s_cel->ccb_Flags |= CCB_BGND | CCB_LAST;
   s_trans_pen = -1;
   s_underlay = 0;
+  s_nlayers = 0;
+  s_ndrop = 0;
   update_view();
 
   for(i = 0; i < 256; i++)
@@ -469,9 +762,31 @@ gfx_swap(void)
 {
   if(!s_ready)
     return;
-  if(s_underlay)
-    DrawCels(s_sc.sc_BitmapItems[s_cur], (CCB *)s_underlay);
-  DrawCels(s_sc.sc_BitmapItems[s_cur], s_cel);
+  if(s_smart_drop && s_view != GFX_VIEW_CROP && s_h > 240 && s_h - 240 <= MAX_DROPS)
+    {
+      /* 256 lines on 240: leave out repeated lines (see choose_drops) */
+      CCB *f, *l;
+      choose_drops();
+      if(s_underlay)
+        {
+          CCB *u = strip_underlay((CCB *)s_underlay);
+          if(u)
+            DrawCels(s_sc.sc_BitmapItems[s_cur], u);
+        }
+      f = make_strips(s_cel, s_frame_strip, s_pix16 ? (UBYTE *)s_pix16 : s_pix8,
+                      s_pix16 ? W * 2 : W, s_h, &l);
+      if(f)
+        {
+          l->ccb_Flags |= CCB_LAST;
+          DrawCels(s_sc.sc_BitmapItems[s_cur], f);
+        }
+    }
+  else
+    {
+      if(s_underlay)
+        DrawCels(s_sc.sc_BitmapItems[s_cur], (CCB *)s_underlay);
+      DrawCels(s_sc.sc_BitmapItems[s_cur], s_cel);
+    }
   DisplayScreen(s_sc.sc_Screens[s_cur], 0);
   s_cur ^= 1;
   /* Absolute pacing: frame n is due at field base + n*6/5 (50 fps on the
@@ -484,11 +799,14 @@ gfx_swap(void)
     QueryGraphics(QUERYGRAF_TAG_FIELDCOUNT, &now);
     if((s32)(due - now) > 0)
       WaitVBL(s_vbl, due - now);
-    else if((s32)(now - due) > 6)
+    else
       {
-        /* running slow: re-sync instead of rushing to catch up */
-        s_base_field = now;
-        s_paced = 0;
+        if((s32)(now - due) > 6)
+          {
+            /* running slow: re-sync instead of rushing to catch up */
+            s_base_field = now;
+            s_paced = 0;
+          }
       }
   }
   g_amiga_frame++;
