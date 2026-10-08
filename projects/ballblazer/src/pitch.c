@@ -231,7 +231,61 @@ static void floor_half(UBYTE *row, int dy, LONG C, int t, LONG cellx, int a0, in
     }
 }
 
+#include "floor_cels.h"
+
+/* x of the cell edge at world z = z16 on the line dy16 below the horizon
+ * centre (16.16 px): 160 + fwd * (cam_z - z) * dy / hover */
+#define HOVER_I (HOVER_H >> FP)            /* 2: divisions by it are shifts */
+static LONG floor_edge_x(LONG camz16, LONG z16, LONG dy16, int fwd)
+{
+    LONG off = (((camz16 - z16) >> 8) * (dy16 >> 10) * 4) / HOVER_I;
+    return ((LONG)HALF_W << 16) + (fwd > 0 ? off : -off);
+}
+
+/* The floor as cels (floor_cels.c): rows with the same cellx form a band,
+ * and each band is one cel whose texels are the cells along z. The frame
+ * itself is left in the transparent pen there (see main.c). */
 static void draw_checker_floor(struct RastPort *rp, int pane_y0,
+                               LONG cam_x, LONG cam_z, LONG cam_angle)
+{
+    int fwd = (cam_angle == 0) ? +1 : -1;
+    LONG grid_i  = GRID_STEP >> FP;
+    LONG cam_x_i = cam_x    >> FP;
+    int hy = pane_y0 + HORIZON_Y;            /* horizon row */
+    int dy, dy_a;
+    LONG cell_a;
+    if (!floor_ready) floor_tables();
+    SetAPen(rp, PEN_FLOOR_HW);
+    RectFill(rp, 0, hy + 1, SCR_W - 1, pane_y0 + PANE_H - 1);
+    dy_a = 1;
+    cell_a = floor_div5(cam_x_i + fwd * zdist_tab[1], grid_i);
+    for (dy = 2; dy <= FLOOR_ROWS; dy++) {
+        LONG cell = (dy < FLOOR_ROWS) ? floor_div5(cam_x_i + fwd * zdist_tab[dy], grid_i) : cell_a + 1;
+        if (cell != cell_a) {
+            /* band: rows dy_a .. dy-1; edges at dy_a - 1/2 and dy - 1/2 */
+            LONG dt = ((LONG)dy_a << 16) - 0x8000, db = ((LONG)dy << 16) - 0x8000;
+            /* visible half width at the band's far edge, world units 16.16 */
+            LONG half_w = ((160L * HOVER_I) << 20) / (dt >> 12);
+            LONG zmin = cam_z - half_w - (grid_i << 16);
+            LONG m0 = floor_div5(zmin >> 16, grid_i);
+            int texels = (int)((((ULONG)(2 * half_w >> 16)) * 0xCCCDUL) >> 18) + 4;   /* / 5 */
+            LONG z0, xt, xb, ht, hb, yt, yb;
+            if ((m0 + cell_a) & 1) { m0--; texels++; }
+            z0 = m0 * (grid_i << 16);
+            xt = floor_edge_x(cam_z, z0, dt, fwd);
+            xb = floor_edge_x(cam_z, z0, db, fwd);
+            ht = (-fwd * grid_i * dt / HOVER_I) << 4;
+            hb = (-fwd * grid_i * db / HOVER_I) << 4;
+            yt = gfx_display_y((LONG)(hy + dy_a) << 16);
+            yb = gfx_display_y((LONG)(hy + dy) << 16);
+            fc_band(xt, yt, ht, xb - xt, yb - yt, hb - ht, texels);
+            dy_a = dy;
+            cell_a = cell;
+        }
+    }
+}
+
+static void draw_checker_floor_sw(struct RastPort *rp, int pane_y0,
                                LONG cam_x, LONG cam_z, LONG cam_angle)
 {
     UBYTE *pix = gfx_pixels8();
@@ -349,6 +403,14 @@ static void draw_checker_floor(struct RastPort *rp, int pane_y0,
 
 #endif
 
+/* Horizontal span. 3DO port: a one-row RectFill skips Draw's line set-up
+ * and clipping (hundreds of spans a frame for the ball and rotofoils). */
+#ifdef AMIGA3DO
+#define HLINE(rp, x0, x1, y) RectFill(rp, x0, y, x1, y)
+#else
+#define HLINE(rp, x0, x1, y) (Move(rp, x0, y), Draw(rp, x1, y))
+#endif
+
 /* ---- shaded ball --------------------------------------------------- */
 static void draw_ball_sphere(struct RastPort *rp, int pane_y0,
                              int cx, int cy, int r)
@@ -360,6 +422,9 @@ static void draw_ball_sphere(struct RastPort *rp, int pane_y0,
     int hr;
     int hr2;
     int dy;
+#ifdef AMIGA3DO
+    int w_out_prev = 0, w_mid_prev = 0, w_hi_prev = 0;
+#endif
     if (r < 1) r = 1;
     /* Three-tone shading: dark outer, mid, bright inner-offset. */
     hi_dx = -r / 3; hi_dy = -r / 3; /* highlight upper-left */
@@ -380,32 +445,55 @@ static void draw_ball_sphere(struct RastPort *rp, int pane_y0,
         if (y < pane_y0 || y >= pane_y0 + PANE_H) continue;
         hw_out = r2 - dy * dy; if (hw_out <= 0) continue;
         hw_mid = mr2 - dy * dy;
+#ifdef AMIGA3DO
+        /* floor(sqrt()) stepped from the previous row's value (the
+         * widths change by little per row) instead of counting from 0 */
+        w_out = w_out_prev;
+        while ((w_out+1)*(w_out+1) <= hw_out) w_out++;
+        while (w_out > 0 && w_out*w_out > hw_out) w_out--;
+        w_out_prev = w_out;
+        w_mid = 0;
+        if (hw_mid > 0) {
+            w_mid = w_mid_prev;
+            while ((w_mid+1)*(w_mid+1) <= hw_mid) w_mid++;
+            while (w_mid > 0 && w_mid*w_mid > hw_mid) w_mid--;
+            w_mid_prev = w_mid;
+        }
+#else
         w_out = 0; while ((w_out+1)*(w_out+1) <= hw_out) w_out++;
         w_mid = 0; if (hw_mid > 0) while ((w_mid+1)*(w_mid+1) <= hw_mid) w_mid++;
+#endif
         /* Outer ring: PEN_BALL_DARK */
         SetAPen(rp, PEN_BALL_DARK);
         xL = cx - w_out; xR = cx + w_out;
         if (xL < 0)         xL = 0;
         if (xR > SCR_W - 1) xR = SCR_W - 1;
-        Move(rp, xL, y); Draw(rp, xR, y);
+        HLINE(rp, xL, xR, y);
         /* Mid: PEN_BALL */
         if (w_mid > 0) {
             int mL, mR;
             SetAPen(rp, PEN_BALL);
             mL = cx - w_mid; mR = cx + w_mid;
             if (mL < 0) mL = 0; if (mR > SCR_W - 1) mR = SCR_W - 1;
-            Move(rp, mL, y); Draw(rp, mR, y);
+            HLINE(rp, mL, mR, y);
         }
         /* Highlight: PEN_BALL_HI, offset up-left */
         hdy = dy - hi_dy;
         hw_hi = hr2 - hdy * hdy;
         if (hw_hi > 0) {
             int w_hi = 0, hL, hR;
+#ifdef AMIGA3DO
+            w_hi = w_hi_prev;
+            while (w_hi > 0 && w_hi*w_hi > hw_hi) w_hi--;
+#endif
             while ((w_hi+1)*(w_hi+1) <= hw_hi) w_hi++;
+#ifdef AMIGA3DO
+            w_hi_prev = w_hi;
+#endif
             SetAPen(rp, PEN_BALL_HI);
             hL = cx + hi_dx - w_hi; hR = cx + hi_dx + w_hi;
             if (hL < 0) hL = 0; if (hR > SCR_W - 1) hR = SCR_W - 1;
-            Move(rp, hL, y); Draw(rp, hR, y);
+            HLINE(rp, hL, hR, y);
         }
     }
 }
@@ -439,6 +527,41 @@ static void draw_rotofoil(struct RastPort *rp, int pane_y0,
     /* Dark outline first (one-pixel outer silhouette), then body fill
      * so the darker edge remains visible where body doesn't overwrite. */
     SetAPen(rp, PEN_ROTO_EDGE);
+#ifdef AMIGA3DO
+    {   /* half_w = ((dy + 1) * scale) / span_h, stepped without dividing */
+        int q = scale / span_h, rem = scale % span_h;
+        for (dy = 0; dy <= span_h; dy++) {
+            int half_w = q;
+            int y = apex_y + dy;
+            int L, R;
+            rem += scale;
+            while (rem >= span_h) { rem -= span_h; q++; }
+            if (y < pane_y0 || y >= pane_y0 + PANE_H) continue;
+            L = cx_ground - half_w - 1;
+            R = cx_ground + half_w + 1;
+            if (L < 0)         L = 0;
+            if (R > SCR_W - 1) R = SCR_W - 1;
+            HLINE(rp, L, R, y);
+        }
+    }
+    SetAPen(rp, body_pen);
+    {   /* half_w = (dy * scale) / span_h */
+        int q = scale / span_h, rem = scale % span_h;
+        for (dy = 1; dy <= span_h; dy++) {
+            int half_w = q;
+            int y = apex_y + dy;
+            int L, R;
+            rem += scale;
+            while (rem >= span_h) { rem -= span_h; q++; }
+            if (y < pane_y0 || y >= pane_y0 + PANE_H) continue;
+            L = cx_ground - half_w;
+            R = cx_ground + half_w;
+            if (L < 0)         L = 0;
+            if (R > SCR_W - 1) R = SCR_W - 1;
+            HLINE(rp, L, R, y);
+        }
+    }
+#else
     for (dy = 0; dy <= span_h; dy++) {
         int half_w = ((dy + 1) * scale) / span_h;
         int y = apex_y + dy;
@@ -449,7 +572,7 @@ static void draw_rotofoil(struct RastPort *rp, int pane_y0,
         R = cx_ground + half_w + 1;
         if (L < 0)         L = 0;
         if (R > SCR_W - 1) R = SCR_W - 1;
-        Move(rp, L, y); Draw(rp, R, y);
+        HLINE(rp, L, R, y);
     }
     /* Body fill inside outline. */
     SetAPen(rp, body_pen);
@@ -463,8 +586,9 @@ static void draw_rotofoil(struct RastPort *rp, int pane_y0,
         R = cx_ground + half_w;
         if (L < 0)         L = 0;
         if (R > SCR_W - 1) R = SCR_W - 1;
-        Move(rp, L, y); Draw(rp, R, y);
+        HLINE(rp, L, R, y);
     }
+#endif
     /* Hover skirt: two-pixel dark bar centred on ground point. */
     SetAPen(rp, PEN_ROTO_EDGE);
     if (cy_ground < pane_y0 + PANE_H) {

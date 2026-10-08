@@ -49,6 +49,18 @@ void  gfx_exit(void);
 struct RastPort *gfx_back(void);       /* the RastPort to draw into */
 void  gfx_swap(void);                  /* show the frame, pace to 50 fps, poll input/audio */
 void  gfx_set_view(int view_mode, int y0);
+/* Hardware layers under the frame (GFX_PAL32): pixels in the transparent
+ * pen show what the underlay cels drew. gfx_set_underlay() takes a CCB
+ * list (last one flagged CCB_LAST), drawn before the frame at every
+ * gfx_swap() in display coordinates (320x240); gfx_display_y() maps a
+ * logical y (16.16) to display y for them. See projects/ballblazer. */
+void  gfx_set_transparent_pen(int pen);   /* -1: none (default) */
+void  gfx_set_underlay(void *ccb_list);   /* NULL: none */
+LONG  gfx_display_y(LONG y16);
+/* an 8-bit pen buffer as an underlay cel in the screen palette (a
+ * scrolling background drawn once), and where to put it (game pixels) */
+void *gfx_layer_cel(UBYTE *pens, int w, int h, int stride);
+void  gfx_layer_move(void *cel, LONG x, LONG y);
 void  gfx_set_rate(int hz);            /* 50 (default) or 60 */
 void  gfx_set_rgb4(int pen, UWORD rgb4);               /* $0RGB */
 void  gfx_set_rgb24(int pen, ULONG rgb24);              /* $RRGGBB */

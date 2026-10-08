@@ -62,6 +62,7 @@
 #define PEN_HUD_BG    14
 #define PEN_HUD_FG    15
 #define PEN_WHITE     16
+#define PEN_FLOOR_HW  31     /* 3DO port: transparent - the floor cels show through */
 
 /* ---- rotofoil state ----------------------------------------------- */
 typedef struct {
