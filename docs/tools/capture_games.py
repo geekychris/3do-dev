@@ -41,7 +41,7 @@ def capture_arcade():
     e.run_until_log("ARCADE: menu", 2000)
     e.step(40)
     e.screenshot(str(OUT / "arcade-menu.png"), scale=1)
-    for _ in range(13):                    # scroll down to show the rest
+    for _ in range(len(games()) - 1):      # scroll to the end to show the rest
         e.press(["DOWN"])
         e.step(6)
     e.step(10)
@@ -88,7 +88,8 @@ def main():
                         + " ".join(imgs) + "\n")
     page = ["# The games", "",
             "Ports of the Amiga games to the 3DO through the sdk/amiga compatibility",
-            "layer, and Planet Chomp, a Unity game rebuilt for the 3DO's cel engine.",
+            "layer, and two Unity games rebuilt for the 3DO's cel engine (Planet Chomp",
+            "and Spectral Keep).",
             "Every game is its own disc (`./3do build <game>`), and the arcade",
             "disc (`./3do build arcade`) bundles all of them behind a menu.",
             "Screenshots are from the automated tests; regenerate this page with",

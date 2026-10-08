@@ -1,0 +1,5 @@
+title=Spectral Keep
+origin=Unity
+genre=Iso adventure
+order=210
+desc=A Knight Lore style flip-screen adventure through three keeps: find the relics and carry them to the throne. Keys open gates; guards, hounds, ghosts and bouncers are deadly. D-pad walks (relative to the screen), A or B jumps, P pause. On the title: C grid controls, B music, L+R a tour of every room.

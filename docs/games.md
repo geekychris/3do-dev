@@ -1,7 +1,8 @@
 # The games
 
 Ports of the Amiga games to the 3DO through the sdk/amiga compatibility
-layer, and Planet Chomp, a Unity game rebuilt for the 3DO's cel engine.
+layer, and two Unity games rebuilt for the 3DO's cel engine (Planet Chomp
+and Spectral Keep).
 Every game is its own disc (`./3do build <game>`), and the arcade
 disc (`./3do build arcade`) bundles all of them behind a menu.
 Screenshots are from the automated tests; regenerate this page with
@@ -42,6 +43,7 @@ Measured in the emulator by `./3do selftest`.
 | [RJ Birthday](#rj-birthday) | 50 | 50 |
 | [Fractalus](#fractalus) | 50 | 9 |
 | [Planet Chomp](#planet-chomp) | 49 | 14 |
+| [Spectral Keep](#spectral-keep) | 50 | 50 |
 
 ## Games
 
@@ -215,3 +217,12 @@ A Pac-Man homage on a tiny planet: the maze wraps all the way round a sphere. Ea
 3D maze · `projects/planet_chomp` · from the Unity version
 
 ![Planet Chomp title](images/games/planet_chomp-title.png) ![Planet Chomp play](images/games/planet_chomp-play.png)
+
+### Spectral Keep
+<a id="spectral-keep"></a>
+
+A Knight Lore style flip-screen adventure through three keeps: find the relics and carry them to the throne. Keys open gates; guards, hounds, ghosts and bouncers are deadly. D-pad walks (relative to the screen), A or B jumps, P pause. On the title: C grid controls, B music, L+R a tour of every room.
+
+Iso adventure · `projects/spectral_keep` · from the Unity version
+
+![Spectral Keep title](images/games/spectral_keep-title.png) ![Spectral Keep play](images/games/spectral_keep-play.png)
