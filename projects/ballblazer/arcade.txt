@@ -1,4 +1,5 @@
 title=Ballblazer
 origin=Amiga
+genre=Sports
 order=140
 desc=Split-screen futuristic ball sport against the computer. Steer your rotofoil, grab the plasmorb and shoot it through the goal beams. D-pad steers, UP or A forward.

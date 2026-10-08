@@ -3,7 +3,8 @@
 # A project joins the arcade by having an arcade.txt:
 #
 #   title=Rock Blaster
-#   origin=AMIGA
+#   origin=Amiga          (where the port came from; docs only)
+#   genre=Shooter         (shown beside the title in the menu)
 #   order=10
 #   desc=Asteroids-style vector shooter: rotate, thrust and blast the rocks.
 #
@@ -28,14 +29,14 @@ $(OBJDIR)/main.c.o: $(GEN)
 $(GEN): $(ARCADE_TXT) Makefile
 	mkdir -p $(dir $@)
 	{ echo "/* generated from each project's arcade.txt by projects/arcade/Makefile */"; \
-	  echo "typedef struct { const char *name, *title, *origin, *desc; } ArcadeGame;"; \
+	  echo "typedef struct { const char *name, *title, *genre, *desc; } ArcadeGame;"; \
 	  echo "static const ArcadeGame GAMES[] = {"; \
 	  for f in $(ARCADE_TXT); do \
 	    g=$$(basename $$(dirname $$f)); \
 	    awk -F= -v g=$$g ' \
-	      /^title=/ {t=substr($$0,7)} /^origin=/ {o=substr($$0,8)} \
+	      /^title=/ {t=substr($$0,7)} /^genre=/ {o=substr($$0,7)} \
 	      /^order=/ {n=substr($$0,7)} /^desc=/ {d=substr($$0,6)} \
-	      END { gsub(/"/,"\\\"",t); gsub(/"/,"\\\"",d); if(n=="") n=500; if(o=="") o="AMIGA"; \
+	      END { gsub(/"/,"\\\"",t); gsub(/"/,"\\\"",d); if(n=="") n=500; if(o=="") o="GAME"; \
 	            printf "%05d\t    { \"%s\", \"%s\", \"%s\", \"%s\" },\n", n, g, toupper(t), toupper(o), toupper(d) }' $$f; \
 	  done | sort | cut -f2-; \
 	  echo "    { 0, 0, 0, 0 }"; \

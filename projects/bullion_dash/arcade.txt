@@ -1,4 +1,5 @@
 title=Bullion Dash
 origin=Amiga
+genre=Platform
 order=90
 desc=Lode Runner-style puzzle platformer with a level editor. Collect the gold, dig traps for the guards, then climb out. A fire, B/C dig left/right. C on the title opens the editor.

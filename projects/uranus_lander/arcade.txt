@@ -1,4 +1,5 @@
 title=Uranus Lander
 origin=Amiga
+genre=Lander
 order=120
 desc=Lunar Lander over the rings of Uranus, with ProTracker music. Rotate, thrust gently and touch down on the pads before the fuel runs out. LEFT/RIGHT rotate, A thrust.

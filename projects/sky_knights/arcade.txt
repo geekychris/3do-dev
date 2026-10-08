@@ -1,4 +1,5 @@
 title=Sky Knights
 origin=Amiga
+genre=Action
 order=70
 desc=Joust-style jousting on flying mounts for one or two players. Land on enemies from above and collect the eggs. D-pad steers, A flaps. A starts one player, C two (second pad).
