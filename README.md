@@ -79,7 +79,7 @@ Detailed, per-platform walkthrough: [docs/getting-started.md](docs/getting-start
 ## First steps
 
 ```sh
-./3do run demo                 # window: arrows, Z/X/C = A/B/C, Enter = P, Backspace = X
+./3do run demo                 # window: arrows, Z/X/C = A/B/C, Enter = P, Esc or Backspace = X
 ./3do new mygame               # copy the template into projects/mygame
 $EDITOR projects/mygame/src/main.c
 ./3do run mygame               # rebuilds, boots, opens a window
@@ -164,9 +164,9 @@ work: **[docs/how-it-works.md](docs/how-it-works.md)**.
 ```
 
 **Window keys:** arrows = D-pad · **Z/X/C** = A/B/C · **Enter** = P (play/pause) ·
-**Backspace** = X (stop) · **Q/W** = L/R · F1 screenshot · F2 pause/run ·
+**Esc / Backspace** = X (stop: games return to the arcade menu) · **Q/W** = L/R · F1 screenshot · F2 pause/run ·
 F3 frame-advance · F5/F9 save/load state · F8 reset · F12 halt/continue CPU ·
-Tab fast-forward · Esc quit. Game controllers work too.
+Tab fast-forward · Ctrl+Q / Cmd+Q (or close the window) quits. Game controllers work too.
 
 ## Remote control and debugging
 

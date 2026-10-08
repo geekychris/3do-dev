@@ -49,6 +49,10 @@ void  gfx_exit(void);
 struct RastPort *gfx_back(void);       /* the RastPort to draw into */
 void  gfx_swap(void);                  /* show the frame, pace to 50 fps, poll input/audio */
 void  gfx_set_view(int view_mode, int y0);
+/* 256 lines on 240: by default each band of 16 lines leaves out one that
+ * repeats the line above (so text keeps all its rows); 0 = plain 15/16
+ * scaling, for games that place underlay cels with gfx_display_y() */
+void  gfx_set_line_drop(int smart);
 /* Hardware layers under the frame (GFX_PAL32): pixels in the transparent
  * pen show what the underlay cels drew. gfx_set_underlay() takes a CCB
  * list (last one flagged CCB_LAST), drawn before the frame at every

@@ -111,9 +111,14 @@ projects/<game>/
    preprocessor and may hoist into an `#else` branch); compound
    literals and other cases still need hand edits. The 3DO headers define
    `Item`; a game type with that name needs `#define Item xx_Item`.
-4. Height: screens are 256 lines tall and are scaled to 240 by default. Use
-   `gfx_set_view(GFX_VIEW_CROP, y0)` to show 240 lines 1:1 instead, if the game
-   leaves the top/bottom 16 lines empty.
+4. Height: screens are 256 lines tall and the 3DO shows 240, so 16 lines are
+   left out. The layer picks them per frame: in each band of 16 lines it
+   leaves out one that repeats the line above (the gap between text lines,
+   flat sky, the inside of a fill), so text keeps every row; a band with no
+   repeated line loses its last. Use `gfx_set_view(GFX_VIEW_CROP, y0)` to show
+   240 lines 1:1 instead if the game leaves 16 lines empty, and
+   `gfx_set_line_drop(0)` for plain 15/16 scaling if it places underlay cels
+   with `gfx_display_y()` (ballblazer).
 5. Update on-screen instructions that name keyboard keys to the 3DO pad.
 6. `./3do build <game>`, `./3do run <game>`, then write `test.py` (copy
    `projects/rock_blaster/test.py`) and make `./3do test <game>` pass.

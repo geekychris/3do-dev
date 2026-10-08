@@ -2,12 +2,12 @@
 
 Keyboard (3DO pad, port 0):
   arrows      D-pad            Z / X / C   A / B / C
-  Enter       P (play/pause)   Backspace   X (stop)
+  Enter       P (play/pause)   Esc / Backspace   X (stop: games quit to the menu)
   Q / W       L / R shoulder
 Host keys:
   F1 screenshot      F2 pause/run          F3 advance one frame (paused)
   F5 save state      F9 load state         F8 reset         F12 halt/continue CPU
-  Tab (hold) fast-forward                  Esc quit
+  Tab (hold) fast-forward                  Ctrl+Q / Cmd+Q (or close) quit
 A connected game controller also works (SDL mapping). Remote control and gdb
 keep working while the window is open.
 """
@@ -114,8 +114,8 @@ class Window:
                 s.quit = True
             elif ev.type == pg.KEYDOWN:
                 k = ev.key
-                if k == pg.K_ESCAPE:
-                    s.quit = True
+                if k == pg.K_q and (ev.mod & (pg.KMOD_CTRL | pg.KMOD_META)):
+                    s.quit = True       # Esc is the pad's X (stop), not "quit"
                 elif k == pg.K_F1:
                     d = repo_root() / "build" / "screenshots"
                     d.mkdir(parents=True, exist_ok=True)
@@ -146,6 +146,8 @@ class Window:
                         self._say("CPU halted")
         pressed = pg.key.get_pressed()
         held = [b for b, key in self.keys.items() if pressed[key]]
+        if pressed[pg.K_ESCAPE] and "X" not in held:
+            held.append("X")          # Esc is the pad's X: games quit to the menu
         for pad in self.pads:
             for b, name in PADMAP.items():
                 if pad.get_button(getattr(pg, name)):
