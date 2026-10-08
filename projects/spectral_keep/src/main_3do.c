@@ -268,7 +268,7 @@ static void hud_title(void)
     ctext(200, "A PLAY   UP/DOWN CHOOSE A KEEP", INK_WHITE);
     sprintf(buf, "C CONTROLS:%s   B MUSIC:%s", G.grid_controls ? "GRID" : "SCREEN", G.music_on ? "ON" : "OFF");
     ctext(212, buf, INK_GREEN);
-    ctext(228, "(C) 2026 CLAUDE SOFTWARE", INK_MAGENTA);
+    ctext(228, "(C) 2026 HITORRO", INK_MAGENTA);
 }
 
 static void hud_play(void)
