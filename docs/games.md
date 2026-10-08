@@ -25,21 +25,21 @@ Measured in the emulator by `./3do selftest`.
 | [Rock Blaster](#rock-blaster) | 50 | 50 |
 | [Nova Defense](#nova-defense) | 50 | 50 |
 | [Dot Chase](#dot-chase) | 50 | 50 |
-| [StakAttack](#stakattack) | 50 | 45 |
-| [Lunar Rider](#lunar-rider) | 50 | 27 |
-| [Frank the Frog](#frank-the-frog) | 50 | 45 |
+| [StakAttack](#stakattack) | 50 | 50 |
+| [Lunar Rider](#lunar-rider) | 50 | 32 |
+| [Frank the Frog](#frank-the-frog) | 50 | 50 |
 | [Sky Knights](#sky-knights) | 50 | 50 |
-| [Orbital Patrol](#orbital-patrol) | 50 | 39 |
-| [Bullion Dash](#bullion-dash) | 46 | 46 |
-| [Jump Quest](#jump-quest) | 49 | 49 |
-| [Orb Hunter](#orb-hunter) | 49 | 49 |
-| [Uranus Lander](#uranus-lander) | 50 | 22 |
-| [Pea Shooter Blast](#pea-shooter-blast) | 50 | 23 |
-| [Ballblazer](#ballblazer) | 50 | 11 |
-| [Ace Pilot](#ace-pilot) | 50 | 23 |
-| [Void Trader](#void-trader) | 50 | 21 |
-| [RJ Birthday](#rj-birthday) | 50 | 25 |
-| [Fractalus](#fractalus) | 51 | 8 |
+| [Orbital Patrol](#orbital-patrol) | 50 | 49 |
+| [Bullion Dash](#bullion-dash) | 50 | 50 |
+| [Jump Quest](#jump-quest) | 50 | 50 |
+| [Orb Hunter](#orb-hunter) | 50 | 50 |
+| [Uranus Lander](#uranus-lander) | 50 | 25 |
+| [Pea Shooter Blast](#pea-shooter-blast) | 50 | 24 |
+| [Ballblazer](#ballblazer) | 50 | 12 |
+| [Ace Pilot](#ace-pilot) | 51 | 45 |
+| [Void Trader](#void-trader) | 50 | 23 |
+| [RJ Birthday](#rj-birthday) | 50 | 32 |
+| [Fractalus](#fractalus) | 51 | 10 |
 
 ## Games
 
@@ -118,7 +118,7 @@ Shooter · `projects/orbital_patrol` · from the Amiga version
 ### Bullion Dash
 <a id="bullion-dash"></a>
 
-Lode Runner-style puzzle platformer with a level editor. Collect the gold, dig traps for the guards, then climb out. A fire, B/C dig left/right. C on the title opens the editor.
+Lode Runner-style puzzle platformer with a level editor. Collect the gold, dig traps for the guards, then climb out. A fire, B/C dig left/right. C on the title opens the editor: A put, B tile, L save, R load, P test.
 
 Platform · `projects/bullion_dash` · from the Amiga version
 
@@ -136,7 +136,7 @@ Platform · `projects/jump_quest` · from the Amiga version
 ### Orb Hunter
 <a id="orb-hunter"></a>
 
-Metroid-style exploration. Search the caverns room by room, collect power-ups to reach new areas. D-pad moves and aims, UP or B jumps, DOWN rolls, A fires.
+Metroid-style exploration. Search the caverns room by room, collect power-ups to reach new areas. LEFT/RIGHT move, UP or B jump, DOWN rolls, A fires (bombs when rolled), UP + A fires a missile.
 
 Explore · `projects/orb_hunter` · from the Amiga version
 
@@ -163,7 +163,7 @@ Action · `projects/pea_shooter_blast` · from the Amiga version
 ### Ballblazer
 <a id="ballblazer"></a>
 
-Split-screen futuristic ball sport against the computer. Steer your rotofoil, grab the plasmorb and shoot it through the goal beams. D-pad steers, UP or A forward.
+Split-screen futuristic ball sport against the computer. Steer your rotofoil, grab the plasmorb and carry it over the goal line. UP or A forward, DOWN or B reverse, LEFT/RIGHT strafe.
 
 Sports · `projects/ballblazer` · from the Amiga version
 
@@ -181,7 +181,7 @@ Flight sim · `projects/ace_pilot` · from the Amiga version
 ### Void Trader
 <a id="void-trader"></a>
 
-Elite-style 3D space trading and combat with generated music. Fly, fight the pirates, dock at the station and trade. D-pad pitch/yaw, L/R roll, B/C thrust, A fire, P dock.
+Elite-style 3D space trading and combat with generated music. Fly, fight the pirates, dock at the station and trade. D-pad pitch/yaw, L/R roll, B/C thrust, A fire, P dock. Docked: UP/DOWN pick, B buy, C sell, P launch.
 
 Space trade · `projects/void_trader` · from the Amiga version
 
@@ -190,7 +190,7 @@ Space trade · `projects/void_trader` · from the Amiga version
 ### RJ Birthday
 <a id="rj-birthday"></a>
 
-Birthday party adventure with ProTracker music. Run around the party rooms, greet the guests, find the cake. D-pad moves, A acts, B help, C guest list.
+Birthday party adventure with ProTracker music. Run around the party rooms, greet the guests, find the cake. D-pad moves, A acts, B help, C guest list, X back. Names: A adds a letter, UP/DOWN change it, B deletes, P confirms.
 
 Adventure · `projects/rj_birthday` · from the Amiga version
 

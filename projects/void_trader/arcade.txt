@@ -2,4 +2,4 @@ title=Void Trader
 origin=Amiga
 genre=Space trade
 order=160
-desc=Elite-style 3D space trading and combat with generated music. Fly, fight the pirates, dock at the station and trade. D-pad pitch/yaw, L/R roll, B/C thrust, A fire, P dock.
+desc=Elite-style 3D space trading and combat with generated music. Fly, fight the pirates, dock at the station and trade. D-pad pitch/yaw, L/R roll, B/C thrust, A fire, P dock. Docked: UP/DOWN pick, B buy, C sell, P launch.

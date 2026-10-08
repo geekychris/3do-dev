@@ -2,4 +2,4 @@ title=Orb Hunter
 origin=Amiga
 genre=Explore
 order=110
-desc=Metroid-style exploration. Search the caverns room by room, collect power-ups to reach new areas. D-pad moves and aims, UP or B jumps, DOWN rolls, A fires.
+desc=Metroid-style exploration. Search the caverns room by room, collect power-ups to reach new areas. LEFT/RIGHT move, UP or B jump, DOWN rolls, A fires (bombs when rolled), UP + A fires a missile.

@@ -65,6 +65,15 @@ void draw_clear(struct RastPort *rp)
     SetRast(rp, COL_BG);
 }
 
+/* 3DO port: on-screen controls name the pad's buttons */
+#ifdef AMIGA3DO
+#define KEYS(amiga, pad) pad
+#else
+#define KEYS(amiga, pad) amiga
+#endif
+/* x that centres n characters of the 8-pixel font on the 320 screen */
+#define CENTRE(n) (160 - (n) * 4)
+
 void draw_text(struct RastPort *rp, WORD x, WORD y, const char *str)
 {
     Move(rp, x, y);
@@ -740,17 +749,17 @@ void draw_title(struct RastPort *rp, GameState *gs)
     /* Instructions */
     SetAPen(rp, COL_WHITE);
     draw_text(rp, 44, 175, "KEEP THE PARTY GOING!");
-    draw_text(rp, 56, 190, "ARROWS/JOYSTICK+FIRE");
+    draw_text(rp, KEYS(56, CENTRE(9)), 190, KEYS("ARROWS/JOYSTICK+FIRE", "D-PAD + A"));
 
     /* Blink prompt */
     if (gs->title_blink & 16) {
         SetAPen(rp, COL_YELLOW);
-        draw_text(rp, 60, 206, "PRESS FIRE TO PARTY!");
+        draw_text(rp, KEYS(60, CENTRE(17)), 206, KEYS("PRESS FIRE TO PARTY!", "PRESS A TO PARTY!"));
     }
 
     /* Menu options */
     SetAPen(rp, COL_LTGREEN);
-    draw_text(rp, 36, 222, "H=HELP E=GUESTS Q=QUIT");
+    draw_text(rp, 36, 222, KEYS("H=HELP E=GUESTS Q=QUIT", "B=HELP C=GUESTS X=QUIT"));
 
     /* Tribute */
     SetAPen(rp, COL_GREY);
@@ -804,7 +813,7 @@ void draw_credits(struct RastPort *rp, GameState *gs)
     y += 20;
 
     SetAPen(rp, COL_GREY);
-    if (y > 0 && y < 260) draw_text(rp, 80, y, "PRESS FIRE TO PLAY");
+    if (y > 0 && y < 260) draw_text(rp, KEYS(80, CENTRE(15)), y, KEYS("PRESS FIRE TO PLAY", "PRESS A TO PLAY"));
 }
 
 /* Game over */
@@ -821,7 +830,7 @@ void draw_gameover(struct RastPort *rp, GameState *gs)
     draw_number(rp, 120, 130, gs->score);
 
     SetAPen(rp, COL_GREY);
-    draw_text(rp, 60, 180, "PRESS FIRE TO CONTINUE");
+    draw_text(rp, KEYS(60, CENTRE(19)), 180, KEYS("PRESS FIRE TO CONTINUE", "PRESS A TO CONTINUE"));
 }
 
 /* Win screen */
@@ -859,7 +868,7 @@ void draw_win(struct RastPort *rp, GameState *gs)
     draw_text(rp, 36, 200, "HAPPY BIRTHDAY RJ MICAL!");
 
     SetAPen(rp, COL_GREY);
-    draw_text(rp, 60, 230, "PRESS FIRE FOR CREDITS");
+    draw_text(rp, KEYS(60, CENTRE(19)), 230, KEYS("PRESS FIRE FOR CREDITS", "PRESS A FOR CREDITS"));
 }
 
 /* High score table */
@@ -901,7 +910,7 @@ void draw_hiscore(struct RastPort *rp, GameState *gs)
     draw_text(rp, 44, 205, "THE GUEST LIST!");
 
     SetAPen(rp, COL_GREY);
-    draw_text(rp, 52, 235, "PRESS FIRE TO CONTINUE");
+    draw_text(rp, KEYS(52, CENTRE(19)), 235, KEYS("PRESS FIRE TO CONTINUE", "PRESS A TO CONTINUE"));
 }
 
 /* Name entry screen */
@@ -949,8 +958,8 @@ void draw_enter_name(struct RastPort *rp, GameState *gs)
     }
 
     SetAPen(rp, COL_GREY);
-    draw_text(rp, 44, 180, "TYPE + RETURN TO CONFIRM");
-    draw_text(rp, 68, 200, "ESC TO SKIP");
+    draw_text(rp, KEYS(44, CENTRE(25)), 180, KEYS("TYPE + RETURN TO CONFIRM", "A=NEW LETTER UP/DN=CHANGE"));
+    draw_text(rp, KEYS(68, CENTRE(20)), 200, KEYS("ESC TO SKIP", "B=DELETE P=OK X=SKIP"));
 }
 
 /* Help screen */
@@ -977,11 +986,11 @@ void draw_help(struct RastPort *rp, GameState *gs)
     draw_text(rp, 12, y, "CONTROLS:");
     y += 12;
     SetAPen(rp, COL_WHITE);
-    draw_text(rp, 12, y, "ARROWS/JOYSTICK = MOVE");
+    draw_text(rp, 12, y, KEYS("ARROWS/JOYSTICK = MOVE", "D-PAD = MOVE"));
     y += 11;
-    draw_text(rp, 12, y, "SPACE/FIRE = INTERACT");
+    draw_text(rp, 12, y, KEYS("SPACE/FIRE = INTERACT", "A = INTERACT"));
     y += 11;
-    draw_text(rp, 12, y, "ESC = QUIT");
+    draw_text(rp, 12, y, KEYS("ESC = QUIT", "X = QUIT"));
     y += 16;
 
     SetAPen(rp, COL_YELLOW);
@@ -1023,7 +1032,7 @@ void draw_help(struct RastPort *rp, GameState *gs)
     y += 14;
 
     SetAPen(rp, COL_GREY);
-    draw_text(rp, 44, 248, "PRESS FIRE TO GO BACK");
+    draw_text(rp, KEYS(44, CENTRE(18)), 248, KEYS("PRESS FIRE TO GO BACK", "PRESS A TO GO BACK"));
 }
 
 /* Guest list editor */
@@ -1105,9 +1114,9 @@ void draw_guest_edit(struct RastPort *rp, GameState *gs)
     SetAPen(rp, COL_GREY);
     draw_text(rp, 28, y, "UP/DOWN = SELECT");
     y += 12;
-    draw_text(rp, 28, y, "DEL = REMOVE  RET = ADD");
+    draw_text(rp, 28, y, KEYS("DEL = REMOVE  RET = ADD", "B = REMOVE  P = ADD"));
     y += 12;
-    draw_text(rp, 28, y, "ESC = SAVE AND EXIT");
+    draw_text(rp, 28, y, KEYS("ESC = SAVE AND EXIT", "X = SAVE AND EXIT"));
 }
 
 /* Jail screen */

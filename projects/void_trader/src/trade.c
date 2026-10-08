@@ -126,6 +126,14 @@ void vt_trade_render(struct RastPort *rp, const TradeState *t)
 
     /* Controls hint */
     SetAPen(rp, PEN_DIM);
+#ifdef AMIGA3DO   /* 3DO port: pad buttons */
+    Move(rp, 24, 210); Text(rp, (STRPTR)"UP/DN select B buy  C sell", 26);
+#else
     Move(rp, 24, 210); Text(rp, (STRPTR)"W/S select   B buy   N sell", 27);
+#endif
+#ifdef AMIGA3DO   /* 3DO port: pad buttons */
+    Move(rp, 24, 224); Text(rp, (STRPTR)"P undock and launch",         19);
+#else
     Move(rp, 24, 224); Text(rp, (STRPTR)"U undock and launch",         19);
+#endif
 }

@@ -923,10 +923,19 @@ void draw_title(struct RastPort *rp)
     cx = 60;
     draw_string(rp, cx, 160, "CONTROLS:", 1);
     draw_string(rp, cx, 172, "LEFT/RIGHT - MOVE", 1);
+#ifdef AMIGA3DO
+    /* 3DO port: what the buttons really do (missiles are fired with
+     * UP held; P isn't used in play) */
+    draw_string(rp, cx, 182, "UP/B - JUMP", 1);
+    draw_string(rp, cx, 192, "DOWN - ROLL FORM", 1);
+    draw_string(rp, cx, 202, "A - SHOOT (BOMB IN ROLL)", 1);
+    draw_string(rp, cx, 212, "UP + A - MISSILE", 1);
+#else
     draw_string(rp, cx, 182, "UP/B - JUMP / AIM UP", 1);
     draw_string(rp, cx, 192, "DOWN - ROLL FORM", 1);
     draw_string(rp, cx, 202, "A - SHOOT/BOMB", 1);
     draw_string(rp, cx, 212, "P - MISSILE MODE", 1);
+#endif
 
     /* Version */
     SetAPen(rp, COL_ROCK2);
