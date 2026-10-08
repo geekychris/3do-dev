@@ -1,8 +1,8 @@
 # The games
 
 Ports of the Amiga games to the 3DO through the sdk/amiga compatibility
-layer, and two Unity games rebuilt for the 3DO's cel engine (Planet Chomp
-and Spectral Keep).
+layer, and three Unity games rebuilt for the 3DO's cel engine (Planet Chomp,
+Spectral Keep and Rolling Steel).
 Every game is its own disc (`./3do build <game>`), and the arcade
 disc (`./3do build arcade`) bundles all of them behind a menu.
 Screenshots are from the automated tests; regenerate this page with
@@ -28,7 +28,7 @@ Measured in the emulator by `./3do selftest`.
 | [Nova Defense](#nova-defense) | 50 | 50 |
 | [Dot Chase](#dot-chase) | 50 | 50 |
 | [StakAttack](#stakattack) | 50 | 50 |
-| [Lunar Rider](#lunar-rider) | 52 | 50 |
+| [Lunar Rider](#lunar-rider) | 50 | 50 |
 | [Frank the Frog](#frank-the-frog) | 50 | 50 |
 | [Sky Knights](#sky-knights) | 50 | 50 |
 | [Orbital Patrol](#orbital-patrol) | 50 | 46 |
@@ -37,13 +37,14 @@ Measured in the emulator by `./3do selftest`.
 | [Orb Hunter](#orb-hunter) | 50 | 50 |
 | [Uranus Lander](#uranus-lander) | 50 | 50 |
 | [Pea Shooter Blast](#pea-shooter-blast) | 50 | 50 |
-| [Ballblazer](#ballblazer) | 49 | 30 |
-| [Ace Pilot](#ace-pilot) | 50 | 27 |
+| [Ballblazer](#ballblazer) | 49 | 29 |
+| [Ace Pilot](#ace-pilot) | 50 | 26 |
 | [Void Trader](#void-trader) | 50 | 24 |
 | [RJ Birthday](#rj-birthday) | 50 | 50 |
 | [Fractalus](#fractalus) | 50 | 9 |
 | [Planet Chomp](#planet-chomp) | 49 | 14 |
 | [Spectral Keep](#spectral-keep) | 50 | 50 |
+| [Rolling Steel](#rolling-steel) | 50 | 18 |
 
 ## Games
 
@@ -226,3 +227,12 @@ A Knight Lore style flip-screen adventure through three keeps: find the relics a
 Iso adventure · `projects/spectral_keep` · from the Unity version
 
 ![Spectral Keep title](images/games/spectral_keep-title.png) ![Spectral Keep play](images/games/spectral_keep-play.png)
+
+### Rolling Steel
+<a id="rolling-steel"></a>
+
+Roll a steel marble down six floating courses against one clock that carries over: no jump, no brakes, just momentum. Ice slides, sand bites, acid dissolves; sweepers, crushers, fans, chasers and blobs. D-pad pushes (relative to the view), L/R turn the view, A/B zoom, C+up/down tilt. Two players on two pads.
+
+Marble racer · `projects/rolling_steel` · from the Unity version
+
+![Rolling Steel title](images/games/rolling_steel-title.png) ![Rolling Steel play](images/games/rolling_steel-play.png)

@@ -1,0 +1,49 @@
+name ULTIMATE
+medals gold=40 silver=48 bronze=55
+time 56
+width 8
+decor 5
+music 6
+
+pad d=6 w=8 start
+rails
+hill len=11 drop=3 w=6
+
+run len=17 w=4.2                    # straight to the hard part
+blob x=0 back=6 range=999 speed=7
+curve r=11 a=70 drop=2.5 w=5 bank=18
+
+run len=13 w=9
+crusher x=0 back=5 w=3.2 period=1.6 lift=5
+acid w=3 d=2.8 x=-3 back=1
+
+ice len=16 w=5                      # unkerbed ice, straight into a jump
+hill len=9 drop=4 w=4.6
+jump gap=3 drop=3
+run len=9 w=7
+rails
+chaser x=0 back=3 range=26 speed=12
+
+curve r=10 a=-80 drop=2 w=4.6 bank=17
+run len=14 w=10
+fan x=0 back=9 w=10 d=6 push=19
+pillar x=-3 back=3 r=0.8 h=2.4
+pillar x=3 back=3 r=0.8 h=2.4
+
+run len=7 w=13
+split len=16 side=3.4 pit=5
+run len=10 w=9
+boost x=-3 back=6 w=3.4 d=5 push=28  # the quick way past the sweeper
+sweeper x=5 back=5 len=7 speed=120
+
+crumble len=10 w=9
+chicane r=12 a=45 drop=3 w=6 bank=15
+run len=13 w=10
+acid w=3.2 d=3 x=-3.4 back=8
+acid w=3.2 d=3 x=3.4 back=2
+chaser x=0 back=6 range=28 speed=13
+
+hill len=16 drop=7 w=5
+rough len=9 w=5
+rails
+goal d=9

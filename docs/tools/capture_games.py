@@ -88,8 +88,8 @@ def main():
                         + " ".join(imgs) + "\n")
     page = ["# The games", "",
             "Ports of the Amiga games to the 3DO through the sdk/amiga compatibility",
-            "layer, and two Unity games rebuilt for the 3DO's cel engine (Planet Chomp",
-            "and Spectral Keep).",
+            "layer, and three Unity games rebuilt for the 3DO's cel engine (Planet Chomp,",
+            "Spectral Keep and Rolling Steel).",
             "Every game is its own disc (`./3do build <game>`), and the arcade",
             "disc (`./3do build arcade`) bundles all of them behind a menu.",
             "Screenshots are from the automated tests; regenerate this page with",

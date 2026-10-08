@@ -1,0 +1,43 @@
+name SILLY
+medals gold=34 silver=44 bronze=55
+time 58
+width 9
+decor 4
+music 5
+
+pad d=7 w=9 start
+rails
+hill len=13 drop=3 w=8
+
+run len=15 w=9
+crusher x=0 back=5 w=3 period=1.9 lift=4.5
+curve r=13 a=-65 drop=2 w=7 bank=15 rails
+
+run len=17 w=9
+fan x=0 back=12 w=9 d=5 push=17
+fan x=0 back=4 w=9 d=5 push=-17     # and straight back the other way
+run len=8 w=7
+rails
+
+ice len=14 w=7
+rails
+curve r=14 a=70 drop=2 w=7 bank=17 rails
+
+run len=16 w=10
+crusher x=-2.8 back=11 w=3 period=1.7 lift=4
+crusher x=2.8 back=4 w=3 period=1.7 phase=0.5 lift=4
+run len=9 w=8
+rails
+
+sweeper x=4.5 back=5 len=7 speed=110
+crumble len=9 w=8
+curve r=12 a=-55 drop=2.5 w=7 bank=14 rails
+
+run len=12 w=9
+acid w=3.4 d=3 x=-3 back=7
+acid w=3.4 d=3 x=3 back=2
+hill len=14 drop=5 w=7
+chaser x=0 back=5 range=24 speed=11
+run len=11 w=7
+rails
+goal d=9

@@ -5,7 +5,7 @@ Everything runs from the repo root with `./3do`.
 ## Play
 
 ```sh
-./3do run arcade          # the arcade: all 20 games behind a menu
+./3do run arcade          # the arcade: all 21 games behind a menu
 ./3do run rock_blaster    # one game on its own
 ```
 
