@@ -769,7 +769,8 @@ gfx_swap(void)
       choose_drops();
       if(s_underlay)
         {
-          CCB *u = strip_underlay((CCB *)s_underlay);
+          /* only layer cels need strips; a plain cel list goes as it is */
+          CCB *u = s_nlayers ? strip_underlay((CCB *)s_underlay) : (CCB *)s_underlay;
           if(u)
             DrawCels(s_sc.sc_BitmapItems[s_cur], u);
         }
