@@ -382,6 +382,7 @@ void draw_tile_column(struct RastPort *rp, WORD map_col, WORD pixel_x)
  * original code, twice to cover 23 columns with a 320 px screen) and copy
  * it shifted afterwards - the ARM60 can't redraw every tile each frame. */
 #define CACHE_W ((TILES_X + 1) * TILE_W)          /* 368 */
+#define PEN_HW_BG    31     /* transparent: the tile cache cel shows through */
 #define CACHE_STRIDE (CACHE_W + 16)                 /* slack for copy_shifted's read-ahead */
 static void draw_all_tiles_orig(struct RastPort *rp, ScrollState *sc);
 
@@ -469,6 +470,26 @@ void draw_all_tiles(struct RastPort *rp, ScrollState *sc)
     key_level = g_current_level;
     key_col = sc->tile_col;
     memcpy(key_cells, cells, sizeof(cells));
+    {
+        /* The cache itself is shown by the cel engine under the frame,
+         * shifted by the fine scroll; the frame only needs the transparent
+         * pen there (one fast fill instead of a shifted copy of 75 KB). */
+        static void *layer = 0;
+        static int layer_tried = 0;
+        if (!layer_tried) {
+            layer_tried = 1;
+            layer = gfx_layer_cel(cache, CACHE_W, (int)rows, CACHE_STRIDE);
+            if (layer)
+                gfx_set_transparent_pen(PEN_HW_BG);
+        }
+        if (layer) {
+            SetAPen(rp, PEN_HW_BG);
+            RectFill(rp, 0, 0, GFX_WIDTH - 1, rows - 1);
+            gfx_layer_move(layer, -fine, 0);
+            gfx_set_underlay(layer);
+            return;
+        }
+    }
     for (y = 0; y < rows; y++)
         copy_shifted(screen + y * GFX_WIDTH, cache + y * CACHE_STRIDE + fine, GFX_WIDTH);
 }

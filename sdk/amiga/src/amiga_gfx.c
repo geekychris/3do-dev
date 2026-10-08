@@ -51,6 +51,22 @@ rgb4_to_15(UWORD c)
   return (UWORD)((((r << 1) | (r >> 3)) << 10) | (((g << 1) | (g >> 3)) << 5) | ((b << 1) | (b >> 3)));
 }
 
+static int   s_trans_pen = -1;       /* gfx_set_transparent_pen() */
+static void *s_underlay;              /* gfx_set_underlay() */
+
+/* The cel engine treats a final pixel value of 0 as transparent once
+ * CCB_BGND is off: the transparent pen gets 0, any other black gets 1
+ * (one step of blue) so it stays opaque. */
+static UWORD
+plut_value(int pen, UWORD c)
+{
+  if(s_trans_pen < 0)
+    return c;
+  if(pen == s_trans_pen)
+    return 0;
+  return c ? c : 1;
+}
+
 static void
 set_pen_rgb15(int pen, UWORD c)
 {
@@ -58,7 +74,76 @@ set_pen_rgb15(int pen, UWORD c)
     return;
   s_pal[pen] = c;
   if(s_plut && pen < 32)
-    s_plut[pen] = c;
+    s_plut[pen] = plut_value(pen, c);
+}
+
+void
+gfx_set_transparent_pen(int pen)
+{
+  int i;
+  s_trans_pen = (pen >= 0 && pen < 32) ? pen : -1;
+  if(s_cel)
+    {
+      if(s_trans_pen >= 0)
+        s_cel->ccb_Flags &= ~CCB_BGND;
+      else
+        s_cel->ccb_Flags |= CCB_BGND;
+    }
+  if(s_plut)
+    for(i = 0; i < 32; i++)
+      s_plut[i] = plut_value(i, s_pal[i]);
+}
+
+void gfx_set_underlay(void *cels)   { s_underlay = cels; }
+
+/* An 8-bit pen buffer (w x h, rows `stride` bytes apart, stride a multiple
+ * of 4) as a cel coloured by the screen's palette, for gfx_set_underlay():
+ * e.g. a scrolling background drawn once into its own buffer. */
+void *
+gfx_layer_cel(UBYTE *pens, int w, int h, int stride)
+{
+  CCB *c;
+  if(!s_plut || (stride & 3) || w > stride)
+    return 0;
+  c = CreateCel(stride, h, 8, CREATECEL_CODED, pens);
+  if(!c)
+    return 0;
+  /* share the screen palette (CreateCel's own 64-byte PLUT stays
+   * allocated: its layout is CreateCel's business; never DeleteCel this) */
+  c->ccb_PLUTPtr = (void *)s_plut;
+  c->ccb_Flags |= CCB_BGND | CCB_LAST;
+  c->ccb_PRE1 = (c->ccb_PRE1 & ~PRE1_TLHPCNT_MASK) |
+                (((ULONG)w - PRE1_TLHPCNT_PREFETCH) & PRE1_TLHPCNT_MASK);
+  c->ccb_Width = w;
+  return c;
+}
+
+/* place a layer cel with its top-left at game pixel (x, y) */
+void
+gfx_layer_move(void *cel, LONG x, LONG y)
+{
+  CCB *c = (CCB *)cel;
+  if(!c)
+    return;
+  c->ccb_XPos = x << 16;
+  c->ccb_YPos = gfx_display_y(y << 16);
+  c->ccb_HDX = 1 << 20;
+  c->ccb_HDY = 0;
+  c->ccb_VDX = 0;
+  c->ccb_VDY = gfx_display_y((y + 1) << 16) - c->ccb_YPos;
+  if(s_view != GFX_VIEW_CROP && s_h > 240)
+    c->ccb_VDY = (240 << 16) / s_h;
+}
+
+/* logical (game) y in 16.16 -> display y in 16.16, for underlay cels */
+LONG
+gfx_display_y(LONG y)
+{
+  if(s_view == GFX_VIEW_CROP || s_h <= 240)
+    return y - ((s_view == GFX_VIEW_CROP ? s_view_y0 : 0) << 16);
+  if(s_h == 256)
+    return (y >> 4) * 15;                /* 240/256 = 15/16, no divide */
+  return (LONG)(((y >> 4) * 240) / s_h) << 4;
 }
 
 void gfx_set_rgb4(int pen, UWORD rgb4)   { set_pen_rgb15(pen, rgb4_to_15(rgb4)); }
@@ -192,6 +277,8 @@ gfx_init_mode(int mode, int height, const UWORD *pal, int n)
     }
   /* draw pen-0 / black pixels instead of treating them as transparent */
   s_cel->ccb_Flags |= CCB_BGND | CCB_LAST;
+  s_trans_pen = -1;
+  s_underlay = 0;
   update_view();
 
   for(i = 0; i < 256; i++)
@@ -308,6 +395,8 @@ gfx_swap(void)
 {
   if(!s_ready)
     return;
+  if(s_underlay)
+    DrawCels(s_sc.sc_BitmapItems[s_cur], (CCB *)s_underlay);
   DrawCels(s_sc.sc_BitmapItems[s_cur], s_cel);
   DisplayScreen(s_sc.sc_Screens[s_cur], 0);
   s_cur ^= 1;
@@ -363,7 +452,29 @@ fill8(UBYTE *p, int pen, long n)
   ULONG blocks;
   if(n < 96)
     {
-      memset(p, pen, n);
+      /* short spans (Draw's horizontal lines, sprite rows): inline
+       * 32-bit stores; a memset call costs more than the fill */
+      ULONG pw = (ULONG)(pen & 255) * 0x01010101UL, *q;
+      while(((ULONG)p & 3) && n)
+        {
+          *p++ = (UBYTE)pen;
+          n--;
+        }
+      q = (ULONG *)p;
+      while(n >= 16)
+        {
+          q[0] = pw; q[1] = pw; q[2] = pw; q[3] = pw;
+          q += 4;
+          n -= 16;
+        }
+      while(n >= 4)
+        {
+          *q++ = pw;
+          n -= 4;
+        }
+      p = (UBYTE *)q;
+      while(n-- > 0)
+        *p++ = (UBYTE)pen;
       return;
     }
   while(((ULONG)p & 3) && n)

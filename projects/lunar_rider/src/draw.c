@@ -124,6 +124,27 @@ static void draw_char(struct RastPort *rp, WORD x, WORD y, char c, WORD scale)
     if (c < 32 || c > 127) return;
     idx = c - 32;
 
+#ifdef AMIGA3DO
+    /* 3DO port: unscaled glyphs inside the clip go straight into the
+     * frame buffer (a RectFill per pixel cost most of the frame) */
+    {
+        UBYTE *pix = gfx_pixels8();
+        if (scale == 1 && pix && x >= rp->clip_x0 && x + 4 <= rp->clip_x1 &&
+            y >= rp->clip_y0 && y + 6 <= rp->clip_y1) {
+            UBYTE pen = (UBYTE)rp->apen;
+            UBYTE *d = pix + (LONG)y * GFX_WIDTH + x;
+            for (row = 0; row < 7; row++, d += GFX_WIDTH) {
+                bits = font_5x7[idx][row];
+                if (bits & 0x10) d[0] = pen;
+                if (bits & 0x08) d[1] = pen;
+                if (bits & 0x04) d[2] = pen;
+                if (bits & 0x02) d[3] = pen;
+                if (bits & 0x01) d[4] = pen;
+            }
+            return;
+        }
+    }
+#endif
     for (row = 0; row < 7; row++) {
         bits = font_5x7[idx][row];
         for (col = 0; col < 5; col++) {

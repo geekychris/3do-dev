@@ -30,6 +30,9 @@
 
 #include "bridge_client.h"
 #include "ballblazer.h"
+#ifdef AMIGA3DO
+#include "floor_cels.h"
+#endif
 #include "sound.h"
 #ifdef AMIGA3DO
 #include "amiga3do.h"
@@ -96,6 +99,9 @@ static int open_display(void)
     if (!gfx_init(0, 32))
         return 1;
     set_palette(0);
+    /* the floor is drawn by the cel engine under the frame (pitch.c) */
+    if (fc_init(gfx_pen_rgb16(PEN_GRID_A), gfx_pen_rgb16(PEN_GRID_B)))
+        gfx_set_transparent_pen(PEN_FLOOR_HW);
     return 0;
 }
 static void close_display(void) { gfx_exit(); }
@@ -481,6 +487,9 @@ static void render_frame(void)
     rp->BitMap = bm;
 #endif
 
+#ifdef AMIGA3DO
+    fc_begin();
+#endif
     /* P1 (human) pane sees the P2 rotofoil. */
     pitch_render(rp, PANE_P1_Y0, p1.x, p1.z, p1.angle, &ball,
                  p2.x, p2.z, PEN_ROTO_P2);
@@ -495,6 +504,7 @@ static void render_frame(void)
     draw_hud(rp);
 
 #ifdef AMIGA3DO
+    gfx_set_underlay(fc_list());
     gfx_swap();             /* paces to 50 fps */
 #else
     WaitBlit();

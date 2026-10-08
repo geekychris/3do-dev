@@ -26,15 +26,30 @@ Atari ports in hatari_augmented), all playable from the **arcade** disc
   maps to `$boot/<progdir>/x`, set with `amiga_set_progdir("<game>")`. Writes
   (`MODE_NEWFILE`) go to NVRAM (`/NVRAM/<name>`, 32 KB total, so keep them
   tiny). `amiga_load_file()` loads a whole file.
-- **Sound:** a Paula emulation (`custom.aud[n]`, `paula_dmacon()`) mixed in
-  software at 22 kHz and streamed to the 3DO audio folio, plus a C ProTracker
-  player with the ptplayer API (`mt_install_cia`, `mt_init`, `mt_playfx`,
-  `mt_soundfx`, `mt_end`, ...). Music ticks run at 50 Hz of *audio* time, so
-  tempo holds even if a game draws slower. Load MODs with
+- **Sound:** a Paula emulation (`custom.aud[n]`, `paula_dmacon()`) played by
+  the 3DO's **DSP**: each Amiga channel is a `varmono8.dsp` sample player,
+  panned Amiga-style (0 and 3 left, 1 and 2 right) through `mixer4x2.dsp`, so
+  no CPU time goes to mixing. An audio thread runs the music tick at 50 Hz of
+  audio-clock time (the clock is set to exactly 300 Hz), whatever the game's
+  frame rate, and turns the registers into DSP commands: DMA on starts the
+  latched block; new `ac_ptr/ac_len` while it plays queue the next block
+  after it, as on Paula; period and volume are knobs. There's also a C
+  ProTracker player with the ptplayer API (`mt_install_cia`, `mt_init`,
+  `mt_playfx`, `mt_soundfx`, `mt_end`, ...); load MODs with
   `amiga_load_file("PROGDIR:x.mod", &len)`. Code that writes Paula registers
   itself works too: start channels with `paula_dmacon(DMAF_SETCLR|DMAF_AUDn)`
-  (plain `custom.dmacon =` writes are applied once per frame), and use
-  `paula_init(tick, 50)` for a player tick.
+  (plain `custom.dmacon =` writes are picked up at the next tick), and use
+  `paula_init(tick, 50)` to run a player tick on the audio thread. Since the
+  tick then runs on another thread, bracket main-loop code that changes the
+  player's state with `paula_lock()`/`paula_unlock()` (Disable()/Enable()).
+  If the DSP voices can't be set up, a software mixer (22 kHz, streamed)
+  takes over. `projects/paula_test` checks both against Paula's behaviour.
+- **Hardware layers:** `gfx_set_transparent_pen(pen)` makes one pen show
+  through, and `gfx_set_underlay(ccb_list)` draws a list of 3DO cels under
+  the frame at every `gfx_swap()` (display coordinates; `gfx_display_y()`
+  maps a game y). Projects/ballblazer draws its whole chequered floor this
+  way, about 40 cels per pane mapped onto perspective trapezoids, while
+  rotofoils, ball and HUD stay ordinary drawing on top.
 - **Debug bridge:** `ab_init`, `AB_I/W/E(fmt, ...)` (real functions here, since
   Norcroft has no variadic macros) print to the 3DO debug console with the name
   given to `ab_init` as prefix. `ab_register_var/hook` are no-ops.
@@ -128,6 +143,11 @@ In order of preference:
   Games that draw below 12 fps call `gfx_set_max_steps(n)` so the catch-up
   limit (default 4 steps per frame) doesn't slow their logic down. Logic
   tuned for 25 fps runs one tick per two steps (projects/fractalus/main.cpp).
+- **Let the hardware draw big regular shapes**: ballblazer's floor went
+  from half the frame in software to a list of cels (`gfx_set_underlay`):
+  11.9 -> 29.6 fps with the other fixes below.
+- **Horizontal spans with `RectFill(rp, x0, y, x1, y)`**, not Move/Draw:
+  it skips the line set-up and clipping (ballblazer's ball and rotofoils).
 - **Hidden samples by compare, not divide**: a front-to-back raycaster only
   needs the perspective divide for samples that draw. Keep the "would this
   draw" threshold as `k * dist`, advance it by addition, and find the new
