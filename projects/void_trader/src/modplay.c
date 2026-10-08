@@ -16,6 +16,18 @@
 
 #include "modplay.h"
 #include "bridge_client.h"
+#ifdef AMIGA3DO
+/* 3DO port: the music tick runs on the layer's audio thread (50 Hz of
+ * audio time, whatever the frame rate), so the calls the game makes from
+ * its main loop take the Paula lock - like Disable()/Enable() around the
+ * Amiga's interrupt. The bodies below are the originals, renamed. */
+#define modplay_init       modplay_init_u
+#define modplay_start      modplay_start_u
+#define modplay_start_song modplay_start_song_u
+#define modplay_stop       modplay_stop_u
+#define modplay_cleanup    modplay_cleanup_u
+#define modplay_sfx        modplay_sfx_u
+#endif
 
 extern struct Custom custom;
 
@@ -713,3 +725,39 @@ void modplay_sfx(BYTE *data, UWORD len_words, UWORD period, UWORD volume)
     if (mp.sfx_frames < 3) mp.sfx_frames = 3;
     if (mp.sfx_frames > 25) mp.sfx_frames = 25;
 }
+
+#ifdef AMIGA3DO
+#undef modplay_init
+#undef modplay_start
+#undef modplay_start_song
+#undef modplay_stop
+#undef modplay_cleanup
+#undef modplay_sfx
+int modplay_init(void)
+{
+    int r;
+    UWORD k = paula_lock();
+    r = modplay_init_u();
+    paula_unlock(k);
+    if (r == 0)
+        paula_set_tick(modplay_tick);
+    return r;
+}
+void modplay_start(void)          { UWORD k = paula_lock(); modplay_start_u(); paula_unlock(k); }
+void modplay_start_song(int id)   { UWORD k = paula_lock(); modplay_start_song_u(id); paula_unlock(k); }
+void modplay_stop(void)           { UWORD k = paula_lock(); modplay_stop_u(); paula_unlock(k); }
+void modplay_cleanup(void)
+{
+    UWORD k;
+    paula_set_tick(0);
+    k = paula_lock();
+    modplay_cleanup_u();
+    paula_unlock(k);
+}
+void modplay_sfx(BYTE *data, UWORD len_words, UWORD period, UWORD volume)
+{
+    UWORD k = paula_lock();
+    modplay_sfx_u(data, len_words, period, volume);
+    paula_unlock(k);
+}
+#endif

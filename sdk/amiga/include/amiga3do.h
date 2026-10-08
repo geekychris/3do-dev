@@ -61,6 +61,7 @@ LONG  gfx_display_y(LONG y16);
  * scrolling background drawn once), and where to put it (game pixels) */
 void *gfx_layer_cel(UBYTE *pens, int w, int h, int stride);
 void  gfx_layer_move(void *cel, LONG x, LONG y);
+void *gfx_layer_chain(void *a, void *b);  /* a then b as one list; returns a */
 /* draw into another pen buffer (to fill a layer); returns the previous
  * target, NULL = the frame */
 UBYTE *gfx_draw_to(UBYTE *buf);

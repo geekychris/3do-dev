@@ -924,7 +924,9 @@ int main(void)
 
         frame++;
         if (bridge_ok) ab_poll();
+#ifndef AMIGA3DO           /* 3DO port: ticks on the audio thread (modplay.c) */
         modplay_tick();      /* one music tick per game frame */
+#endif
 
         /* FPS via DateStamp every 30 frames. */
         if ((frame % 30) == 0) {

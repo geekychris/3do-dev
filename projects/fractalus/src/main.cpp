@@ -544,10 +544,7 @@ int main(void)
          * call for the rationale. Handles pending var reads/writes,
          * hook calls, and drains the reply queue. */
         if (bridge_ok) ab_poll();
-#ifdef AMIGA3DO
-        while (s_steps-- > 0)
-            modplay_tick();  /* 3DO port: music at 50 Hz (ProTracker rate) */
-#else
+#ifndef AMIGA3DO           /* 3DO port: ticks on the audio thread (modplay.c) */
         modplay_tick();      /* one music tick per frame (VBlank-ish) */
 #endif
         sfx.tick();

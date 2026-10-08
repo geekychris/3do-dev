@@ -172,6 +172,26 @@ gfx_draw_to16(UWORD *buf)
   return prev;
 }
 
+/* Link two layer cels into one underlay list (a first, then b); b may
+ * be NULL. Returns a. */
+void *
+gfx_layer_chain(void *a, void *b)
+{
+  CCB *ca = (CCB *)a, *cb = (CCB *)b;
+  if(!ca)
+    return b;
+  ca->ccb_Flags |= CCB_NPABS;
+  if(cb)
+    {
+      ca->ccb_Flags &= ~CCB_LAST;
+      ca->ccb_NextPtr = cb;
+      cb->ccb_Flags |= CCB_LAST;
+    }
+  else
+    ca->ccb_Flags |= CCB_LAST;
+  return a;
+}
+
 /* place a layer cel with its top-left at game pixel (x, y) */
 void
 gfx_layer_move(void *cel, LONG x, LONG y)

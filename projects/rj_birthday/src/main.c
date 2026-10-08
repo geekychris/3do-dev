@@ -490,6 +490,9 @@ int main(void)
                     draw_title(rp, &gs);
                     break;
                 case GS_PLAYING:
+#ifdef AMIGA3DO
+                    if (!rooms_layers_active())   /* the room layers clear it */
+#endif
                     draw_clear(rp);
                     rooms_draw_bg(rp, &gs);
                     rooms_draw_details(rp, &gs);
