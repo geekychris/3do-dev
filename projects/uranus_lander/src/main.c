@@ -549,7 +549,11 @@ int main(void)
                 } }
 #endif
                 /* Draw everything */
+#ifdef AMIGA3DO
+                draw_clear_play(rp);     /* transparent once the terrain layer is up */
+#else
                 draw_clear(rp);
+#endif
                 draw_stars(rp, &gs);
                 draw_terrain(rp, &gs);
                 draw_particles(rp, &gs);

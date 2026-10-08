@@ -783,6 +783,9 @@ int main(void)
         rp->BitMap = sbuf[cur_buf]->sb_BitMap;
 #endif
 
+#ifdef AMIGA3DO
+        gfx_set_underlay(0);     /* the 3D view sets it again (engine3d.c) */
+#endif
         if (game_mode == GM_TITLE) {
             int y;
             char goal[48];

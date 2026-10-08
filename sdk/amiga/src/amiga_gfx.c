@@ -67,12 +67,16 @@ plut_value(int pen, UWORD c)
   return c ? c : 1;
 }
 
+static UWORD s_pal_raw[256];          /* colours as set (s_pal: as drawn) */
+
 static void
 set_pen_rgb15(int pen, UWORD c)
 {
   if(pen < 0 || pen > 255)
     return;
-  s_pal[pen] = c;
+  s_pal_raw[pen] = c;
+  /* GFX_RGB16 frames hold colours, so the transparent pen is drawn as 0 */
+  s_pal[pen] = s_pix16 ? plut_value(pen, c) : c;
   if(s_plut && pen < 32)
     s_plut[pen] = plut_value(pen, c);
 }
@@ -81,7 +85,10 @@ void
 gfx_set_transparent_pen(int pen)
 {
   int i;
-  s_trans_pen = (pen >= 0 && pen < 32) ? pen : -1;
+  s_trans_pen = (pen >= 0 && pen < (s_pix16 ? 256 : 32)) ? pen : -1;
+  if(s_pix16)
+    for(i = 0; i < 256; i++)
+      s_pal[i] = plut_value(i, s_pal_raw[i]);
   if(s_cel)
     {
       if(s_trans_pen >= 0)
@@ -116,6 +123,53 @@ gfx_layer_cel(UBYTE *pens, int w, int h, int stride)
                 (((ULONG)w - PRE1_TLHPCNT_PREFETCH) & PRE1_TLHPCNT_MASK);
   c->ccb_Width = w;
   return c;
+}
+
+/* Draw into another GFX_WIDTH x gfx_height() pen buffer (GFX_PAL32), e.g.
+ * to render a layer once; returns the previous target - pass it back
+ * (or NULL for the frame) to resume drawing the frame. */
+UBYTE *
+gfx_draw_to(UBYTE *buf)
+{
+  static UBYTE *frame;
+  UBYTE *prev = s_pix8;
+  if(!s_pix8)
+    return 0;
+  if(!frame)
+    frame = s_pix8;
+  s_pix8 = buf ? buf : frame;
+  return prev;
+}
+
+/* GFX_RGB16: a 16-bit colour buffer as a layer cel (stride in pixels, even) */
+void *
+gfx_layer_cel16(UWORD *pix, int w, int h, int stride)
+{
+  CCB *c;
+  if((stride & 1) || w > stride)
+    return 0;
+  c = CreateCel(stride, h, 16, CREATECEL_UNCODED, pix);
+  if(!c)
+    return 0;
+  c->ccb_Flags |= CCB_BGND | CCB_LAST;
+  c->ccb_PRE1 = (c->ccb_PRE1 & ~PRE1_TLHPCNT_MASK) |
+                (((ULONG)w - PRE1_TLHPCNT_PREFETCH) & PRE1_TLHPCNT_MASK);
+  c->ccb_Width = w;
+  return c;
+}
+
+/* GFX_RGB16 version of gfx_draw_to(): GFX_WIDTH pixels per row */
+UWORD *
+gfx_draw_to16(UWORD *buf)
+{
+  static UWORD *frame;
+  UWORD *prev = s_pix16;
+  if(!s_pix16)
+    return 0;
+  if(!frame)
+    frame = s_pix16;
+  s_pix16 = buf ? buf : frame;
+  return prev;
 }
 
 /* place a layer cel with its top-left at game pixel (x, y) */
@@ -282,7 +336,7 @@ gfx_init_mode(int mode, int height, const UWORD *pal, int n)
   update_view();
 
   for(i = 0; i < 256; i++)
-    s_pal[i] = 0;
+    s_pal[i] = s_pal_raw[i] = 0;
   if(s_plut)
     for(i = 0; i < 32; i++)
       s_plut[i] = 0;

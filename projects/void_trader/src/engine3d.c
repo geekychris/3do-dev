@@ -11,6 +11,11 @@
 #include <proto/graphics.h>
 
 #include <string.h>
+#ifdef AMIGA3DO
+#include <exec/memory.h>
+#include <proto/exec.h>
+#include "amiga3do.h"
+#endif
 
 /* Palette layout — caller sets these up at boot, engine just uses. */
 #define PEN_SPACE     0
@@ -269,6 +274,34 @@ static void build_object_matrix(const Entity *o, Mat3 *out)
     out->m[2][2] = (y20 * a02 + 0 * a12 + y22 * a22) >> FP;
 }
 
+#ifdef AMIGA3DO
+/* 3DO port: the 3D view is hardware layers under the frame - space and
+ * stars in a 16-bit layer (drawn here each frame), then the triangles as
+ * cels in painter's order - and the frame is transparent over the view, so
+ * bolts, crosshair, text and cockpit draw on top as before. */
+#include "tri_cels.h"
+#define PEN_HW_VIEW 255            /* transparent pen */
+static int    g_cels = -1;         /* -1: not set up yet, 0: unavailable */
+static UWORD *g_space;             /* space + stars, g_w x g_h */
+static void  *g_space_cel;
+static int    g_space_ok;          /* layer holds a cleared backdrop */
+static WORD   g_oldx[128], g_oldy[128];   /* stars drawn into it last frame */
+static int    g_nold;
+
+static void cels_setup(void)
+{
+    g_cels = 0;
+    g_space = (UWORD *)AllocMem((ULONG)GFX_WIDTH * g_h * 2, MEMF_CLEAR);
+    if (!g_space || !tc_init())
+        return;
+    g_space_cel = gfx_layer_cel16(g_space, g_w, g_h, GFX_WIDTH);
+    if (!g_space_cel)
+        return;
+    gfx_set_transparent_pen(PEN_HW_VIEW);
+    g_cels = 1;
+}
+#endif
+
 static void draw_one_object(struct RastPort *rp, const Entity *o)
 {
     const Model *m = o->model;
@@ -369,6 +402,16 @@ static void draw_one_object(struct RastPort *rp, const Entity *o)
         int ff = face_order[i];
         int a = m->face[ff][0], b = m->face[ff][1], c = m->face[ff][2];
         if (!proj_ok[a] || !proj_ok[b] || !proj_ok[c]) continue;
+#ifdef AMIGA3DO
+        if (g_cels) {
+            /* 3DO port: the cel engine fills it (tri_cels.c) */
+            tc_tri((LONG)proj_x[a] << 16, gfx_display_y((LONG)proj_y[a] << 16),
+                   (LONG)proj_x[b] << 16, gfx_display_y((LONG)proj_y[b] << 16),
+                   (LONG)proj_x[c] << 16, gfx_display_y((LONG)proj_y[c] << 16),
+                   gfx_pen_rgb16(face_shade[ff]));
+            continue;
+        }
+#endif
         SetAPen(rp, face_shade[ff]);
         AreaMove(rp, proj_x[a], proj_y[a]);
         AreaDraw(rp, proj_x[b], proj_y[b]);
@@ -416,11 +459,41 @@ void e3d_render_frame(struct RastPort *rp,
     int nobj;
     int order[64];
     LONG cz_key[64];
+#ifdef AMIGA3DO
+    UWORD *frame16 = 0;
+#endif
     if (!g_stars_built) build_stars();
 
+#ifdef AMIGA3DO
+    if (g_cels < 0)
+        cels_setup();
+    if (g_cels) {
+        /* the view in the frame shows the layers below */
+        SetAPen(rp, PEN_HW_VIEW);
+        RectFill(rp, 0, 0, g_w - 1, g_h - 1);
+        frame16 = gfx_draw_to16(g_space);       /* backdrop and stars -> layer */
+        tc_begin(g_space_cel);
+    }
+#endif
     /* Wipe backdrop. */
-    SetAPen(rp, PEN_SPACE);
-    RectFill(rp, 0, 0, g_w - 1, g_h - 1);
+#ifdef AMIGA3DO
+    if (g_cels && g_space_ok) {
+        /* the layer only changes where stars were: erase those */
+        int k;
+        SetAPen(rp, PEN_SPACE);
+        for (k = 0; k < g_nold; k++)
+            WritePixel(rp, g_oldx[k], g_oldy[k]);
+        g_nold = 0;
+    } else
+#endif
+    {
+        SetAPen(rp, PEN_SPACE);
+        RectFill(rp, 0, 0, g_w - 1, g_h - 1);
+#ifdef AMIGA3DO
+        g_space_ok = g_cels;
+        g_nold = 0;
+#endif
+    }
 
     build_view_matrix(cam);
 
@@ -453,8 +526,19 @@ void e3d_render_frame(struct RastPort *rp,
         if (syp < 0 || syp >= g_h) continue;
         SetAPen(rp, star_pen[i]);
         WritePixel(rp, (WORD)sxp, (WORD)syp);
+#ifdef AMIGA3DO
+        if (g_nold < NUM_STARS) {
+            g_oldx[g_nold] = (WORD)sxp;
+            g_oldy[g_nold] = (WORD)syp;
+            g_nold++;
+        }
+#endif
     }
 
+#ifdef AMIGA3DO
+    if (g_cels)
+        gfx_draw_to16(frame16);                 /* back to the frame */
+#endif
     /* Sort objects back-to-front by camera-space z (rough — using
      * centre distance is fine for now since they're solid poly and
      * far enough apart in typical play). */
@@ -482,4 +566,10 @@ void e3d_render_frame(struct RastPort *rp,
     }
 
     for (i = 0; i < nobj; i++) draw_one_object(rp, &objs[order[i]]);
+#ifdef AMIGA3DO
+    if (g_cels) {
+        gfx_layer_move(g_space_cel, 0, 0);
+        gfx_set_underlay(tc_list());
+    }
+#endif
 }
