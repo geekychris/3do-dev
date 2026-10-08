@@ -1,4 +1,5 @@
 title=Dot Chase
 origin=Amiga
+genre=Maze
 order=30
 desc=Maze chase in the style of Pac-Man. Eat every dot, grab a power pellet to turn the tables on the ghosts. D-pad steers, A starts.

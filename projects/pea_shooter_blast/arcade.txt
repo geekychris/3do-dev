@@ -1,4 +1,5 @@
 title=Pea Shooter Blast
 origin=Amiga
+genre=Action
 order=130
 desc=Side-scrolling tank action. Drive, jump and blast through the enemy lines to the end of each level. D-pad drives, UP or B jumps, A fires.

@@ -1,4 +1,5 @@
 title=Nova Defense
 origin=Amiga
+genre=Shooter
 order=20
 desc=Space Invaders-style shooter. Hold back the alien swarm from behind your shields and pick off the UFO. LEFT/RIGHT move, A fire.

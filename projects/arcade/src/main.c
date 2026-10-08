@@ -35,6 +35,12 @@ static UWORD palette[16] = {
 #define C_LIGHT  14
 
 #define VISIBLE  12
+/* The menu is drawn 1:1 (lines VIEW_Y0..VIEW_Y0+239 of the 256-line
+ * screen): the default 256 -> 240 scaling drops a line in 16, which
+ * clips rows of text. */
+#define VIEW_Y0  8
+#define LIST_Y   52                     /* list band top */
+#define DESC_Y   (LIST_Y + VISIBLE * 11 + 7)
 #define STARS    40
 
 static WORD star_x[STARS], star_y[STARS], star_s[STARS];
@@ -99,6 +105,7 @@ static int menu(int sel)
 
     if (!gfx_init(palette, 16))
         return -1;
+    gfx_set_view(GFX_VIEW_CROP, VIEW_Y0);
     rp = gfx_back();
     AB_I("menu games=%d selected=%s", NUM_GAMES, NUM_GAMES ? GAMES[sel].name : "-");
 
@@ -128,35 +135,35 @@ static int menu(int sel)
 
         /* title */
         SetAPen(rp, C_CORAL);
-        gfx_text_big(rp, 160 - 5 * 16 / 2 * 2 + 1, 10, "3DO", 3);
+        gfx_text_big(rp, 160 - 5 * 16 / 2 * 2 + 1, 13, "3DO", 3);
         SetAPen(rp, C_GOLD);
-        gfx_text_big(rp, 160 - 5 * 16 / 2 * 2, 9, "3DO", 3);
+        gfx_text_big(rp, 160 - 5 * 16 / 2 * 2, 12, "3DO", 3);
         SetAPen(rp, C_SKY);
-        gfx_text_big(rp, 160 - 3 * 16 / 2 * 2 + 64, 13, "ARCADE", 2);
+        gfx_text_big(rp, 160 - 3 * 16 / 2 * 2 + 64, 16, "ARCADE", 2);
         text_at(rp, 160 - 28 * 4, 40, "AMIGA CLASSICS BY GEEKYCHRIS", C_DIMSKY);
 
         /* list */
         SetAPen(rp, C_BAND1);
-        RectFill(rp, 16, 54, 303, 54 + VISIBLE * 11 + 3);
+        RectFill(rp, 16, LIST_Y, 303, LIST_Y + VISIBLE * 11 + 3);
         for (i = 0; i < VISIBLE && top + i < NUM_GAMES; i++) {
             int g = top + i;
-            LONG y = 57 + i * 11;
+            LONG y = LIST_Y + 3 + i * 11;
             if (g == sel) {
                 SetAPen(rp, C_SEL);
                 RectFill(rp, 18, y - 1, 301, y + 9);
                 text_at(rp, 24, y + 1, ">", C_YELLOW);
             }
             text_at(rp, 40, y + 1, GAMES[g].title, g == sel ? C_YELLOW : C_WHITE);
-            text_at(rp, 296 - 8 * (LONG)strlen(GAMES[g].origin), y + 1, GAMES[g].origin,
+            text_at(rp, 296 - 8 * (LONG)strlen(GAMES[g].genre), y + 1, GAMES[g].genre,
                     g == sel ? C_GOLD : C_GREY);
         }
         if (NUM_GAMES > VISIBLE) {
             /* scrollbar right of the list so it's clear there are more games */
             LONG track = VISIBLE * 11 + 3;
             LONG th = track * VISIBLE / NUM_GAMES;
-            LONG ty = 54 + (track - th) * top / (NUM_GAMES - VISIBLE);
+            LONG ty = LIST_Y + (track - th) * top / (NUM_GAMES - VISIBLE);
             SetAPen(rp, C_BAND2);
-            RectFill(rp, 305, 54, 308, 54 + track);
+            RectFill(rp, 305, LIST_Y, 308, LIST_Y + track);
             SetAPen(rp, C_GOLD);
             RectFill(rp, 305, ty, 308, ty + th - 1);
         }
@@ -164,12 +171,12 @@ static int menu(int sel)
         /* description */
         if (NUM_GAMES) {
             SetAPen(rp, C_BAND2);
-            RectFill(rp, 16, 194, 303, 232);
-            text_wrapped(rp, 22, 197, GAMES[sel].desc, 35, C_LIGHT, 3);
+            RectFill(rp, 16, DESC_Y, 303, DESC_Y + 36);
+            text_wrapped(rp, 22, DESC_Y + 4, GAMES[sel].desc, 35, C_LIGHT, 3);
         } else {
             text_at(rp, 40, 120, "NO GAMES ON THIS DISC", C_CORAL);
         }
-        text_at(rp, 160 - 36 * 4, 240, "UP/DOWN CHOOSE  A PLAY  X QUITS GAME", ((t >> 4) & 1) ? C_GREEN : C_DIMSKY);
+        text_at(rp, 160 - 36 * 4, DESC_Y + 42, "UP/DOWN CHOOSE  A PLAY  X QUITS GAME", ((t >> 4) & 1) ? C_GREEN : C_DIMSKY);
 
         gfx_swap();
         t++;

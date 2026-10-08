@@ -1,4 +1,5 @@
 title=Fractalus
 origin=Amiga
+genre=3D flight
 order=190
 desc=Fly a fractal planet's valleys and rescue downed pilots - but some are Jaggis in disguise. Up/Down thrust and brake, Left/Right turn, L/R climb and dive, A fires, B lands, P starts.

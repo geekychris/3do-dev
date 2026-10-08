@@ -84,7 +84,7 @@ def main():
             logic, draw = spd[g["name"]]
             rows.append(f"| [{g['title']}](#{g['name'].replace('_', '-')}) | {logic:.0f} | {draw:.0f} |")
         sections.append(f"### {g['title']}\n<a id=\"{g['name'].replace('_', '-')}\"></a>\n\n"
-                        f"{g.get('desc', '')}\n\n`projects/{g['name']}` · from the {g.get('origin', '')} version\n\n"
+                        f"{g.get('desc', '')}\n\n{g.get('genre', '')} · `projects/{g['name']}` · from the {g.get('origin', '')} version\n\n"
                         + " ".join(imgs) + "\n")
     page = ["# The games", "",
             "Ports of the Amiga games to the 3DO through the sdk/amiga compatibility",

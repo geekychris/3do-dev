@@ -48,7 +48,7 @@ Measured in the emulator by `./3do selftest`.
 
 Asteroids-style vector shooter. Rotate, thrust and blast the rocks before they smash your ship. LEFT/RIGHT rotate, UP or B thrust, A fire.
 
-`projects/rock_blaster` · from the Amiga version
+Shooter · `projects/rock_blaster` · from the Amiga version
 
 ![Rock Blaster title](images/games/rock_blaster-title.png) ![Rock Blaster play](images/games/rock_blaster-play.png)
 
@@ -57,7 +57,7 @@ Asteroids-style vector shooter. Rotate, thrust and blast the rocks before they s
 
 Space Invaders-style shooter. Hold back the alien swarm from behind your shields and pick off the UFO. LEFT/RIGHT move, A fire.
 
-`projects/nova_defense` · from the Amiga version
+Shooter · `projects/nova_defense` · from the Amiga version
 
 ![Nova Defense title](images/games/nova_defense-title.png) ![Nova Defense play](images/games/nova_defense-play.png)
 
@@ -66,7 +66,7 @@ Space Invaders-style shooter. Hold back the alien swarm from behind your shields
 
 Maze chase in the style of Pac-Man. Eat every dot, grab a power pellet to turn the tables on the ghosts. D-pad steers, A starts.
 
-`projects/dot_chase` · from the Amiga version
+Maze · `projects/dot_chase` · from the Amiga version
 
 ![Dot Chase title](images/games/dot_chase-title.png) ![Dot Chase play](images/games/dot_chase-play.png)
 
@@ -75,7 +75,7 @@ Maze chase in the style of Pac-Man. Eat every dot, grab a power pellet to turn t
 
 Falling-block puzzle with ProTracker music. Fit the pieces together and clear lines before the stack reaches the top. LEFT/RIGHT move, A rotate, B drop, DOWN soft drop, P pause.
 
-`projects/stakattack` · from the Amiga version
+Puzzle · `projects/stakattack` · from the Amiga version
 
 ![StakAttack title](images/games/stakattack-title.png) ![StakAttack play](images/games/stakattack-play.png)
 
@@ -84,7 +84,7 @@ Falling-block puzzle with ProTracker music. Fit the pieces together and clear li
 
 Moon Patrol-style buggy ride. Jump the craters and rocks while shooting UFOs and meteors on the way to each checkpoint. LEFT/RIGHT speed, UP or B jump, A shoot.
 
-`projects/lunar_rider` · from the Amiga version
+Driving · `projects/lunar_rider` · from the Amiga version
 
 ![Lunar Rider title](images/games/lunar_rider-title.png) ![Lunar Rider play](images/games/lunar_rider-play.png)
 
@@ -93,7 +93,7 @@ Moon Patrol-style buggy ride. Jump the craters and rocks while shooting UFOs and
 
 Frogger-style crossing with generated music. Hop across the traffic and ride the logs to fill all five homes. D-pad hops, A starts.
 
-`projects/frank_the_frog` · from the Amiga version
+Action · `projects/frank_the_frog` · from the Amiga version
 
 ![Frank the Frog title](images/games/frank_the_frog-title.png) ![Frank the Frog play](images/games/frank_the_frog-play.png)
 
@@ -102,7 +102,7 @@ Frogger-style crossing with generated music. Hop across the traffic and ride the
 
 Joust-style jousting on flying mounts for one or two players. Land on enemies from above and collect the eggs. D-pad steers, A flaps. A starts one player, C two (second pad).
 
-`projects/sky_knights` · from the Amiga version
+Action · `projects/sky_knights` · from the Amiga version
 
 ![Sky Knights title](images/games/sky_knights-title.png) ![Sky Knights play](images/games/sky_knights-play.png)
 
@@ -111,7 +111,7 @@ Joust-style jousting on flying mounts for one or two players. Land on enemies fr
 
 Defender-style side scroller with ProTracker music. Fly over the planet, shoot the invaders and protect the humans. D-pad flies, A fire, B smart bomb, C hyperspace.
 
-`projects/orbital_patrol` · from the Amiga version
+Shooter · `projects/orbital_patrol` · from the Amiga version
 
 ![Orbital Patrol title](images/games/orbital_patrol-title.png) ![Orbital Patrol play](images/games/orbital_patrol-play.png)
 
@@ -120,7 +120,7 @@ Defender-style side scroller with ProTracker music. Fly over the planet, shoot t
 
 Lode Runner-style puzzle platformer with a level editor. Collect the gold, dig traps for the guards, then climb out. A fire, B/C dig left/right. C on the title opens the editor.
 
-`projects/bullion_dash` · from the Amiga version
+Platform · `projects/bullion_dash` · from the Amiga version
 
 ![Bullion Dash title](images/games/bullion_dash-title.png) ![Bullion Dash play](images/games/bullion_dash-play.png)
 
@@ -129,7 +129,7 @@ Lode Runner-style puzzle platformer with a level editor. Collect the gold, dig t
 
 Side-scrolling platformer for one or two players taking turns. Pick RJ or Dale, jump on the enemies and reach the end of three levels. D-pad moves, A jumps.
 
-`projects/jump_quest` · from the Amiga version
+Platform · `projects/jump_quest` · from the Amiga version
 
 ![Jump Quest title](images/games/jump_quest-title.png) ![Jump Quest play](images/games/jump_quest-play.png)
 
@@ -138,7 +138,7 @@ Side-scrolling platformer for one or two players taking turns. Pick RJ or Dale, 
 
 Metroid-style exploration. Search the caverns room by room, collect power-ups to reach new areas. D-pad moves and aims, UP or B jumps, DOWN rolls, A fires.
 
-`projects/orb_hunter` · from the Amiga version
+Explore · `projects/orb_hunter` · from the Amiga version
 
 ![Orb Hunter title](images/games/orb_hunter-title.png) ![Orb Hunter play](images/games/orb_hunter-play.png)
 
@@ -147,7 +147,7 @@ Metroid-style exploration. Search the caverns room by room, collect power-ups to
 
 Lunar Lander over the rings of Uranus, with ProTracker music. Rotate, thrust gently and touch down on the pads before the fuel runs out. LEFT/RIGHT rotate, A thrust.
 
-`projects/uranus_lander` · from the Amiga version
+Lander · `projects/uranus_lander` · from the Amiga version
 
 ![Uranus Lander title](images/games/uranus_lander-title.png) ![Uranus Lander play](images/games/uranus_lander-play.png)
 
@@ -156,7 +156,7 @@ Lunar Lander over the rings of Uranus, with ProTracker music. Rotate, thrust gen
 
 Side-scrolling tank action. Drive, jump and blast through the enemy lines to the end of each level. D-pad drives, UP or B jumps, A fires.
 
-`projects/pea_shooter_blast` · from the Amiga version
+Action · `projects/pea_shooter_blast` · from the Amiga version
 
 ![Pea Shooter Blast title](images/games/pea_shooter_blast-title.png) ![Pea Shooter Blast play](images/games/pea_shooter_blast-play.png)
 
@@ -165,7 +165,7 @@ Side-scrolling tank action. Drive, jump and blast through the enemy lines to the
 
 Split-screen futuristic ball sport against the computer. Steer your rotofoil, grab the plasmorb and shoot it through the goal beams. D-pad steers, UP or A forward.
 
-`projects/ballblazer` · from the Amiga version
+Sports · `projects/ballblazer` · from the Amiga version
 
 ![Ballblazer play](images/games/ballblazer-play.png)
 
@@ -174,7 +174,7 @@ Split-screen futuristic ball sport against the computer. Steer your rotofoil, gr
 
 3D wireframe dogfighting over an airfield to the Blue Danube, one player or two in split screen. D-pad flies, A fires, L/R throttle. L or R on the title picks 1 or 2 players.
 
-`projects/ace_pilot` · from the Amiga version
+Flight sim · `projects/ace_pilot` · from the Amiga version
 
 ![Ace Pilot title](images/games/ace_pilot-title.png) ![Ace Pilot play](images/games/ace_pilot-play.png)
 
@@ -183,7 +183,7 @@ Split-screen futuristic ball sport against the computer. Steer your rotofoil, gr
 
 Elite-style 3D space trading and combat with generated music. Fly, fight the pirates, dock at the station and trade. D-pad pitch/yaw, L/R roll, B/C thrust, A fire, P dock.
 
-`projects/void_trader` · from the Amiga version
+Space trade · `projects/void_trader` · from the Amiga version
 
 ![Void Trader title](images/games/void_trader-title.png) ![Void Trader play](images/games/void_trader-play.png)
 
@@ -192,7 +192,7 @@ Elite-style 3D space trading and combat with generated music. Fly, fight the pir
 
 Birthday party adventure with ProTracker music. Run around the party rooms, greet the guests, find the cake. D-pad moves, A acts, B help, C guest list.
 
-`projects/rj_birthday` · from the Amiga version
+Adventure · `projects/rj_birthday` · from the Amiga version
 
 ![RJ Birthday title](images/games/rj_birthday-title.png) ![RJ Birthday play](images/games/rj_birthday-play.png)
 
@@ -201,6 +201,6 @@ Birthday party adventure with ProTracker music. Run around the party rooms, gree
 
 Fly a fractal planet's valleys and rescue downed pilots - but some are Jaggis in disguise. Up/Down thrust and brake, Left/Right turn, L/R climb and dive, A fires, B lands, P starts.
 
-`projects/fractalus` · from the Amiga version
+3D flight · `projects/fractalus` · from the Amiga version
 
 ![Fractalus title](images/games/fractalus-title.png) ![Fractalus play](images/games/fractalus-play.png)
