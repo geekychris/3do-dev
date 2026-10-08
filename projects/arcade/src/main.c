@@ -60,12 +60,14 @@ static void text_at(struct RastPort *rp, LONG x, LONG y, const char *s, int pen)
     Text(rp, s, strlen(s));
 }
 
-/* Word-wrap a description into lines of at most `cols` characters. */
-static void text_wrapped(struct RastPort *rp, LONG x, LONG y, const char *s, int cols, int pen, int maxlines)
+/* Word-wrap a description into lines of at most `cols` characters and
+ * draw lines skip..skip+maxlines-1. Returns the total number of lines. */
+static int text_wrapped(struct RastPort *rp, LONG x, LONG y, const char *s, int cols, int pen,
+                        int skip, int maxlines)
 {
     char line[48];
     int lines = 0;
-    while (*s && lines < maxlines) {
+    while (*s) {
         int n = (int)strlen(s), cut = n;
         if (n > cols) {
             cut = cols;
@@ -76,12 +78,14 @@ static void text_wrapped(struct RastPort *rp, LONG x, LONG y, const char *s, int
         }
         memcpy(line, s, cut);
         line[cut] = 0;
-        text_at(rp, x, y + lines * 10, line, pen);
+        if (lines >= skip && lines < skip + maxlines)
+            text_at(rp, x, y + (lines - skip) * 10, line, pen);
         s += cut;
         while (*s == ' ')
             s++;
         lines++;
     }
+    return lines;
 }
 
 static void draw_background(struct RastPort *rp, ULONG t)
@@ -102,6 +106,8 @@ static int menu(int sel)
     struct RastPort *rp;
     int top = 0, i;
     ULONG t = 0;
+    int desc_sel = -1, desc_lines = 3;
+    ULONG desc_t = 0;
 
     if (!gfx_init(palette, 16))
         return -1;
@@ -172,7 +178,19 @@ static int menu(int sel)
         if (NUM_GAMES) {
             SetAPen(rp, C_BAND2);
             RectFill(rp, 16, DESC_Y, 303, DESC_Y + 36);
-            text_wrapped(rp, 22, DESC_Y + 4, GAMES[sel].desc, 35, C_LIGHT, 3);
+            /* long descriptions (story, then controls) turn a page of
+             * three lines every 3 s, from the top for each new choice */
+            if (sel != desc_sel) {
+                desc_sel = sel;
+                desc_t = 0;
+            }
+            {
+                int pages = (desc_lines + 2) / 3;
+                int page = (int)((desc_t / 150) % (ULONG)(pages > 0 ? pages : 1));
+                desc_lines = text_wrapped(rp, 22, DESC_Y + 4, GAMES[sel].desc, 35, C_LIGHT,
+                                          3 * page, 3);
+            }
+            desc_t += gfx_steps();          /* 50 per second, whatever the frame rate */
         } else {
             text_at(rp, 40, 120, "NO GAMES ON THIS DISC", C_CORAL);
         }

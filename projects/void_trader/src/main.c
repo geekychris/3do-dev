@@ -585,10 +585,17 @@ int main(void)
 #ifdef AMIGA3DO
         /* 3DO port: pad -> the game's input bits (apply_key's mapping) */
         {
-            ULONG held = pad_held(0);
+            ULONG held = pad_held(0), pressed = pad_pressed(0);
             UWORD f = 0;
-            if (held & PAD_UP)    f |= IN_PITCH_DOWN;   /* W */
-            if (held & PAD_DOWN)  f |= IN_PITCH_UP;     /* S */
+            if (game_mode == GM_DOCKED) {
+                /* market list: Up moves the cursor up (W/S would be
+                 * backwards on a D-pad) */
+                if (held & PAD_UP)    f |= IN_PITCH_UP;
+                if (held & PAD_DOWN)  f |= IN_PITCH_DOWN;
+            } else {
+                if (held & PAD_UP)    f |= IN_PITCH_DOWN;   /* W */
+                if (held & PAD_DOWN)  f |= IN_PITCH_UP;     /* S */
+            }
             if (held & PAD_LEFT)  f |= IN_YAW_L;        /* A */
             if (held & PAD_RIGHT) f |= IN_YAW_R;        /* D */
             if (held & PAD_L)     f |= IN_ROLL_L;       /* Q */
@@ -597,7 +604,8 @@ int main(void)
             if (game_mode == GM_DOCKED) {
                 if (held & PAD_B) f |= IN_BUY;          /* B */
                 if (held & PAD_C) f |= IN_SELL;         /* N */
-                if (held & PAD_P) f |= IN_UNDOCK;       /* U */
+                /* U; a fresh press, so the P that docked doesn't undock */
+                if (pressed & PAD_P) f |= IN_UNDOCK;
             } else {
                 if (held & PAD_B) f |= IN_THRUST_FWD;   /* R */
                 if (held & PAD_C) f |= IN_THRUST_REV;   /* F */
@@ -797,13 +805,29 @@ int main(void)
             sprintf(goal, "earn %ld credits to win.", (long)WIN_CREDITS_TARGET);
             Move(&mrp, 32, y); Text(&mrp, (STRPTR)goal, strlen(goal)); y += 20;
             SetAPen(&mrp, 120);
+#ifdef AMIGA3DO   /* 3DO port: pad buttons */
+            Move(&mrp, 32, y); Text(&mrp, (STRPTR)"D-PAD fly    L/R  roll", 22); y += 10;
+#else
             Move(&mrp, 32, y); Text(&mrp, (STRPTR)"WASD  fly    QE   roll", 22); y += 10;
+#endif
+#ifdef AMIGA3DO   /* 3DO port: pad buttons */
+            Move(&mrp, 32, y); Text(&mrp, (STRPTR)"B/C   thrust A     fire", 23); y += 10;
+#else
             Move(&mrp, 32, y); Text(&mrp, (STRPTR)"R/F   thrust SPACE fire", 23); y += 10;
+#endif
+#ifdef AMIGA3DO   /* 3DO port: pad buttons */
+            Move(&mrp, 32, y); Text(&mrp, (STRPTR)"P     dock   P    undock", 24); y += 20;
+#else
             Move(&mrp, 32, y); Text(&mrp, (STRPTR)"TAB   dock   U    undock", 24); y += 20;
+#endif
             if (((mode_timer >> 3) & 1) == 0) {
                 SetAPen(&mrp, 125);
                 Move(&mrp, SCREEN_W/2 - 76, SCREEN_H - 24);
+#ifdef AMIGA3DO   /* 3DO port: pad buttons */
+                Text(&mrp, (STRPTR)"  PRESS A TO LAUNCH  ", 21);
+#else
                 Text(&mrp, (STRPTR)"PRESS SPACE TO LAUNCH", 21);
+#endif
             }
         } else if (game_mode == GM_DOCKED) {
             vt_trade_render(&mrp, &trade);
@@ -817,7 +841,11 @@ int main(void)
                 SetDrMd(&mrp, JAM1);
                 if ((mode_timer >> 3) & 1) {
                     Move(&mrp, SCREEN_W/2 - 56, VIEW_H - 12);
+#ifdef AMIGA3DO   /* 3DO port: pad buttons */
+                    Text(&mrp, (STRPTR)" P TO DOCK ", 11);
+#else
                     Text(&mrp, (STRPTR)"TAB TO DOCK", 11);
+#endif
                 }
             }
             if (game_mode == GM_DOCKING) {
@@ -840,7 +868,11 @@ int main(void)
                 if (((mode_timer >> 3) & 1) == 0) {
                     SetAPen(&mrp, 120);
                     Move(&mrp, SCREEN_W/2 - 68, VIEW_H/2 + 16);
+#ifdef AMIGA3DO   /* 3DO port: pad buttons */
+                    Text(&mrp, (STRPTR)"  A = MAIN MENU  ", 17);
+#else
                     Text(&mrp, (STRPTR)"SPACE = MAIN MENU", 17);
+#endif
                 }
             }
             if (game_mode == GM_WIN) {
@@ -855,7 +887,11 @@ int main(void)
                 Text(&mrp, (STRPTR)buf, strlen(buf));
                 if (((mode_timer >> 3) & 1) == 0) {
                     Move(&mrp, SCREEN_W/2 - 68, VIEW_H/2 + 22);
+#ifdef AMIGA3DO   /* 3DO port: pad buttons */
+                    Text(&mrp, (STRPTR)"  A = MAIN MENU  ", 17);
+#else
                     Text(&mrp, (STRPTR)"SPACE = MAIN MENU", 17);
+#endif
                 }
             }
         }

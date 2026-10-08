@@ -332,6 +332,17 @@ void draw_title(struct RastPort *rp)
     /* Controls */
     SetAPen(rp, 7); /* light grey */
     SetBPen(rp, 0);
+#ifdef AMIGA3DO
+    /* 3DO port: the pad's buttons */
+    Move(rp, 60, 186);
+    Text(rp, "LEFT   ROTATE LEFT", 18);
+    Move(rp, 60, 196);
+    Text(rp, "RIGHT  ROTATE RIGHT", 19);
+    Move(rp, 60, 206);
+    Text(rp, "UP/B   THRUST", 13);
+    Move(rp, 60, 216);
+    Text(rp, "A/C    FIRE", 11);
+#else
     Move(rp, 60, 186);
     Text(rp, "A/Z  ROTATE LEFT", 16);
     Move(rp, 60, 196);
@@ -345,14 +356,19 @@ void draw_title(struct RastPort *rp)
     SetAPen(rp, 5);
     Move(rp, 72, 232);
     Text(rp, "JOYSTICK PORT 2 OK", 18);
+#endif
 
     /* "PRESS FIRE TO START" blinking */
     SetAPen(rp, 15); /* bright yellow */
     {
+#ifdef AMIGA3DO
+        static const char *prompt = "PRESS A TO START";
+#else
         static const char *prompt = "PRESS FIRE TO START";
-        WORD pw = 19 * 8;
+#endif
+        WORD pw = (WORD)strlen(prompt) * 8;
         Move(rp, cx - pw / 2, 248);
-        Text(rp, prompt, 19);
+        Text(rp, prompt, strlen(prompt));
     }
 }
 
