@@ -9,6 +9,11 @@
 #include <graphics/rastport.h>
 #include <string.h>
 #include "game.h"
+#ifdef AMIGA3DO
+#include <exec/memory.h>
+#include <proto/exec.h>
+#include "amiga3do.h"
+#endif
 
 /* Room name strings */
 static const char *room_names[ROOM_COUNT] = {
@@ -272,6 +277,76 @@ static RoomDrawFunc room_drawers[ROOM_COUNT] = {
     draw_living
 };
 
+#ifdef AMIGA3DO
+/* 3DO port: room backgrounds never change, so each visible room is drawn
+ * once into its own buffer and shown as a cel under the frame at its
+ * scroll position; the frame keeps the HUD, guests, items and players
+ * over a transparent playfield. Two buffers cover any camera position. */
+#define PEN_HW_ROOM 31
+static UBYTE *room_buf[2];
+static void  *room_cel[2];
+static int    room_of[2] = { -1, -1 };
+static int    room_layers = -1;     /* -1: not set up, 0: unavailable */
+
+int rooms_layers_active(void) { return room_layers > 0; }
+
+static int room_slot(struct RastPort *rp, int r, int keep)
+{
+    int s;
+    UBYTE *prev;
+    for (s = 0; s < 2; s++)
+        if (room_of[s] == r)
+            return s;
+    s = (room_of[0] == keep) ? 1 : 0;      /* don't evict the other visible room */
+    prev = gfx_draw_to(room_buf[s]);
+    SetRast(rp, COL_BG);
+    room_drawers[r](rp, 0);
+    gfx_draw_to(prev);
+    room_of[s] = r;
+    return s;
+}
+
+static int rooms_draw_layers(struct RastPort *rp, GameState *gs)
+{
+    WORD cam = gs->camera_x;
+    WORD left_room = cam / ROOM_W;
+    WORD right_room = (cam + SCREEN_W - 1) / ROOM_W;
+    int sl, sr;
+    if (room_layers < 0) {
+        int s;
+        room_layers = 0;
+        for (s = 0; s < 2; s++) {
+            room_buf[s] = (UBYTE *)AllocMem((ULONG)GFX_WIDTH * gfx_height(), MEMF_CLEAR);
+            if (!room_buf[s])
+                return 0;
+            room_cel[s] = gfx_layer_cel(room_buf[s], GFX_WIDTH, gfx_height(), GFX_WIDTH);
+            if (!room_cel[s])
+                return 0;
+        }
+        gfx_set_transparent_pen(PEN_HW_ROOM);
+        room_layers = 1;
+    }
+    if (!room_layers)
+        return 0;
+    if (left_room < 0) left_room = 0;
+    if (right_room >= ROOM_COUNT) right_room = ROOM_COUNT - 1;
+    /* frame: HUD band as before, playfield transparent */
+    SetAPen(rp, COL_BG);
+    RectFill(rp, 0, 0, SCREEN_W - 1, HUD_H - 1);
+    SetAPen(rp, PEN_HW_ROOM);
+    RectFill(rp, 0, HUD_H, SCREEN_W - 1, SCREEN_H - 1);
+    sl = room_slot(rp, left_room, right_room);
+    gfx_layer_move(room_cel[sl], left_room * ROOM_W - cam, 0);
+    if (right_room != left_room) {
+        sr = room_slot(rp, right_room, left_room);
+        gfx_layer_move(room_cel[sr], right_room * ROOM_W - cam, 0);
+        gfx_set_underlay(gfx_layer_chain(room_cel[sl], room_cel[sr]));
+    } else
+        gfx_set_underlay(gfx_layer_chain(room_cel[sl], 0));
+    return 1;
+}
+#endif
+
 void rooms_draw_bg(struct RastPort *rp, GameState *gs)
 {
     WORD cam = gs->camera_x;
@@ -279,6 +354,10 @@ void rooms_draw_bg(struct RastPort *rp, GameState *gs)
     WORD right_room = (cam + SCREEN_W - 1) / ROOM_W;
     WORD r;
 
+#ifdef AMIGA3DO
+    if (rooms_draw_layers(rp, gs))
+        return;
+#endif
     if (left_room < 0) left_room = 0;
     if (right_room >= ROOM_COUNT) right_room = ROOM_COUNT - 1;
 

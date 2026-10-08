@@ -320,6 +320,9 @@ void game_set_message(GameState *gs, const char *text, WORD duration);
 void game_init_tables(void);
 
 /* Functions - rooms.c */
+#ifdef AMIGA3DO
+int rooms_layers_active(void);
+#endif
 void rooms_draw_bg(struct RastPort *rp, GameState *gs);
 void rooms_draw_details(struct RastPort *rp, GameState *gs);
 

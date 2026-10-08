@@ -44,12 +44,18 @@ Atari ports in hatari_augmented), all playable from the **arcade** disc
   player's state with `paula_lock()`/`paula_unlock()` (Disable()/Enable()).
   If the DSP voices can't be set up, a software mixer (22 kHz, streamed)
   takes over. `projects/paula_test` checks both against Paula's behaviour.
-- **Hardware layers:** `gfx_set_transparent_pen(pen)` makes one pen show
-  through, and `gfx_set_underlay(ccb_list)` draws a list of 3DO cels under
-  the frame at every `gfx_swap()` (display coordinates; `gfx_display_y()`
-  maps a game y). Projects/ballblazer draws its whole chequered floor this
-  way, about 40 cels per pane mapped onto perspective trapezoids, while
-  rotofoils, ball and HUD stay ordinary drawing on top.
+- **Hardware layers:** the frame is one cel, so other cels can go under it.
+  `gfx_set_transparent_pen(pen)` makes one pen show through (any other black
+  stays opaque), and `gfx_set_underlay(list)` draws a CCB list under the
+  frame at every `gfx_swap()`. For a background that rarely changes, draw it
+  once into its own buffer (`gfx_draw_to(buf)` / `gfx_draw_to16(buf)` point
+  the normal drawing calls at it), wrap it with `gfx_layer_cel()` /
+  `gfx_layer_cel16()`, place it with `gfx_layer_move()` (game pixels; the
+  256 -> 240 scaling is applied), link two with `gfx_layer_chain()`, and fill
+  the frame with the transparent pen where it should show. Games that do:
+  ballblazer (floor as ~40 perspective cels per pane), pea_shooter_blast
+  (scrolled tile cache), uranus_lander (terrain), rj_birthday (rooms),
+  void_trader (triangles as cels over a space-and-stars layer).
 - **Debug bridge:** `ab_init`, `AB_I/W/E(fmt, ...)` (real functions here, since
   Norcroft has no variadic macros) print to the 3DO debug console with the name
   given to `ab_init` as prefix. `ab_register_var/hook` are no-ops.
@@ -143,9 +149,11 @@ In order of preference:
   Games that draw below 12 fps call `gfx_set_max_steps(n)` so the catch-up
   limit (default 4 steps per frame) doesn't slow their logic down. Logic
   tuned for 25 fps runs one tick per two steps (projects/fractalus/main.cpp).
-- **Let the hardware draw big regular shapes**: ballblazer's floor went
-  from half the frame in software to a list of cels (`gfx_set_underlay`):
-  11.9 -> 29.6 fps with the other fixes below.
+- **Let the hardware draw what doesn't move or is regular**: a background
+  that only scrolls or changes per level becomes a layer cel, drawn once
+  (Pea Shooter Blast 24 -> 50 fps, Uranus Lander 25 -> 50, RJ Birthday
+  34 -> 50), and big regular shapes become cel lists (Ballblazer's floor:
+  11.9 -> 29.6 fps with the fixes below; Void Trader's triangles).
 - **Horizontal spans with `RectFill(rp, x0, y, x1, y)`**, not Move/Draw:
   it skips the line set-up and clipping (ballblazer's ball and rotofoils).
 - **Hidden samples by compare, not divide**: a front-to-back raycaster only
