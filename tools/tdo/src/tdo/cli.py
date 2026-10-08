@@ -388,7 +388,7 @@ def main(argv=None):
     s.add_argument("-v", "--verbose", action="store_true")
     s.set_defaults(fn=cmd_test)
 
-    s = sub.add_parser("profile", help="sample where CPU time goes (per-function %)")
+    s = sub.add_parser("profile", help="sample where CPU time goes (per-function %%)")
     s.add_argument("game")
     s.add_argument("--frames", type=int, default=600, help="frames to sample")
     s.add_argument("--warmup", type=int, default=600, help="frames to run first (boot, presses)")
