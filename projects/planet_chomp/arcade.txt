@@ -1,0 +1,5 @@
+title=Planet Chomp
+origin=Unity
+genre=3D maze
+order=200
+desc=A Pac-Man homage on a tiny planet: the maze wraps all the way round a sphere. Eat every crumb, dodge the four spooks, grab a golden key to eat them. D-pad steers (relative to the screen), L/R spin the view, C whole planet, P pause.

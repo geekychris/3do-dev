@@ -14,7 +14,9 @@ int  mz_rev[CELLS][4];
 int  mz_step[CELLS][4][3];
 unsigned char mz_open[CELLS][4];
 V3   mz_tan[CELLS][4];
-int  mz_start, mz_nest;
+int  mz_start, mz_nest, mz_keys[4];
+fix  mz_len[CELLS][4];
+fix  mz_cell_len;
 Wall mz_wall[MAX_WALLS];
 int  mz_nwalls;
 
@@ -51,9 +53,13 @@ V3 v3_norm14(V3 a)
     }
     len = isqrt32((unsigned long)(a.x * a.x + a.y * a.y + a.z * a.z));
     if (len == 0) { r.x = 0; r.y = ONE14; r.z = 0; return r; }
-    r.x = (a.x << 14) / (fix)len;
-    r.y = (a.y << 14) / (fix)len;
-    r.z = (a.z << 14) / (fix)len;
+    {
+        /* one divide, not three: components are < 2^15 and len >= 2^12 */
+        long inv = (1L << 28) / (long)len;              /* 2^28 / len */
+        r.x = (a.x * inv) >> 14;
+        r.y = (a.y * inv) >> 14;
+        r.z = (a.z * inv) >> 14;
+    }
     return r;
 }
 
@@ -172,6 +178,23 @@ static void build_grid(void)
         }
     mz_start = lookup(0, GRID_N, 0);    /* north pole */
     mz_nest = lookup(0, -GRID_N, 0);    /* south pole */
+    mz_keys[0] = lookup(GRID_N, 0, 0);  /* four keys round the equator */
+    mz_keys[1] = lookup(0, 0, GRID_N);
+    mz_keys[2] = lookup(-GRID_N, 0, 0);
+    mz_keys[3] = lookup(0, 0, -GRID_N);
+    {
+        /* edge lengths: the chord, which for these short hops is within
+         * 0.1% of the arc */
+        long total = 0;
+        for (c = 0; c < CELLS; c++)
+            for (k = 0; k < 4; k++) {
+                V3 d = v3_sub(mz_dir[mz_nb[c][k]], mz_dir[c]);
+                fix chord = (fix)isqrt32((unsigned long)(d.x * d.x + d.y * d.y + d.z * d.z));  /* Q14 */
+                mz_len[c][k] = (chord * PLANET_R) >> 14;
+                total += mz_len[c][k];
+            }
+        mz_cell_len = total / (CELLS * 4);
+    }
 }
 
 static void carve(void)
@@ -213,6 +236,24 @@ static void carve(void)
         for (k = 0; k < 4; k++)
             if (!mz_open[c][k] && mz_nb[c][k] > c && rnd(100) < 7) set_open(c, k, 1);
     for (k = 0; k < 4; k++) { set_open(mz_start, k, 1); set_open(mz_nest, k, 1); }
+}
+
+void mz_bfs(int src, short *dist)
+{
+    static short q[CELLS];
+    int head = 0, tail = 0, c, k;
+    for (c = 0; c < CELLS; c++) dist[c] = 32767;
+    dist[src] = 0;
+    q[tail++] = (short)src;
+    while (head < tail) {
+        c = q[head++];
+        for (k = 0; k < 4; k++) {
+            int nb = mz_nb[c][k];
+            if (!mz_open[c][k] || dist[nb] != 32767) continue;
+            dist[nb] = (short)(dist[c] + 1);
+            q[tail++] = (short)nb;
+        }
+    }
 }
 
 void mz_build(unsigned long seed)
