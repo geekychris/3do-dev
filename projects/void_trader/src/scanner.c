@@ -17,6 +17,47 @@
 /* Draw an axis-aligned ellipse outline. Half-widths cx±ew,
  * cy±eh. Two arcs (top + bottom) rasterised the naive integer way
  * — the ellipse is small so cost is trivial. */
+#ifdef AMIGA3DO
+/* 3DO port: the scanner's ellipse never changes size, so its half-heights
+ * are worked out once (a divide and a square root per column per frame) */
+static void ellipse_calc(int ew, int eh, int *ytab)
+{
+    int i;
+    for (i = -ew; i <= ew; i++) {
+        LONG num = (LONG)i * i * eh * eh;
+        LONG den = (LONG)ew * ew;
+        LONG y2  = (LONG)eh * eh - num / den;
+        LONG y = 0;
+        if (y2 > 0) {
+            LONG r = 0, bit = 1L << 30, v = y2;
+            while (bit > v) bit >>= 2;
+            while (bit) {
+                if (v >= r + bit) { v -= r + bit; r = (r >> 1) + bit; }
+                else r >>= 1;
+                bit >>= 2;
+            }
+            y = r;
+        }
+        ytab[i + ew] = (int)y;
+    }
+}
+
+static void ellipse(struct RastPort *rp, int cx, int cy, int ew, int eh)
+{
+    static int ytab[2 * 160 + 1], tab_ew = -1, tab_eh = -1;
+    int i;
+    if (ew > 160) ew = 160;
+    if (ew != tab_ew || eh != tab_eh) {
+        ellipse_calc(ew, eh, ytab);
+        tab_ew = ew;
+        tab_eh = eh;
+    }
+    for (i = -ew; i <= ew; i++) {
+        WritePixel(rp, (WORD)(cx + i), (WORD)(cy + ytab[i + ew]));
+        WritePixel(rp, (WORD)(cx + i), (WORD)(cy - ytab[i + ew]));
+    }
+}
+#else
 static void ellipse(struct RastPort *rp, int cx, int cy, int ew, int eh)
 {
     int px = -ew, py = 0;
@@ -42,6 +83,7 @@ static void ellipse(struct RastPort *rp, int cx, int cy, int ew, int eh)
         (void)px; (void)py;
     }
 }
+#endif
 
 /* Rotate a world offset into the player's local frame (undo yaw
  * and pitch). Roll is ignored — the scanner shows world axes

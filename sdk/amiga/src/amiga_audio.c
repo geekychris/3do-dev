@@ -367,6 +367,27 @@ static volatile int s_quit;
 static ULONG   s_ticks_logged;
 static int     s_thread_ok;
 
+/* Checksum of a copied block, to notice a game rewriting it in place
+ * (synthesised sound). Short blocks are summed whole; long ones at 64
+ * spread positions plus the tail, so a retriggered long sample costs
+ * almost nothing. */
+static ULONG
+block_sum(const signed char *b, ULONG len)
+{
+	ULONG sum = len, k, step;
+	if (len <= 256) {
+		for (k = 0; k < len; k++)
+			sum = sum * 31 + (UBYTE)b[k];
+		return sum;
+	}
+	step = len >> 6;
+	for (k = 0; k < len; k += step)
+		sum = sum * 31 + (UBYTE)b[k];
+	for (k = len - 16; k < len; k++)
+		sum = sum * 31 + (UBYTE)b[k];
+	return sum;
+}
+
 /* A block as a Sample item, cached. The DSP's sample DMA wants 4-byte
  * aligned addresses and lengths; Paula's are 2-byte. Misaligned blocks
  * up to 16 KB are copied (loops stay exact: an odd number of words is
@@ -398,8 +419,7 @@ voice_sample(const signed char *b, ULONG len)
 		if (v->sample > 0 && v->key == b && v->keylen == len) {
 			if (v->copy) {
 				/* the game may rewrite a buffer in place (synthesised sound) */
-				for (sum = 0, k = 0; k < len; k++)
-					sum = sum * 31 + (UBYTE)b[k];
+				sum = block_sum(b, len);
 				if (sum != v->sum)
 					break;              /* stale copy: rebuild below */
 			}
@@ -441,9 +461,7 @@ voice_sample(const signed char *b, ULONG len)
 		if (n != len)
 			memcpy((char *)v->copy + len, b, len);
 		v->copylen = n;
-		for (sum = 0, k = 0; k < len; k++)
-			sum = sum * 31 + (UBYTE)b[k];
-		v->sum = sum;
+		v->sum = block_sum(b, len);
 		addr = v->copy;
 		bytes = n;
 	} else {

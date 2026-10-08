@@ -178,6 +178,74 @@ void draw_clear(struct RastPort *rp)
     RectFill(rp, 0, 0, SCREEN_W - 1, SCREEN_H - 1);
 }
 
+#ifdef AMIGA3DO
+/* 3DO port: during play the background (sky and terrain) is a layer cel,
+ * drawn once per level; the frame is cleared to this transparent pen and
+ * carries only what moves. */
+#define PEN_HW_BG 31
+static void *terrain_layer;
+static UBYTE *terrain_buf;
+static int terrain_layer_on;
+static WORD key_terrain[TERRAIN_W];
+static LandingPad key_pads[MAX_PADS];
+static WORD key_npads = -1;
+static void draw_terrain_sw(struct RastPort *rp, GameState *gs);
+
+void draw_clear_play(struct RastPort *rp)
+{
+    if (terrain_layer_on) {
+        SetAPen(rp, PEN_HW_BG);
+        RectFill(rp, 0, 0, SCREEN_W - 1, SCREEN_H - 1);
+    } else
+        draw_clear(rp);
+}
+
+void draw_stars(struct RastPort *rp, GameState *gs)
+{
+    WORD i;
+    for (i = 0; i < MAX_STARS; i++) {
+        WORD x = gs->stars[i].x, y = gs->stars[i].y;
+        /* the terrain (drawn after the stars originally) hides them */
+        if (terrain_layer_on && gs->state != STATE_TITLE &&
+            x >= 0 && x < TERRAIN_W && y >= gs->terrain_y[x])
+            continue;
+        SetAPen(rp, gs->stars[i].brightness);
+        WritePixel(rp, x, y);
+    }
+}
+
+void draw_terrain(struct RastPort *rp, GameState *gs)
+{
+    if (!terrain_layer && !terrain_buf) {
+        terrain_buf = (UBYTE *)AllocMem((ULONG)GFX_WIDTH * gfx_height(), MEMF_CLEAR);
+        if (terrain_buf)
+            terrain_layer = gfx_layer_cel(terrain_buf, GFX_WIDTH, gfx_height(), GFX_WIDTH);
+        if (terrain_layer)
+            gfx_set_transparent_pen(PEN_HW_BG);
+    }
+    if (!terrain_layer) {
+        draw_terrain_sw(rp, gs);
+        return;
+    }
+    if (key_npads != gs->num_pads ||
+        memcmp(key_terrain, gs->terrain_y, sizeof(key_terrain)) != 0 ||
+        memcmp(key_pads, gs->pads, sizeof(key_pads)) != 0) {
+        /* new level: render sky and terrain into the layer */
+        UBYTE *prev = gfx_draw_to(terrain_buf);
+        draw_clear(rp);
+        draw_terrain_sw(rp, gs);
+        gfx_draw_to(prev);
+        memcpy(key_terrain, gs->terrain_y, sizeof(key_terrain));
+        memcpy(key_pads, gs->pads, sizeof(key_pads));
+        key_npads = gs->num_pads;
+    }
+    gfx_layer_move(terrain_layer, 0, 0);
+    gfx_set_underlay(terrain_layer);
+    terrain_layer_on = 1;
+}
+
+static void draw_terrain_sw(struct RastPort *rp, GameState *gs)
+#else
 void draw_stars(struct RastPort *rp, GameState *gs)
 {
     WORD i;
@@ -188,6 +256,7 @@ void draw_stars(struct RastPort *rp, GameState *gs)
 }
 
 void draw_terrain(struct RastPort *rp, GameState *gs)
+#endif
 {
     WORD x, x2, i;
 

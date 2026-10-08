@@ -13,6 +13,9 @@
 void planet_gfx_init(void);
 void planet_gfx_cleanup(void);
 void draw_clear(struct RastPort *rp);
+#ifdef AMIGA3DO
+void draw_clear_play(struct RastPort *rp);   /* 3DO port: see draw_terrain */
+#endif
 void draw_stars(struct RastPort *rp, GameState *gs);
 void draw_terrain(struct RastPort *rp, GameState *gs);
 void draw_ship(struct RastPort *rp, GameState *gs);
