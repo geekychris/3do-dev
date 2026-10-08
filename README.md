@@ -19,6 +19,7 @@ loop that people, scripts and AI agents (Claude Code via MCP) can all drive.
 - [One-line install](#one-line-install)
 - [Manual install](#manual-install)
 - [First steps](#first-steps)
+- [The games and the arcade](#the-games-and-the-arcade)
 - [How it works (overview)](#how-it-works-overview)
 - [Everyday commands](#everyday-commands)
 - [Remote control and debugging](#remote-control-and-debugging)
@@ -89,6 +90,22 @@ $EDITOR projects/mygame/src/main.c
 Then read [docs/writing-programs.md](docs/writing-programs.md), a tutorial
 that walks through the template and the demo (display, cels, input, fixed
 point, logging and tests).
+
+## The games and the arcade
+
+Eighteen Amiga games ported with the `sdk/amiga` compatibility layer, each on
+its own disc and all of them on the arcade disc behind a menu
+(`./3do build arcade && ./3do run arcade`; X in a game returns to the menu).
+
+![The arcade menu](docs/images/games/arcade-menu.png)
+![Fractalus](docs/images/games/fractalus-play.png)
+![Ballblazer](docs/images/games/ballblazer-play.png)
+![Dot Chase](docs/images/games/dot_chase-play.png)
+![Frank the Frog](docs/images/games/frank_the_frog-play.png)
+![RJ Birthday](docs/images/games/rj_birthday-play.png)
+
+Every game with screenshots, controls and measured speed:
+**[docs/games.md](docs/games.md)**. Porting guide: [sdk/amiga/README.md](sdk/amiga/README.md).
 
 ## How it works (overview)
 
@@ -283,6 +300,7 @@ third_party/ bios/ .venv/ build/   created by setup, not committed
 | [docs/how-it-works.md](docs/how-it-works.md) | The full story: toolchain, emulator, sessions, debugger, symbols, OS introspection, MCP |
 | [docs/writing-programs.md](docs/writing-programs.md) | Tutorial: display, cels, input, fixed point, logging, assets, testing, debugging |
 | [docs/emulator-harness.md](docs/emulator-harness.md) | Reference: sessions, every control command, gdb, C API, memory map |
+| [docs/games.md](docs/games.md) | The arcade and all 18 ported games: screenshots, controls, speed |
 | [docs/devbench.md](docs/devbench.md) | Web UI, REST API, SSE events, OS introspection (tasks, items, memory map, snapshots) |
 | [docs/3do-notes.md](docs/3do-notes.md) | Verified facts and gotchas about the 3DO hardware, OS and compiler |
 | [docs/architecture.md](docs/architecture.md) | Component diagram and design decisions |
