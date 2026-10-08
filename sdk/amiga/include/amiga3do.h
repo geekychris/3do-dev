@@ -60,6 +60,9 @@ void  gfx_set_line_drop(int smart);
  * logical y (16.16) to display y for them. See projects/ballblazer. */
 void  gfx_set_transparent_pen(int pen);   /* -1: none (default) */
 void  gfx_set_underlay(void *ccb_list);   /* NULL: none */
+/* split screen: left list clipped to x < split, right to x >= split, then
+ * `over` unclipped (any may be NULL except right) */
+void  gfx_set_underlay_split(void *left, void *right, void *over, int split);
 LONG  gfx_display_y(LONG y16);
 /* an 8-bit pen buffer as an underlay cel in the screen palette (a
  * scrolling background drawn once), and where to put it (game pixels) */

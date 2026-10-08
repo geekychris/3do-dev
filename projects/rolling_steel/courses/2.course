@@ -1,0 +1,41 @@
+name BEGINNER
+medals gold=36 silver=48 bronze=65
+time 70
+width 9
+decor 1
+music 2
+
+pad d=8 w=9 start
+rails
+hill len=14 drop=3 w=7 rails
+
+run len=10 w=6
+acid w=3.2 d=3.2 x=-1.2 back=3
+blob x=2 back=1 range=999 speed=5
+
+curve r=14 a=70 drop=2 w=6 bank=16 rails
+ice len=16 w=6
+rails
+curve r=17 a=-50 drop=2 w=6 bank=14 rails
+
+run len=19 w=8
+fan x=0 back=14 w=8 d=5 push=13     # shoves you sideways while you cross it
+sweeper x=4 back=6 len=6 speed=80   # pivoted at the edge: no wide line here
+hill len=12 drop=4 w=5
+jump gap=2.6 drop=2.4               # flat lip, then carry speed
+run len=9 w=7
+rails
+
+chaser x=-1.5 back=3 range=20 speed=9
+curve r=12 a=-45 drop=1 w=6 bank=10 rails
+split len=14 side=2.8 pit=4
+
+run len=8 w=7
+acid w=2.6 d=2.6 x=1.6 back=2.5
+crumble len=7 w=7                   # keep moving
+hill len=14 drop=5 w=6
+chaser x=1 back=5 range=22 speed=10
+curve r=14 a=55 drop=1.5 w=6 bank=12 rails
+run len=11 w=6
+rails
+goal d=9

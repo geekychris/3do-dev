@@ -1,0 +1,42 @@
+name AERIAL
+medals gold=38 silver=47 bronze=58
+time 60
+width 8
+decor 3
+music 4
+
+pad d=7 w=8 start
+rails
+hill len=12 drop=3 w=6
+
+run len=18 w=4.4                    # first span, nothing either side
+pillar x=0 back=6 r=0.7 h=2.2
+curve r=14 a=55 drop=2 w=5 bank=16
+
+run len=10 w=7
+jump gap=2.8 drop=2.6
+run len=9 w=6
+rails
+blob x=0 back=4 range=999 speed=6
+
+curve r=12 a=-60 drop=2 w=5 bank=15
+run len=16 w=4.6                    # second span
+boost x=0 back=12 w=3.4 d=5 push=26
+crumble len=7 w=5
+
+run len=11 w=9
+jump gap=3 drop=3
+run len=10 w=8
+rails
+sweeper x=4.5 back=5 len=6 speed=95
+
+chicane r=13 a=35 drop=3 w=6 bank=13
+split len=14 side=3.2 pit=4
+run len=9 w=8
+chaser x=0 back=4 range=22 speed=10
+
+hill len=15 drop=6 w=6
+jump gap=2.8 drop=2.8
+run len=11 w=7
+rails
+goal d=9

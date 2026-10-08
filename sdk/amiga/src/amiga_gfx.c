@@ -53,6 +53,8 @@ rgb4_to_15(UWORD c)
 
 static int   s_trans_pen = -1;       /* gfx_set_transparent_pen() */
 static void *s_underlay;              /* gfx_set_underlay() */
+static void *s_split_right, *s_split_over;   /* gfx_set_underlay_split() */
+static int   s_split_x;
 
 /* The cel engine treats a final pixel value of 0 as transparent once
  * CCB_BGND is off: the transparent pen gets 0, any other black gets 1
@@ -101,7 +103,17 @@ gfx_set_transparent_pen(int pen)
       s_plut[i] = plut_value(i, s_pal[i]);
 }
 
-void gfx_set_underlay(void *cels)   { s_underlay = cels; }
+void gfx_set_underlay(void *cels)   { s_underlay = cels; s_split_right = 0; }
+
+/* split screen: `left` clipped to x < split, `right` to x >= split, then
+ * `over` (HUD boxes, flashes) across the whole screen */
+void gfx_set_underlay_split(void *left, void *right, void *over, int split)
+{
+  s_underlay = left;
+  s_split_right = right;
+  s_split_over = over;
+  s_split_x = split;
+}
 
 /* An 8-bit pen buffer (w x h, rows `stride` bytes apart, stride a multiple
  * of 4) as a cel coloured by the screen's palette, for gfx_set_underlay():
@@ -784,9 +796,25 @@ gfx_swap(void)
     }
   else
     {
-      if(s_underlay)
-        DrawCels(s_sc.sc_BitmapItems[s_cur], (CCB *)s_underlay);
-      DrawCels(s_sc.sc_BitmapItems[s_cur], s_cel);
+      Item bm = s_sc.sc_BitmapItems[s_cur];
+      if(s_split_right)
+        {
+          /* each half through its own clip rectangle (shrink, then move) */
+          SetClipHeight(bm, 240);
+          SetClipWidth(bm, s_split_x);
+          if(s_underlay)
+            DrawCels(bm, (CCB *)s_underlay);
+          SetClipWidth(bm, W - s_split_x);
+          SetClipOrigin(bm, s_split_x, 0);
+          DrawCels(bm, (CCB *)s_split_right);
+          SetClipOrigin(bm, 0, 0);
+          SetClipWidth(bm, W);
+          if(s_split_over)
+            DrawCels(bm, (CCB *)s_split_over);
+        }
+      else if(s_underlay)
+        DrawCels(bm, (CCB *)s_underlay);
+      DrawCels(bm, s_cel);
     }
   DisplayScreen(s_sc.sc_Screens[s_cur], 0);
   s_cur ^= 1;
@@ -1175,6 +1203,20 @@ RectFill(struct RastPort *rp, LONG x0, LONG y0, LONG x1, LONG y1)
         {
           for(i = 0; i < n; i++)
             row[i] = pen;
+          row += W;
+        }
+      return;
+    }
+  if(s_pix16 && !(rp->DrawMode & COMPLEMENT) && x1 - x0 < 8)
+    {
+      /* the same for 16-bit screens (big text is a RectFill per pixel) */
+      UWORD v = s_pal[rp->apen & 255];
+      UWORD *row = s_pix16 + y0 * W + x0;
+      LONG n = x1 - x0 + 1, h = y1 - y0 + 1, i;
+      while(h--)
+        {
+          for(i = 0; i < n; i++)
+            row[i] = v;
           row += W;
         }
       return;

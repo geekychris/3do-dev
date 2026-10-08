@@ -56,6 +56,10 @@ Atari ports in hatari_augmented), all playable from the **arcade** disc
   ballblazer (floor as ~40 perspective cels per pane), pea_shooter_blast
   (scrolled tile cache), uranus_lander (terrain), rj_birthday (rooms),
   void_trader (triangles as cels over a space-and-stars layer).
+  For split screen, `gfx_set_underlay_split(left, right, over, x)` draws
+  `left` clipped to x < `x`, `right` clipped to the rest, then `over` across
+  everything. The graphics folio's clip origin also moves the cels, so lay
+  the right view out from x = 0 (rolling_steel).
 - **Debug bridge:** `ab_init`, `AB_I/W/E(fmt, ...)` (real functions here, since
   Norcroft has no variadic macros) print to the 3DO debug console with the name
   given to `ab_init` as prefix. `ab_register_var/hook` are no-ops.

@@ -1,0 +1,5 @@
+title=Rolling Steel
+origin=Unity
+genre=Marble racer
+order=220
+desc=Roll a steel marble down six floating courses against one clock that carries over: no jump, no brakes, just momentum. Ice slides, sand bites, acid dissolves; sweepers, crushers, fans, chasers and blobs. D-pad pushes (relative to the view), L/R turn the view, A/B zoom, C+up/down tilt. Two players on two pads.

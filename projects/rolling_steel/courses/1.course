@@ -1,0 +1,30 @@
+name PRACTICE
+medals gold=25 silver=35 bronze=50
+time 75
+width 10
+decor 0
+music 1
+
+pad d=10 w=10 start
+rails
+run len=12 w=9
+rails
+hill len=16 drop=4 w=8 rails        # eased ramp, flat at both ends
+
+curve r=15 a=60 drop=1.5 w=7 bank=12 rails
+run len=11 w=8
+pillar x=0 back=4 r=0.9 h=2.6       # first thing that is simply in the way
+rails
+curve r=13 a=-55 drop=1.5 w=7 bank=11 rails
+
+run len=7 w=8
+split len=15 side=3 pit=3.5         # pit down the middle
+
+run len=9 w=8
+rails
+hill len=15 drop=5 w=7
+boost x=0 back=9 w=4 d=5 push=24     # faster line, less say in what happens next
+chaser x=0 back=4 range=18 speed=8
+run len=12 w=6
+rails
+goal d=9

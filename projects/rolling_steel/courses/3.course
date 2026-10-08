@@ -1,0 +1,46 @@
+name INTERMEDIATE
+medals gold=42 silver=52 bronze=63
+time 65
+width 8
+decor 2
+music 3
+
+pad d=7 w=8 start
+rails
+hill len=12 drop=3 w=6
+
+run len=16 w=4.2                    # exposed bridge, no kerbs
+blob x=0 back=6 range=999 speed=6
+
+curve r=13 a=65 drop=2 w=5 bank=18  # banked, and nothing to catch you
+run len=14 w=9
+acid w=4.5 d=3 x=0 back=2
+
+chicane r=15 a=40 drop=3 w=6 bank=14
+ice len=16 w=5                      # ice with no kerbs
+hill len=10 drop=5 w=4.5
+jump gap=3 drop=3
+
+run len=13 w=8
+rails
+crusher x=0 back=5 w=3 period=2.2 lift=4.5
+chaser x=0 back=2 range=24 speed=11
+
+curve r=11 a=-75 drop=2 w=4.6 bank=16
+run len=6 w=13
+split len=15 side=3.6 pit=4.5       # twin catwalks over a drop
+
+run len=18 w=11                     # slalom: dodge right, then left
+acid w=3 d=3 x=-3.4 back=11
+acid w=3 d=3 x=3.4 back=3
+
+run len=12 w=9
+pillar x=-2.6 back=8 r=0.8 h=2.4
+pillar x=2.6 back=3 r=0.8 h=2.4
+crumble len=8 w=9
+
+hill len=16 drop=7 w=5
+chaser x=-1 back=6 range=26 speed=12
+rough len=10 w=5                    # sand: kills your speed at the worst time
+rails
+goal d=9
