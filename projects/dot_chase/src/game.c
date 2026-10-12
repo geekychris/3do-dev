@@ -3,65 +3,65 @@
 
 /*
  * DOT_CHASE - Game logic
- * Ghost AI, movement, collision, scoring
+ * Spider AI, movement, collision, scoring
  */
 #include <string.h>
 #include "game.h"
 
 /*
- * Classic dot-maze template: 28x31
- * 1=wall, 2=dot, 3=power pellet, 4=ghost door, 0=empty
+ * The hedge maze: 28x31
+ * 1=hedge, 2=seed, 3=flower (power), 4=nest gate, 0=empty
  */
 const UBYTE maze_template[MAZE_H][MAZE_W] = {
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-    {1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1},
-    {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
-    {1,3,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,3,1},
-    {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
-    {1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1},
-    {1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1},
-    {1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1},
-    {1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1},
-    {1,1,1,1,1,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,1,1,1,1,1},
-    {0,0,0,0,0,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,0,0,0,0,0},
-    {0,0,0,0,0,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,0,0,0,0},
-    {0,0,0,0,0,1,2,1,1,0,1,1,1,4,4,1,1,1,0,1,1,2,1,0,0,0,0,0},
-    {1,1,1,1,1,1,2,1,1,0,1,0,0,0,0,0,0,1,0,1,1,2,1,1,1,1,1,1},
-    {0,0,0,0,0,0,2,0,0,0,1,0,0,0,0,0,0,1,0,0,0,2,0,0,0,0,0,0},
-    {1,1,1,1,1,1,2,1,1,0,1,0,0,0,0,0,0,1,0,1,1,2,1,1,1,1,1,1},
-    {0,0,0,0,0,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,0,0,0,0,0},
-    {0,0,0,0,0,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,0,0,0,0},
-    {0,0,0,0,0,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,0,0,0,0,0},
-    {1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1},
-    {1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1},
-    {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
-    {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
-    {1,3,2,2,1,1,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,1,1,2,2,3,1},
-    {1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1},
-    {1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1},
-    {1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1},
-    {1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1},
-    {1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1},
+    {1,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,1},
+    {1,2,1,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,2,1,2,1,1,1,1,2,1},
+    {1,2,1,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,1,2,1},
+    {1,2,1,2,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,2,1,2,1},
+    {1,3,2,2,1,1,2,2,2,1,2,2,2,1,1,2,2,2,1,2,2,2,1,1,2,2,3,1},
+    {1,1,1,2,1,1,1,1,2,1,2,1,1,1,1,1,1,2,1,2,1,1,1,1,2,1,1,1},
+    {1,2,2,2,2,2,1,1,2,2,2,2,2,1,1,2,2,2,2,2,1,1,2,2,2,2,2,1},
+    {1,2,1,1,1,2,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,2,1,1,1,2,1},
+    {1,2,1,2,2,2,2,2,1,2,2,2,2,1,1,2,2,2,2,1,2,2,2,2,2,1,2,1},
+    {1,2,1,2,1,1,1,2,1,2,1,1,1,1,1,1,1,1,2,1,2,1,1,1,2,1,2,1},
+    {1,2,2,2,1,2,2,2,1,2,2,2,2,2,2,2,2,2,2,1,2,2,2,1,2,2,2,1},
+    {1,1,1,2,1,2,1,1,1,2,1,1,1,4,4,1,1,1,2,1,1,1,2,1,2,1,1,1},
+    {1,1,1,2,1,2,1,1,1,2,1,0,0,0,0,0,0,1,2,1,1,1,2,1,2,1,1,1},
+    {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,1,2,2,2,2,2,2,2,2,2,2},
+    {1,1,1,2,1,2,1,1,1,2,1,0,0,0,0,0,0,1,2,1,1,1,2,1,2,1,1,1},
+    {1,1,1,2,1,2,1,1,1,2,1,1,1,1,1,1,1,1,2,1,1,1,2,1,2,1,1,1},
+    {1,2,2,2,1,2,2,2,2,2,1,2,2,2,2,2,2,1,2,2,2,2,2,1,2,2,2,1},
+    {1,2,1,1,1,2,1,1,1,2,1,2,1,1,1,1,2,1,2,1,1,1,2,1,1,1,2,1},
+    {1,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,1},
+    {1,2,1,1,1,1,1,2,1,2,1,1,1,1,1,1,1,1,2,1,2,1,1,1,1,1,2,1},
+    {1,3,1,2,2,2,2,2,1,2,1,1,1,1,1,1,1,1,2,1,2,2,2,2,2,1,3,1},
+    {1,2,1,2,1,1,1,2,1,2,1,1,1,1,1,1,1,1,2,1,2,1,1,1,2,1,2,1},
+    {1,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,1},
+    {1,1,1,2,1,2,1,1,1,1,1,2,1,1,1,1,2,1,1,1,1,1,2,1,2,1,1,1},
+    {1,2,2,2,1,2,2,2,1,2,2,2,1,1,1,1,2,2,2,1,2,2,2,1,2,2,2,1},
+    {1,2,1,1,1,1,1,2,1,2,1,2,2,1,1,2,2,1,2,1,2,1,1,1,1,1,2,1},
+    {1,2,1,2,2,2,2,2,1,2,1,1,2,1,1,2,1,1,2,1,2,2,2,2,2,1,2,1},
+    {1,2,1,2,1,1,1,1,1,2,1,1,2,1,1,2,1,1,2,1,1,1,1,1,2,1,2,1},
     {1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1},
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
 };
 
-/* Ghost house positions */
-#define GHOST_HOUSE_X  13
-#define GHOST_HOUSE_Y  14
-#define GHOST_DOOR_Y   12
+/* The spiders' nest in the middle of the maze */
+#define SPIDER_HOUSE_X  13
+#define SPIDER_HOUSE_Y  14
+#define SPIDER_DOOR_Y   12
 
 /* Starting positions */
-#define PAC_START_X    13
-#define PAC_START_Y    23
-#define BLINKY_START_X 13
-#define BLINKY_START_Y 11
-#define PINKY_START_X  13
-#define PINKY_START_Y  14
-#define INKY_START_X   11
-#define INKY_START_Y   14
-#define CLYDE_START_X  15
-#define CLYDE_START_Y  14
+#define HERO_START_X    13
+#define HERO_START_Y    23
+#define HUNTER_START_X 13
+#define HUNTER_START_Y 11
+#define AMBUSH_START_X  13
+#define AMBUSH_START_Y  14
+#define FLANK_START_X   11
+#define FLANK_START_Y   14
+#define SHY_START_X  15
+#define SHY_START_Y  14
 
 /* Tunnel tiles (row 14) */
 #define TUNNEL_Y       14
@@ -70,18 +70,18 @@ const UBYTE maze_template[MAZE_H][MAZE_W] = {
 static const WORD dir_dx[4] = { 1, 0, -1, 0 };
 static const WORD dir_dy[4] = { 0, 1, 0, -1 };
 
-/* Check if a tile is passable for dot-eater */
+/* Check if a tile is passable for ladybug */
 static WORD tile_passable(UBYTE tile)
 {
-    return tile != T_WALL && tile != T_GHOST_DOOR;
+    return tile != T_WALL && tile != T_SPIDER_DOOR;
 }
 
-/* Check if a tile is passable for ghosts */
-static WORD tile_passable_ghost(UBYTE tile, WORD state)
+/* Check if a tile is passable for spiders */
+static WORD tile_passable_spider(UBYTE tile, WORD state)
 {
     if (tile == T_WALL) return 0;
-    if (tile == T_GHOST_DOOR && state == GHOST_EATEN) return 1;
-    if (tile == T_GHOST_DOOR) return 0;
+    if (tile == T_SPIDER_DOOR && state == SPIDER_EATEN) return 1;
+    if (tile == T_SPIDER_DOOR) return 0;
     return 1;
 }
 
@@ -97,7 +97,7 @@ static UBYTE get_tile(GameState *gs, WORD tx, WORD ty)
     return gs->maze[ty][tx];
 }
 
-/* Distance squared between two tiles (for ghost targeting) */
+/* Distance squared between two tiles (for spider targeting) */
 static LONG dist_sq(WORD x1, WORD y1, WORD x2, WORD y2)
 {
     LONG dx = (LONG)(x2 - x1);
@@ -155,7 +155,7 @@ static void reset_maze(GameState *gs)
     }
 }
 
-static void place_ghost(Ghost *g, WORD tx, WORD ty, WORD in_house)
+static void place_spider(Spider *g, WORD tx, WORD ty, WORD in_house)
 {
     g->tile_x = tx;
     g->tile_y = ty;
@@ -165,7 +165,7 @@ static void place_ghost(Ghost *g, WORD tx, WORD ty, WORD in_house)
     g->sub_y = 0;
     g->dir = DIR_UP;
     g->next_dir = DIR_UP;
-    g->state = GHOST_SCATTER;
+    g->state = SPIDER_SCATTER;
     g->home = in_house;
     g->fright_timer = 0;
 }
@@ -177,41 +177,41 @@ void game_start_level(GameState *gs)
     gs->mode = 0; /* scatter */
     gs->mode_timer = 0;
     gs->mode_phase = 0;
-    gs->fruit_active = 0;
+    gs->bonus_active = 0;
 }
 
 void game_start_life(GameState *gs)
 {
-    /* Place dot-eater */
-    gs->muncher.tile_x = PAC_START_X;
-    gs->muncher.tile_y = PAC_START_Y;
-    gs->muncher.pixel_x = tile_to_px(PAC_START_X);
-    gs->muncher.pixel_y = tile_to_px(PAC_START_Y);
-    gs->muncher.sub_x = 0;
-    gs->muncher.sub_y = 0;
-    gs->muncher.dir = DIR_LEFT;
-    gs->muncher.next_dir = DIR_LEFT;
-    gs->muncher.anim_frame = 0;
-    gs->muncher.anim_timer = 0;
-    gs->muncher.mouth_open = 1;
+    /* Place ladybug */
+    gs->hero.tile_x = HERO_START_X;
+    gs->hero.tile_y = HERO_START_Y;
+    gs->hero.pixel_x = tile_to_px(HERO_START_X);
+    gs->hero.pixel_y = tile_to_px(HERO_START_Y);
+    gs->hero.sub_x = 0;
+    gs->hero.sub_y = 0;
+    gs->hero.dir = DIR_LEFT;
+    gs->hero.next_dir = DIR_LEFT;
+    gs->hero.anim_frame = 0;
+    gs->hero.anim_timer = 0;
+    gs->hero.leg_step = 1;
 
-    /* Place ghosts */
-    place_ghost(&gs->ghosts[GHOST_BLINKY], BLINKY_START_X, BLINKY_START_Y, 0);
-    gs->ghosts[GHOST_BLINKY].dir = DIR_LEFT;
-    gs->ghosts[GHOST_BLINKY].dot_counter = 0;
+    /* Place spiders */
+    place_spider(&gs->spiders[SPIDER_HUNTER], HUNTER_START_X, HUNTER_START_Y, 0);
+    gs->spiders[SPIDER_HUNTER].dir = DIR_LEFT;
+    gs->spiders[SPIDER_HUNTER].dot_counter = 0;
 
-    place_ghost(&gs->ghosts[GHOST_PINKY], PINKY_START_X, PINKY_START_Y, 1);
-    gs->ghosts[GHOST_PINKY].dot_counter = 0;
+    place_spider(&gs->spiders[SPIDER_AMBUSH], AMBUSH_START_X, AMBUSH_START_Y, 1);
+    gs->spiders[SPIDER_AMBUSH].dot_counter = 0;
 
-    place_ghost(&gs->ghosts[GHOST_INKY], INKY_START_X, INKY_START_Y, 1);
-    gs->ghosts[GHOST_INKY].dot_counter = 30;
+    place_spider(&gs->spiders[SPIDER_FLANK], FLANK_START_X, FLANK_START_Y, 1);
+    gs->spiders[SPIDER_FLANK].dot_counter = 30;
 
-    place_ghost(&gs->ghosts[GHOST_CLYDE], CLYDE_START_X, CLYDE_START_Y, 1);
-    gs->ghosts[GHOST_CLYDE].dot_counter = 60;
+    place_spider(&gs->spiders[SPIDER_SHY], SHY_START_X, SHY_START_Y, 1);
+    gs->spiders[SPIDER_SHY].dot_counter = 60;
 
     gs->fright_active = 0;
     gs->fright_timer = 0;
-    gs->ghosts_eaten = 0;
+    gs->spiders_eaten = 0;
     gs->popup_active = 0;
 
     gs->state = STATE_READY;
@@ -248,14 +248,14 @@ static void move_entity(WORD *px, WORD *py, WORD *sx, WORD *sy,
 }
 
 /* Choose best direction toward target, never reversing */
-static WORD choose_direction(GameState *gs, Ghost *g, WORD target_x, WORD target_y)
+static WORD choose_direction(GameState *gs, Spider *g, WORD target_x, WORD target_y)
 {
     WORD best_dir = g->dir;
     LONG best_dist = 0x7FFFFFFFL;
     WORD d;
     WORD opp = opposite_dir(g->dir);
 
-    /* Priority: UP, LEFT, DOWN, RIGHT (classic dot-eater arcade) */
+    /* Ties go to UP, LEFT, DOWN, RIGHT in that order */
     static const WORD priority[4] = { DIR_UP, DIR_LEFT, DIR_DOWN, DIR_RIGHT };
 
     for (d = 0; d < 4; d++) {
@@ -270,15 +270,7 @@ static WORD choose_direction(GameState *gs, Ghost *g, WORD target_x, WORD target
         ny = g->tile_y + dir_dy[try_dir];
         tile = get_tile(gs, nx, ny);
 
-        if (!tile_passable_ghost(tile, g->state)) continue;
-
-        /* Ghosts can't go up in certain tiles (classic restriction) */
-        if (try_dir == DIR_UP) {
-            if ((g->tile_y == 12 || g->tile_y == 24) &&
-                (g->tile_x == 12 || g->tile_x == 15)) {
-                if (g->state != GHOST_EATEN) continue;
-            }
-        }
+        if (!tile_passable_spider(tile, g->state)) continue;
 
         dd = dist_sq(nx, ny, target_x, target_y);
         if (dd < best_dist) {
@@ -289,109 +281,105 @@ static WORD choose_direction(GameState *gs, Ghost *g, WORD target_x, WORD target
     return best_dir;
 }
 
-/* Ghost leaves the ghost house */
-static void ghost_leave_house(Ghost *g)
+/* Spider leaves the spider house */
+static void spider_leave_house(Spider *g)
 {
     /* Move to door position */
-    g->pixel_x = tile_to_px(GHOST_HOUSE_X);
-    g->pixel_y = tile_to_px(GHOST_DOOR_Y);
-    g->tile_x = GHOST_HOUSE_X;
-    g->tile_y = GHOST_DOOR_Y;
+    g->pixel_x = tile_to_px(SPIDER_HOUSE_X);
+    g->pixel_y = tile_to_px(SPIDER_DOOR_Y);
+    g->tile_x = SPIDER_HOUSE_X;
+    g->tile_y = SPIDER_DOOR_Y;
     g->sub_x = 0;
     g->sub_y = 0;
     g->dir = DIR_LEFT;
     g->home = 0;
 }
 
-/* Update ghost targeting */
-static void update_ghost_target(GameState *gs, Ghost *g, WORD id)
+/* Update spider targeting */
+static void update_spider_target(GameState *gs, Spider *g, WORD id)
 {
-    if (g->state == GHOST_SCATTER) {
+    if (g->state == SPIDER_SCATTER) {
         g->target_x = scatter_target[id][0];
         g->target_y = scatter_target[id][1];
         return;
     }
 
-    if (g->state == GHOST_EATEN) {
-        /* Return to ghost house */
-        g->target_x = GHOST_HOUSE_X;
-        g->target_y = GHOST_DOOR_Y;
+    if (g->state == SPIDER_EATEN) {
+        /* Return to spider house */
+        g->target_x = SPIDER_HOUSE_X;
+        g->target_y = SPIDER_DOOR_Y;
         return;
     }
 
-    if (g->state == GHOST_FRIGHT) {
+    if (g->state == SPIDER_FRIGHT) {
         /* Random-ish target: use frame counter for pseudo-random */
         g->target_x = (gs->frame * 7 + id * 13) % MAZE_W;
         g->target_y = (gs->frame * 11 + id * 17) % MAZE_H;
         return;
     }
 
-    /* Chase mode: each ghost has unique targeting */
+    /* Chase mode: each spider has unique targeting */
     switch (id) {
-    case GHOST_BLINKY:
-        /* Targets dot-eater directly */
-        g->target_x = gs->muncher.tile_x;
-        g->target_y = gs->muncher.tile_y;
+    case SPIDER_HUNTER:
+        /* Targets ladybug directly */
+        g->target_x = gs->hero.tile_x;
+        g->target_y = gs->hero.tile_y;
         break;
 
-    case GHOST_PINKY:
-        /* Targets 4 tiles ahead of dot-eater */
-        g->target_x = gs->muncher.tile_x + dir_dx[gs->muncher.dir] * 4;
-        g->target_y = gs->muncher.tile_y + dir_dy[gs->muncher.dir] * 4;
-        /* Classic bug: UP also adds 4 tiles to the left */
-        if (gs->muncher.dir == DIR_UP) {
-            g->target_x -= 4;
-        }
+    case SPIDER_AMBUSH:
+        /* Targets 4 tiles ahead of ladybug */
+        g->target_x = gs->hero.tile_x + dir_dx[gs->hero.dir] * 4;
+        g->target_y = gs->hero.tile_y + dir_dy[gs->hero.dir] * 4;
         break;
 
-    case GHOST_INKY: {
-        /* Complex: 2 tiles ahead of pac, then double vector from Blinky */
-        WORD ahead_x = gs->muncher.tile_x + dir_dx[gs->muncher.dir] * 2;
-        WORD ahead_y = gs->muncher.tile_y + dir_dy[gs->muncher.dir] * 2;
-        g->target_x = ahead_x + (ahead_x - gs->ghosts[GHOST_BLINKY].tile_x);
-        g->target_y = ahead_y + (ahead_y - gs->ghosts[GHOST_BLINKY].tile_y);
+    case SPIDER_FLANK: {
+        /* 2 tiles ahead of the ladybug, mirrored through the hunter */
+        WORD ahead_x = gs->hero.tile_x + dir_dx[gs->hero.dir] * 2;
+        WORD ahead_y = gs->hero.tile_y + dir_dy[gs->hero.dir] * 2;
+        g->target_x = ahead_x + (ahead_x - gs->spiders[SPIDER_HUNTER].tile_x);
+        g->target_y = ahead_y + (ahead_y - gs->spiders[SPIDER_HUNTER].tile_y);
         break;
     }
 
-    case GHOST_CLYDE: {
-        /* Targets dot-eater when far, scatter corner when close */
+    case SPIDER_SHY: {
+        /* Targets ladybug when far, scatter corner when close */
         LONG d = dist_sq(g->tile_x, g->tile_y,
-                         gs->muncher.tile_x, gs->muncher.tile_y);
+                         gs->hero.tile_x, gs->hero.tile_y);
         if (d > 64) { /* > 8 tiles away */
-            g->target_x = gs->muncher.tile_x;
-            g->target_y = gs->muncher.tile_y;
+            g->target_x = gs->hero.tile_x;
+            g->target_y = gs->hero.tile_y;
         } else {
-            g->target_x = scatter_target[GHOST_CLYDE][0];
-            g->target_y = scatter_target[GHOST_CLYDE][1];
+            g->target_x = scatter_target[SPIDER_SHY][0];
+            g->target_y = scatter_target[SPIDER_SHY][1];
         }
         break;
     }
     }
 }
 
-static void update_ghost(GameState *gs, Ghost *g, WORD id)
+static void update_spider(GameState *gs, Spider *g, WORD id)
 {
     WORD speed;
     WORD in_tunnel;
 
-    /* Ghost in house: wait for dot counter */
+    /* Spider in house: wait for dot counter */
     if (g->home) {
         if (gs->dots_eaten_global >= g->dot_counter) {
-            ghost_leave_house(g);
+            spider_leave_house(g);
         }
         return;
     }
 
     /* Determine speed */
     in_tunnel = (g->tile_y == TUNNEL_Y && (g->tile_x < 6 || g->tile_x >= 22));
-    if (g->state == GHOST_EATEN) {
-        speed = GHOST_EATEN_SPD;
-    } else if (g->state == GHOST_FRIGHT) {
-        speed = GHOST_FRIGHT_SPD;
+    if (g->state == SPIDER_EATEN) {
+        speed = SPIDER_EATEN_SPD;
+    } else if (g->state == SPIDER_FRIGHT) {
+        speed = SPIDER_FRIGHT_SPD;
     } else if (in_tunnel) {
-        speed = GHOST_TUNNEL_SPD;
+        speed = SPIDER_TUNNEL_SPD;
     } else {
-        speed = GHOST_SPEED;
+        speed = SPIDER_SPEED;
         /* Speed up slightly with levels */
         if (gs->level >= 2) speed += 16;
         if (gs->level >= 5) speed += 16;
@@ -399,18 +387,18 @@ static void update_ghost(GameState *gs, Ghost *g, WORD id)
 
     /* At tile center: choose direction */
     if (is_centered(g->pixel_x, g->pixel_y)) {
-        /* Check if eaten ghost reached home */
-        if (g->state == GHOST_EATEN) {
-            if (g->tile_x == GHOST_HOUSE_X &&
-                (g->tile_y == GHOST_DOOR_Y || g->tile_y == GHOST_DOOR_Y + 1)) {
-                g->state = gs->mode ? GHOST_CHASE : GHOST_SCATTER;
-                g->pixel_y = tile_to_px(GHOST_DOOR_Y);
-                g->tile_y = GHOST_DOOR_Y;
+        /* Check if eaten spider reached home */
+        if (g->state == SPIDER_EATEN) {
+            if (g->tile_x == SPIDER_HOUSE_X &&
+                (g->tile_y == SPIDER_DOOR_Y || g->tile_y == SPIDER_DOOR_Y + 1)) {
+                g->state = gs->mode ? SPIDER_CHASE : SPIDER_SCATTER;
+                g->pixel_y = tile_to_px(SPIDER_DOOR_Y);
+                g->tile_y = SPIDER_DOOR_Y;
                 g->sub_y = 0;
             }
         }
 
-        update_ghost_target(gs, g, id);
+        update_spider_target(gs, g, id);
         g->dir = choose_direction(gs, g, g->target_x, g->target_y);
     }
 
@@ -418,12 +406,12 @@ static void update_ghost(GameState *gs, Ghost *g, WORD id)
                 &g->tile_x, &g->tile_y, g->dir, speed);
 }
 
-static void reverse_all_ghosts(GameState *gs)
+static void reverse_all_spiders(GameState *gs)
 {
     WORD i;
-    for (i = 0; i < NUM_GHOSTS; i++) {
-        if (!gs->ghosts[i].home && gs->ghosts[i].state != GHOST_EATEN) {
-            gs->ghosts[i].dir = opposite_dir(gs->ghosts[i].dir);
+    for (i = 0; i < NUM_SPIDERS; i++) {
+        if (!gs->spiders[i].home && gs->spiders[i].state != SPIDER_EATEN) {
+            gs->spiders[i].dir = opposite_dir(gs->spiders[i].dir);
         }
     }
 }
@@ -443,13 +431,13 @@ static void enter_fright_mode(GameState *gs)
 
     gs->fright_active = 1;
     gs->fright_timer = fright_time;
-    gs->ghosts_eaten = 0;
+    gs->spiders_eaten = 0;
 
-    for (i = 0; i < NUM_GHOSTS; i++) {
-        if (gs->ghosts[i].state != GHOST_EATEN && !gs->ghosts[i].home) {
-            gs->ghosts[i].state = GHOST_FRIGHT;
-            gs->ghosts[i].fright_timer = fright_time;
-            gs->ghosts[i].dir = opposite_dir(gs->ghosts[i].dir);
+    for (i = 0; i < NUM_SPIDERS; i++) {
+        if (gs->spiders[i].state != SPIDER_EATEN && !gs->spiders[i].home) {
+            gs->spiders[i].state = SPIDER_FRIGHT;
+            gs->spiders[i].fright_timer = fright_time;
+            gs->spiders[i].dir = opposite_dir(gs->spiders[i].dir);
         }
     }
 }
@@ -460,10 +448,10 @@ static void end_fright_mode(GameState *gs)
     gs->fright_active = 0;
     gs->fright_timer = 0;
 
-    for (i = 0; i < NUM_GHOSTS; i++) {
-        if (gs->ghosts[i].state == GHOST_FRIGHT) {
-            gs->ghosts[i].state = gs->mode ? GHOST_CHASE : GHOST_SCATTER;
-            gs->ghosts[i].fright_timer = 0;
+    for (i = 0; i < NUM_SPIDERS; i++) {
+        if (gs->spiders[i].state == SPIDER_FRIGHT) {
+            gs->spiders[i].state = gs->mode ? SPIDER_CHASE : SPIDER_SCATTER;
+            gs->spiders[i].fright_timer = 0;
         }
     }
 }
@@ -491,48 +479,48 @@ static void update_mode(GameState *gs)
             gs->mode_phase++;
             gs->mode = gs->mode_phase & 1; /* even=scatter, odd=chase */
 
-            /* Reverse ghost directions on mode change */
-            reverse_all_ghosts(gs);
+            /* Reverse spider directions on mode change */
+            reverse_all_spiders(gs);
 
-            /* Update ghost states */
-            for (i = 0; i < NUM_GHOSTS; i++) {
-                if (gs->ghosts[i].state != GHOST_EATEN &&
-                    gs->ghosts[i].state != GHOST_FRIGHT &&
-                    !gs->ghosts[i].home) {
-                    gs->ghosts[i].state = gs->mode ? GHOST_CHASE : GHOST_SCATTER;
+            /* Update spider states */
+            for (i = 0; i < NUM_SPIDERS; i++) {
+                if (gs->spiders[i].state != SPIDER_EATEN &&
+                    gs->spiders[i].state != SPIDER_FRIGHT &&
+                    !gs->spiders[i].home) {
+                    gs->spiders[i].state = gs->mode ? SPIDER_CHASE : SPIDER_SCATTER;
                 }
             }
         }
     }
 }
 
-static void update_pac(GameState *gs, InputState *input)
+static void update_hero(GameState *gs, InputState *input)
 {
-    WORD speed = MUNCHER_SPEED;
+    WORD speed = HERO_SPEED;
     WORD next_tx, next_ty;
     UBYTE next_tile;
 
     /* Buffer direction input */
     if (input->dir != DIR_NONE) {
-        gs->muncher.next_dir = input->dir;
+        gs->hero.next_dir = input->dir;
     }
 
-    /* Speed boost when eating dots (classic behavior) */
+    /* A little faster while the spiders are scared */
     if (gs->fright_active) speed += 16;
 
     /* At tile center: try to turn */
-    if (is_centered(gs->muncher.pixel_x, gs->muncher.pixel_y)) {
+    if (is_centered(gs->hero.pixel_x, gs->hero.pixel_y)) {
         /* Try buffered direction first */
-        next_tx = gs->muncher.tile_x + dir_dx[gs->muncher.next_dir];
-        next_ty = gs->muncher.tile_y + dir_dy[gs->muncher.next_dir];
+        next_tx = gs->hero.tile_x + dir_dx[gs->hero.next_dir];
+        next_ty = gs->hero.tile_y + dir_dy[gs->hero.next_dir];
         next_tile = get_tile(gs, next_tx, next_ty);
 
         if (tile_passable(next_tile)) {
-            gs->muncher.dir = gs->muncher.next_dir;
+            gs->hero.dir = gs->hero.next_dir;
         } else {
             /* Try to continue current direction */
-            next_tx = gs->muncher.tile_x + dir_dx[gs->muncher.dir];
-            next_ty = gs->muncher.tile_y + dir_dy[gs->muncher.dir];
+            next_tx = gs->hero.tile_x + dir_dx[gs->hero.dir];
+            next_ty = gs->hero.tile_y + dir_dy[gs->hero.dir];
             next_tile = get_tile(gs, next_tx, next_ty);
 
             if (!tile_passable(next_tile)) {
@@ -543,15 +531,15 @@ static void update_pac(GameState *gs, InputState *input)
 
         /* Eat dots */
         {
-            UBYTE cur = gs->maze[gs->muncher.tile_y][gs->muncher.tile_x];
+            UBYTE cur = gs->maze[gs->hero.tile_y][gs->hero.tile_x];
             if (cur == T_DOT) {
-                gs->maze[gs->muncher.tile_y][gs->muncher.tile_x] = T_EMPTY;
+                gs->maze[gs->hero.tile_y][gs->hero.tile_x] = T_EMPTY;
                 gs->score += SCORE_DOT;
                 gs->dots_eaten++;
                 gs->dots_eaten_global++;
-                gs->ev_flags |= EV_CHOMP;
+                gs->ev_flags |= EV_SEED;
             } else if (cur == T_POWER) {
-                gs->maze[gs->muncher.tile_y][gs->muncher.tile_x] = T_EMPTY;
+                gs->maze[gs->hero.tile_y][gs->hero.tile_x] = T_EMPTY;
                 gs->score += SCORE_POWER;
                 gs->dots_eaten++;
                 gs->dots_eaten_global++;
@@ -560,14 +548,14 @@ static void update_pac(GameState *gs, InputState *input)
             }
         }
 
-        /* Fruit trigger: at 70 and 170 dots */
-        if (!gs->fruit_active &&
+        /* Bonus trigger: at 70 and 170 dots */
+        if (!gs->bonus_active &&
             (gs->dots_eaten == 70 || gs->dots_eaten == 170)) {
-            gs->fruit_active = 1;
-            gs->fruit_timer = 500; /* ~10 seconds */
-            gs->fruit_type = (gs->level - 1) % MAX_FRUIT_TYPE;
-            gs->fruit_x = tile_to_px(13);
-            gs->fruit_y = tile_to_px(17);
+            gs->bonus_active = 1;
+            gs->bonus_timer = 500; /* ~10 seconds */
+            gs->bonus_type = (gs->level - 1) % MAX_BONUS_TYPE;
+            gs->bonus_x = tile_to_px(13);
+            gs->bonus_y = tile_to_px(17);
         }
 
         /* Check level complete */
@@ -585,58 +573,58 @@ static void update_pac(GameState *gs, InputState *input)
         }
     }
 
-    /* Animate mouth */
-    gs->muncher.anim_timer++;
-    if (gs->muncher.anim_timer >= 3) {
-        gs->muncher.anim_timer = 0;
-        gs->muncher.mouth_open = !gs->muncher.mouth_open;
+    /* Animate legs */
+    gs->hero.anim_timer++;
+    if (gs->hero.anim_timer >= 3) {
+        gs->hero.anim_timer = 0;
+        gs->hero.leg_step = !gs->hero.leg_step;
     }
 
-    move_entity(&gs->muncher.pixel_x, &gs->muncher.pixel_y,
-                &gs->muncher.sub_x, &gs->muncher.sub_y,
-                &gs->muncher.tile_x, &gs->muncher.tile_y,
-                gs->muncher.dir, speed);
+    move_entity(&gs->hero.pixel_x, &gs->hero.pixel_y,
+                &gs->hero.sub_x, &gs->hero.sub_y,
+                &gs->hero.tile_x, &gs->hero.tile_y,
+                gs->hero.dir, speed);
 }
 
-static void check_ghost_collision(GameState *gs)
+static void check_spider_collision(GameState *gs)
 {
     WORD i;
-    for (i = 0; i < NUM_GHOSTS; i++) {
-        Ghost *g = &gs->ghosts[i];
+    for (i = 0; i < NUM_SPIDERS; i++) {
+        Spider *g = &gs->spiders[i];
         WORD dx, dy;
 
         if (g->home) continue;
 
-        dx = gs->muncher.pixel_x - g->pixel_x;
-        dy = gs->muncher.pixel_y - g->pixel_y;
+        dx = gs->hero.pixel_x - g->pixel_x;
+        dy = gs->hero.pixel_y - g->pixel_y;
         if (dx < 0) dx = -dx;
         if (dy < 0) dy = -dy;
 
         if (dx < 6 && dy < 6) {
-            if (g->state == GHOST_FRIGHT) {
-                /* Eat ghost */
-                g->state = GHOST_EATEN;
+            if (g->state == SPIDER_FRIGHT) {
+                /* Eat spider */
+                g->state = SPIDER_EATEN;
                 g->fright_timer = 0;
-                gs->ghosts_eaten++;
+                gs->spiders_eaten++;
 
-                /* Score: 200, 400, 800, 1600 */
+                /* Score: 150, 300, 600, 1200 */
                 {
-                    LONG ghost_score = SCORE_GHOST1;
+                    LONG spider_score = SCORE_SPIDER1;
                     WORD e;
-                    for (e = 1; e < gs->ghosts_eaten; e++) ghost_score *= 2;
-                    gs->score += ghost_score;
+                    for (e = 1; e < gs->spiders_eaten; e++) spider_score *= 2;
+                    gs->score += spider_score;
                     gs->popup_active = 1;
-                    gs->popup_timer = EAT_GHOST_TIME;
+                    gs->popup_timer = EAT_SPIDER_TIME;
                     gs->popup_x = g->pixel_x;
                     gs->popup_y = g->pixel_y;
-                    gs->popup_score = ghost_score;
+                    gs->popup_score = spider_score;
                 }
 
-                gs->ev_flags |= EV_EAT_GHOST;
-                gs->state = STATE_EAT_GHOST;
-                gs->state_timer = EAT_GHOST_TIME;
-            } else if (g->state != GHOST_EATEN) {
-                /* dot-eater dies */
+                gs->ev_flags |= EV_EAT_SPIDER;
+                gs->state = STATE_EAT_SPIDER;
+                gs->state_timer = EAT_SPIDER_TIME;
+            } else if (g->state != SPIDER_EATEN) {
+                /* ladybug dies */
                 gs->state = STATE_DYING;
                 gs->state_timer = DYING_TIME;
                 gs->ev_flags |= EV_DIE;
@@ -671,13 +659,13 @@ void game_update(GameState *gs, InputState *input)
         break;
 
     case STATE_PLAYING:
-        update_pac(gs, input);
+        update_hero(gs, input);
         if (gs->state != STATE_PLAYING) break; /* level done or dying */
 
         update_mode(gs);
 
-        for (i = 0; i < NUM_GHOSTS; i++) {
-            update_ghost(gs, &gs->ghosts[i], i);
+        for (i = 0; i < NUM_SPIDERS; i++) {
+            update_spider(gs, &gs->spiders[i], i);
         }
 
         /* Fright timer */
@@ -688,27 +676,27 @@ void game_update(GameState *gs, InputState *input)
             }
         }
 
-        /* Fruit timer */
-        if (gs->fruit_active) {
-            gs->fruit_timer--;
-            if (gs->fruit_timer <= 0) {
-                gs->fruit_active = 0;
+        /* Bonus timer */
+        if (gs->bonus_active) {
+            gs->bonus_timer--;
+            if (gs->bonus_timer <= 0) {
+                gs->bonus_active = 0;
             }
-            /* Check dot-eater eats fruit */
-            if (gs->fruit_active) {
-                WORD dx = gs->muncher.pixel_x - gs->fruit_x;
-                WORD dy = gs->muncher.pixel_y - gs->fruit_y;
+            /* Check ladybug eats bonus */
+            if (gs->bonus_active) {
+                WORD dx = gs->hero.pixel_x - gs->bonus_x;
+                WORD dy = gs->hero.pixel_y - gs->bonus_y;
                 if (dx < 0) dx = -dx;
                 if (dy < 0) dy = -dy;
                 if (dx < 6 && dy < 6) {
-                    gs->score += fruit_scores[gs->fruit_type];
+                    gs->score += bonus_scores[gs->bonus_type];
                     gs->popup_active = 1;
                     gs->popup_timer = 60;
-                    gs->popup_x = gs->fruit_x;
-                    gs->popup_y = gs->fruit_y;
-                    gs->popup_score = fruit_scores[gs->fruit_type];
-                    gs->fruit_active = 0;
-                    gs->ev_flags |= EV_FRUIT;
+                    gs->popup_x = gs->bonus_x;
+                    gs->popup_y = gs->bonus_y;
+                    gs->popup_score = bonus_scores[gs->bonus_type];
+                    gs->bonus_active = 0;
+                    gs->ev_flags |= EV_BONUS;
                 }
             }
         }
@@ -719,13 +707,13 @@ void game_update(GameState *gs, InputState *input)
             if (gs->popup_timer <= 0) gs->popup_active = 0;
         }
 
-        check_ghost_collision(gs);
+        check_spider_collision(gs);
 
-        /* Update siren speed based on dots eaten */
-        gs->siren_speed = gs->dots_eaten * 3 / gs->dots_total;
+        /* Update pulse speed based on dots eaten */
+        gs->pulse_speed = gs->dots_eaten * 3 / gs->dots_total;
         break;
 
-    case STATE_EAT_GHOST:
+    case STATE_EAT_SPIDER:
         gs->state_timer--;
         if (gs->popup_active) {
             gs->popup_timer--;

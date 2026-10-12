@@ -9,9 +9,9 @@
 /* Precomputed ship / station models. Call vt_build_models() once
  * at startup to fill in vbase, face, and normals. */
 
-extern Model model_cobra;      /* player / friendly */
-extern Model model_krait;      /* pirate — first enemy */
-extern Model model_station;    /* Coriolis cube */
+extern Model model_skiff;      /* player / friendly */
+extern Model model_raider;     /* pirate — first enemy */
+extern Model model_station;    /* trade station (a cube) */
 
 void vt_build_models(void);
 

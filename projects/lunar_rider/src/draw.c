@@ -578,15 +578,19 @@ void draw_hud(struct RastPort *rp, GameState *gs)
 
     /* Checkpoint section indicator */
     {
-        char sec[6];
-        sec[0] = 'A' + gs->checkpoint_cur;
-        sec[1] = '-';
-        sec[2] = 'A' + gs->checkpoint_cur + 1;
-        if (gs->checkpoint_cur + 1 >= 26) sec[2] = 'A';
-        sec[3] = '\0';
+        char sec[8];
+        WORD z = gs->checkpoint_cur + 1;
+        sec[0] = 'Z';
+        sec[1] = 'O';
+        sec[2] = 'N';
+        sec[3] = 'E';
+        sec[4] = ' ';
+        sec[5] = (char)('0' + z / 10);
+        sec[6] = (char)('0' + z % 10);
+        sec[7] = '\0';
 
         SetAPen(rp, COL_GREEN);
-        draw_string_at(rp, SCREEN_W / 2 - 12, 2, sec, 1);
+        draw_string_at(rp, SCREEN_W / 2 - 21, 2, sec, 1);
     }
 
     /* Checkpoint progress bar */
@@ -726,13 +730,13 @@ void draw_checkpoint(struct RastPort *rp, WORD checkpoint)
     WORD w;
     char msg[20];
 
-    msg[0] = 'P';
+    msg[0] = 'Z';
     msg[1] = 'O';
-    msg[2] = 'I';
-    msg[3] = 'N';
-    msg[4] = 'T';
-    msg[5] = ' ';
-    msg[6] = 'A' + checkpoint;
+    msg[2] = 'N';
+    msg[3] = 'E';
+    msg[4] = ' ';
+    msg[5] = (char)('0' + (checkpoint + 1) / 10);
+    msg[6] = (char)('0' + (checkpoint + 1) % 10);
     msg[7] = '\0';
 
     SetAPen(rp, COL_GREEN);

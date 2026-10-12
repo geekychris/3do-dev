@@ -1621,10 +1621,10 @@ void game_update(GameState *gs, InputState *inp)
             gs->arcade_timer <= 0 && !arcade_voice_is_playing()) {
             Player *p = &gs->player;
             WORD room_x = ROOM_SILICON * ROOM_W;
-            WORD dx_sin = p->x - (room_x + 35);
-            WORD dx_rb  = p->x - (room_x + 80);
+            WORD dx_cab_a = p->x - (room_x + 35);
+            WORD dx_cab_b = p->x - (room_x + 80);
             WORD near_y = (p->y > FLOOR_Y - 65 && p->y < FLOOR_Y + 5);
-            if (dx_sin > -20 && dx_sin < 20 && near_y) {
+            if (dx_cab_a > -20 && dx_cab_a < 20 && near_y) {
             gs->arcade_timer = 100;
             gs->arcade_which = 0;
             gs->score += 200;
@@ -1639,14 +1639,16 @@ void game_update(GameState *gs, InputState *inp)
                     "HIGH SCORE!",
                     "LEVEL UP!"
                 };
-                s = arcade_quotes[rng() % 4];
+                /* the clip that is playing says the same words */
+                j = arcade_voice_current();
+                s = arcade_quotes[j >= 0 && j < 4 ? j : rng() % 4];
                 for (j = 0; s[j] && j < BUBBLE_LEN - 1; j++)
                     gs->rj_bubble[j] = s[j];
                 gs->rj_bubble[j] = 0;
             }
             fire_used = 1;
         }
-        else if (dx_rb > -20 && dx_rb < 20 && near_y) {
+        else if (dx_cab_b > -20 && dx_cab_b < 20 && near_y) {
             gs->arcade_timer = 80;
             gs->arcade_which = 1;
             gs->score += 200;

@@ -6,9 +6,8 @@
  * loading/validation and the state machine below are copied from the
  * Amiga main.c; this file replaces its screen, IDCMP and joystick code.
  *
- * Music: the Amiga version plays DH2:Dev/music.mod, a cover of a
- * commercial song, which is not shipped. Put a MOD of your own on the disc
- * as pea_shooter_blast/music.mod to get music; otherwise sound effects only.
+ * Music: music.mod ("Pea Patrol", an original tune made by
+ * tools/modgen/pea_shooter_blast.py), the same song the Amiga version plays.
  *
  * Controls (3DO pad): LEFT/RIGHT drive, UP or B jump, DOWN crouch,
  * A fires (and starts), X quits to the menu.

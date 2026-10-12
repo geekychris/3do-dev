@@ -369,6 +369,7 @@ void arcade_voice_load(void);
 void arcade_voice_cleanup(void);
 void arcade_voice_play_random(void);  /* pause music, play random voice clip */
 WORD arcade_voice_is_playing(void);   /* returns 1 if voice clip still playing */
+WORD arcade_voice_current(void);      /* clip playing (0-3), -1 if none */
 void arcade_voice_check_done(void);   /* call each frame to resume music when done */
 
 #endif

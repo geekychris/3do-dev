@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Chris Collins <chris@hitorro.com>
 
 /*
- * void_trader — Elite-alike space trading + combat demo for Amiga.
+ * void_trader — space trading + combat demo for Amiga.
  * Phase 1: multi-object 3D engine, 6DoF flight, cockpit + HUD,
  * starfield, one enemy ship visible (static for now). No combat.
  *
@@ -394,18 +394,18 @@ static void setup_world(void)
     cam.x = 0; cam.y = 0; cam.z = 0;
     cam.pitch = 0; cam.yaw = 0; cam.roll = 0;
 
-    /* One friendly Cobra floating a bit away — for the demo. */
+    /* One friendly Skiff floating a bit away — for the demo. */
     world[0].active = 1;
-    world[0].model = &model_cobra;
+    world[0].model = &model_skiff;
     world[0].x = -4000; world[0].y = 200; world[0].z = 8000;
     world[0].yaw = 30;
     world[0].team = 0;
     world[0].pen_base = 8;
 
-    /* Two enemy Kraits — start on opposite sides so it's not
+    /* Two enemy Raiders — start on opposite sides so it's not
      * trivially easy to face them both at once. */
     world[1].active = 1;
-    world[1].model = &model_krait;
+    world[1].model = &model_raider;
     world[1].x = 3500; world[1].y = -300; world[1].z = 6500;
     world[1].yaw = -20;
     world[1].team = 1;
@@ -413,7 +413,7 @@ static void setup_world(void)
     world[1].hp = 3;
 
     world[3].active = 1;
-    world[3].model = &model_krait;
+    world[3].model = &model_raider;
     world[3].x = -4500; world[3].y = 200; world[3].z = 7500;
     world[3].yaw = 60;
     world[3].team = 1;
@@ -441,7 +441,7 @@ static LONG srand_range(LONG lo, LONG hi)
     return lo + (LONG)(srng() % (ULONG)(hi - lo + 1));
 }
 
-/* Count Kraits currently alive (team==1 + active + hp > 0). */
+/* Count Raiders currently alive (team==1 + active + hp > 0). */
 static int live_enemy_count(void)
 {
     int n = 0, i;
@@ -450,9 +450,9 @@ static int live_enemy_count(void)
     return n;
 }
 
-/* Spawn a Krait in one of the inactive slots at a random position
+/* Spawn a Raider in one of the inactive slots at a random position
  * roughly around the player, far enough not to be point-blank. */
-static void spawn_krait(void)
+static void spawn_raider(void)
 {
     int i;
     for (i = 0; i < 8; i++) {
@@ -460,7 +460,7 @@ static void spawn_krait(void)
             LONG r = srand_range(6000, 9000);
             LONG ang = srand_range(0, 359);
             world[i].active = 1;
-            world[i].model = &model_krait;
+            world[i].model = &model_raider;
             world[i].team = 1;
             world[i].pen_base = 40;
             world[i].hp = 3;
@@ -672,11 +672,11 @@ int main(void)
             new_kills = (combat.score - prev_score) / 100;
             if (new_kills > 0) trade.credits += new_kills * 50;
             /* Enemy respawn: when no live enemies, run down a
-             * timer; on zero, spawn a new Krait somewhere near. */
+             * timer; on zero, spawn a new Raider somewhere near. */
             if (live_enemy_count() == 0) {
                 if (enemy_respawn_timer > 0) enemy_respawn_timer--;
                 if (enemy_respawn_timer == 0) {
-                    spawn_krait();
+                    spawn_raider();
                     enemy_respawn_timer = ENEMY_RESPAWN_FRAMES;
                 }
             } else {

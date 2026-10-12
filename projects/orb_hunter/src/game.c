@@ -884,13 +884,13 @@ static void check_items(GameState *gs)
                 case ITEM_ENERGY_TANK:
                     h->max_energy += 30;
                     h->health = h->max_energy;
-                    strcpy(gs->item_name, "ENERGY TANK");
+                    strcpy(gs->item_name, "POWER CELL");
                     break;
                 case ITEM_MISSILE_PACK:
                     h->has_missiles = 1;
                     h->max_missiles += 5;
                     h->missiles = h->max_missiles;
-                    strcpy(gs->item_name, "MISSILE PACK");
+                    strcpy(gs->item_name, "ROCKET PACK");
                     break;
                 case ITEM_ROLL_FORM:
                     h->has_roll_form = 1;
@@ -902,15 +902,15 @@ static void check_items(GameState *gs)
                     break;
                 case ITEM_LONG_BEAM:
                     h->has_long_beam = 1;
-                    strcpy(gs->item_name, "LONG BEAM");
+                    strcpy(gs->item_name, "FAR SHOT");
                     break;
                 case ITEM_ICE_BEAM:
                     h->has_ice_beam = 1;
-                    strcpy(gs->item_name, "ICE BEAM");
+                    strcpy(gs->item_name, "FROST RAY");
                     break;
                 case ITEM_HIGH_JUMP:
                     h->has_high_jump = 1;
-                    strcpy(gs->item_name, "HIGH JUMP BOOTS");
+                    strcpy(gs->item_name, "SPRING BOOTS");
                     break;
                 case ITEM_SPIN_STRIKE:
                     h->has_spin_strike = 1;

@@ -2,4 +2,4 @@ title=Frank the Frog
 origin=Amiga
 genre=Action
 order=60
-desc=Frogger-style crossing with generated music. Hop across the traffic and ride the logs to fill all five homes. D-pad hops, A starts.
+desc=Help Frank cross the busy road and the river, with generated music. Hop across the traffic and ride the river to reach every home. D-pad hops, A starts.

@@ -2,8 +2,8 @@
  * STAKATTACK - 3DO port.
  *
  * game.c / draw.c are the Amiga sources (geekychris/amiga_games) drawing
- * through the Amiga graphics API in sdk/amiga. Music is the original
- * stakattack.mod (on the disc) played by the layer's C ProTracker player;
+ * through the Amiga graphics API in sdk/amiga. Music is stakattack.mod
+ * (on the disc, made by tools/modgen/stakattack.py) played by the layer's C ProTracker player;
  * the sound effects below are generated exactly as in the Amiga main.c.
  * This file replaces the AmigaOS main.c (screen, input handler, keyboard).
  *

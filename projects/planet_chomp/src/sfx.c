@@ -1,9 +1,9 @@
 /*
- * Every sound is synthesised at startup, as in Sfx.cs: a phase-integrated
+ * Every sound is synthesised at startup, the way Sfx.cs does it: a phase-integrated
  * oscillator (sweeping pitch never clicks), square / triangle / sine, short
  * attack and release. Signed 8-bit at 11050 Hz (Paula period 321), played
  * through the layer's Paula emulation - i.e. on the 3DO's DSP.
- *   channel 0: waka   1, 3: other effects (alternating)   2: ambience loop
+ *   channel 0: crumbs   1, 3: other effects (alternating)   2: ambience loop
  */
 #include <exec/types.h>
 #include <exec/memory.h>
@@ -19,7 +19,7 @@ enum { W_SQUARE, W_TRI, W_SINE };
 static BYTE  *clip[SFX_COUNT];
 static ULONG  clip_len[SFX_COUNT];
 static UWORD  silence[2];
-static int    waka_flip, fx_chan = 1, amb_now = -1;
+static int    crumb_flip, fx_chan = 1, amb_now = -1;
 
 static const short sine256[64] = {     /* quarter wave, Q14 */
     0, 402, 804, 1205, 1606, 2006, 2404, 2801, 3196, 3590, 3981, 4370, 4756, 5139, 5520, 5897,
@@ -49,34 +49,27 @@ static long wave(int w, ULONG ph)      /* ph: 16-bit phase -> Q14 */
 /* frequency (Hz) at sample i of clip id */
 static long freq(int id, long i)
 {
-    static const short start[16] = { 494, 988, 740, 622, 988, 740, 622, 0, 523, 1047, 784, 659, 1047, 784, 659, 0 };
+    static const short start[16] = { 392, 523, 659, 587, 523, 440, 523, 0, 587, 698, 880, 784, 698, 659, 784, 0 };
     static const short clear[12] = { 523, 659, 784, 1047, 784, 1047, 1319, 1568, 1319, 1568, 2093, 2093 };
     static const short extra[6] = { 1319, 1568, 2637, 2093, 2349, 3136 };
     static const short key[5] = { 523, 659, 784, 1047, 1319 };
+    static const short lose[3] = { 523, 466, 392 };
+    static const short bubble[8] = { 392, 494, 587, 784, 988, 784, 587, 494 };
     long n;
     switch (id) {
-    case SFX_WAKA_A: return 260 + 260 * i / (RATE / 10);
-    case SFX_WAKA_B: return 520 - 260 * i / (RATE / 10);
+    case SFX_CRUMB_A: return 880 + 110 * i / (RATE / 20);    /* a quick rising plink */
+    case SFX_CRUMB_B: return 1047 + 130 * i / (RATE / 20);
     case SFX_KEY:    n = i / (RATE / 10); return key[n > 4 ? 4 : n];
-    case SFX_EAT: {
-        long x = i * 1024 / (RATE * 35 / 100);                         /* 0..1024 */
-        long px = x * (1331 - 307 * x / 1024) / 1024;                  /* ~ x^0.7 */
-        return 180 + 1220 * px / 1024;
-    }
-    case SFX_DEATH: {
-        long base = 900 - 810 * i / (RATE * 3 / 2);
-        long ph = i * 5664 / 100;          /* sin(60 t): 60/(2 pi) turns/s = 56.64 phase units/sample */
-        return base + base * 12 / 100 * wave(W_SINE, (ULONG)ph) / 16384;
-    }
+    case SFX_EAT:    return i < RATE / 12 ? 1047 : 1568;      /* pop-ping */
+    case SFX_DEATH:                                           /* three falling notes, then a slide down */
+        n = i / (RATE / 5);
+        if (n < 3) return lose[n];
+        return 330 - 220 * (i - RATE * 3 / 5) / (RATE * 9 / 10);
     case SFX_START:  n = i / (RATE * 12 / 100); return start[n > 15 ? 15 : n];
     case SFX_CLEAR:  n = i / (RATE * 9 / 100);  return clear[n > 11 ? 11 : n];
     case SFX_EXTRA:  n = i / (RATE * 8 / 100);  return extra[n > 5 ? 5 : n];
-    case SFX_SIREN:  return 420 + 200 * wave(W_SINE, (ULONG)(i * 65536L / (RATE * 6 / 10))) / 16384;
-    case SFX_FRIGHT: {
-        long s = wave(W_SINE, (ULONG)(i * 65536L / (RATE / 4)));
-        if (s < 0) s = -s;
-        return 180 + 120 * s / 16384;
-    }
+    case SFX_HUM:    return (i / (RATE * 3 / 10)) & 1 ? 165 : 147;   /* low two-note hum */
+    case SFX_FRIGHT: n = i / (RATE / 8); return bubble[n & 7];       /* bubbling arpeggio */
     }
     return 0;
 }
@@ -119,11 +112,11 @@ int sfx_init(void)
     for (w = 0; w < 3; w++)
         for (i = 0; i < 256; i++)
             wtab[w][i] = (short)wave(w, (ULONG)i << 8);
-    return build(SFX_WAKA_A, 100, W_SQUARE, 50, 0) & build(SFX_WAKA_B, 100, W_SQUARE, 50, 0) &
+    return build(SFX_CRUMB_A, 50, W_TRI, 60, 0) & build(SFX_CRUMB_B, 50, W_TRI, 60, 0) &
            build(SFX_KEY, 600, W_TRI, 80, 0) & build(SFX_EAT, 350, W_SQUARE, 45, 0) &
            build(SFX_DEATH, 1500, W_TRI, 90, 0) & build(SFX_START, 1900, W_SQUARE, 35, 0) &
            build(SFX_CLEAR, 1100, W_TRI, 70, 0) & build(SFX_EXTRA, 500, W_TRI, 60, 0) &
-           build(SFX_SIREN, 1200, W_SINE, 100, 1) & build(SFX_FRIGHT, 1000, W_TRI, 100, 1);
+           build(SFX_HUM, 1200, W_TRI, 100, 1) & build(SFX_FRIGHT, 1000, W_TRI, 100, 1);
 }
 
 static void start(int ch, int id, int vol, int loop)
@@ -150,10 +143,10 @@ void sfx_play(int id)
     fx_chan = fx_chan == 1 ? 3 : 1;
 }
 
-void sfx_waka(void)
+void sfx_crumb(void)
 {
-    waka_flip = !waka_flip;
-    start(0, waka_flip ? SFX_WAKA_A : SFX_WAKA_B, 30, 0);
+    crumb_flip = !crumb_flip;
+    start(0, crumb_flip ? SFX_CRUMB_A : SFX_CRUMB_B, 24, 0);
 }
 
 void sfx_ambience(int which)
@@ -165,5 +158,5 @@ void sfx_ambience(int which)
         paula_dmacon(1 << 2);
         paula_unlock(k);
     } else
-        start(2, which == 2 ? SFX_FRIGHT : SFX_SIREN, which == 2 ? 14 : 8, 1);
+        start(2, which == 2 ? SFX_FRIGHT : SFX_HUM, which == 2 ? 12 : 10, 1);
 }

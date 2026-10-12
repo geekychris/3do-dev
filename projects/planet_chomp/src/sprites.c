@@ -1,7 +1,7 @@
 /*
  * Sprite textures for the cel engine, drawn here once (32 x 32, 16-bit,
  * 0 = transparent): the chomper (4 facings x 3 mouth openings, normal and
- * powered), the spooks (4 colours, frightened, flashing, eyes only) and
+ * powered), the spooks (4 colours, frightened, flashing, eaten) and
  * the key. In the Unity game these are small 3D models.
  */
 #include <exec/types.h>
@@ -41,79 +41,95 @@ static int light(int x, int y, int cx, int cy, int rad)
     return 300 - (int)(((long)(dx * dx + dy * dy) * k) >> 16);   /* 160 .. 300 (/256) */
 }
 
-/* chomper: mouth along axis (ax, ay), half-opening given by tan in 1/16 */
+static void dot(unsigned short *p, int cx, int cy, int r2, unsigned short c)
+{
+    int x, y;
+    for (y = -3; y <= 3; y++)
+        for (x = -3; x <= 3; x++)
+            if (x * x + y * y <= r2 && cx + x >= 0 && cx + x < S && cy + y >= 0 && cy + y < S)
+                p[(cy + y) * S + cx + x] = c;
+}
+
+/* chomper: a round green critter seen from above, facing (ax, ay): two
+ * eyes up front and an oval mouth on its leading edge that opens wider
+ * (open16: 1 shut .. 16 wide) */
 static int chomper(int powered, int ax, int ay, int open16)
 {
     unsigned short *p = newtex();
-    int x, y;
+    int x, y, s;
     if (!p) return -1;
     for (y = 0; y < S; y++)
         for (x = 0; x < S; x++) {
-            int dx = x - 15, dy = y - 15, along, across, l;
-            if (dx * dx + dy * dy > 15 * 15) continue;
-            along = dx * ax + dy * ay;           /* toward the mouth */
+            int dx = x - 15, dy = y - 15, along, across, l, mw, mh;
+            if (dx * dx + dy * dy > 14 * 14) continue;
+            along = dx * ax + dy * ay;           /* toward the front */
             across = dx * ay - dy * ax;
-            if (across < 0) across = -across;
-            if (along > 1 && across * 16 < along * open16) continue;   /* the mouth */
-            l = light(x, y, 15, 15, 15);
-            p[y * S + x] = powered ? rgb(255 * l / 256, 150 * l / 256, 30 * l / 256)
-                                   : rgb(255 * l / 256, 214 * l / 256, 40 * l / 256);
+            l = light(x, y, 15, 15, 14);
+            p[y * S + x] = powered ? rgb(255 * l / 256, 200 * l / 256, 60 * l / 256)
+                                   : rgb(140 * l / 256, 230 * l / 256, 60 * l / 256);
+            /* the mouth: an oval centred on the front edge */
+            mw = 3 + open16 / 3;
+            mh = 1 + open16 / 4;
+            along -= 12;
+            if (across * across * mh * mh + along * along * mw * mw <= mw * mw * mh * mh)
+                p[y * S + x] = rgb(110, 20, 40);
         }
-    /* eye: above the centre when facing left/right, to its left when facing
-     * up/down, a little back from the mouth */
-    {
-        int ex = 15 - (ay != 0 ? 6 : 0) - ax * 2, ey = 15 - (ax != 0 ? 6 : 0) - ay * 2;
-        for (y = -2; y <= 2; y++)
-            for (x = -2; x <= 2; x++)
-                if (x * x + y * y <= 4)
-                    p[(ey + y) * S + ex + x] = rgb(20, 20, 30);
+    /* eyes either side of the nose, pupils looking ahead */
+    for (s = -1; s <= 1; s += 2) {
+        int ex = 15 + ax * 4 + ay * s * 5, ey = 15 + ay * 4 - ax * s * 5;
+        dot(p, ex, ey, 6, rgb(250, 250, 240));
+        dot(p, ex + ax, ey + ay, 1, rgb(20, 20, 30));
     }
     return pc_tex_create(S, S, p);
 }
 
-static int ghost(int r, int g, int b, int fright, int eyes_only)
+/* spook: a floating jellyfish - a bell with four trailing strands and
+ * one big slit-pupilled eye. fright: grey, eye shut. wisp_only: what is
+ * left after it is eaten, a small puff drifting home. */
+static int spook(int r, int g, int b, int fright, int wisp_only)
 {
     unsigned short *p = newtex();
-    int x, y;
+    int x, y, i;
     if (!p) return -1;
-    if (!eyes_only)
-        for (y = 1; y < S; y++)
-            for (x = 2; x < S - 2; x++) {
-                int dx = x - 16, dy = y - 14, l, in;
-                if (y <= 14) in = dx * dx + dy * dy <= 14 * 14;      /* dome */
-                else {
-                    /* skirt: three scallops along the bottom */
-                    int sx = (x - 2) % 9 - 4, bottom = 27 + (sx * sx < 9 ? 3 : 0);
-                    in = y <= bottom;
-                }
-                if (!in) continue;
-                l = light(x, y, 16, 14, 14);
-                p[y * S + x] = rgb(r * l / 256, g * l / 256, b * l / 256);
+    if (wisp_only) {
+        for (y = 10; y < 22; y++)
+            for (x = 10; x < 22; x++) {
+                int dx = x - 16, dy = y - 16;
+                if (dx * dx + dy * dy <= 25) p[y * S + x] = rgb(190, 200, 220);
             }
-    if (fright && !eyes_only) {
-        /* small eyes and a wavy mouth */
-        static const int mx[] = { 7, 9, 11, 13, 15, 17, 19, 21, 23, 25 };
-        int i;
-        for (y = 10; y <= 12; y++) for (x = 10; x <= 12; x++) p[y * S + x] = rgb(255, 220, 200);
-        for (y = 10; y <= 12; y++) for (x = 20; x <= 22; x++) p[y * S + x] = rgb(255, 220, 200);
-        for (i = 0; i < 10; i++) {
-            int yy = 20 + (i & 1);
-            p[yy * S + mx[i]] = p[yy * S + mx[i] + 1] = rgb(255, 220, 200);
+        dot(p, 16, 15, 2, rgb(40, 40, 60));
+        return pc_tex_create(S, S, p);
+    }
+    for (y = 1; y < 21; y++)
+        for (x = 3; x < S - 3; x++) {
+            int dx = x - 16, dy = y - 13, l;
+            /* bell: a circle on top, squashed to an ellipse below */
+            if (dy <= 0 ? dx * dx + dy * dy > 12 * 12 : dx * dx * 49 + dy * dy * 144 > 144 * 49)
+                continue;
+            l = light(x, y, 16, 12, 12);
+            p[y * S + x] = rgb(r * l / 256, g * l / 256, b * l / 256);
+        }
+    for (i = 0; i < 4; i++) {                    /* strands, wavy */
+        int sx = 8 + i * 5 + (i > 1);
+        for (y = 19; y < 31; y++) {
+            int wx = sx + (((y + i * 2) / 3) & 1);
+            p[y * S + wx] = p[y * S + wx + 1] = rgb(r * 3 / 4, g * 3 / 4, b * 3 / 4);
+        }
+    }
+    if (fright) {
+        /* eye shut tight: a curved lid */
+        for (x = 11; x <= 21; x++) {
+            int dx = x - 16;
+            y = 11 + (dx * dx) / 12;
+            p[y * S + x] = p[(y + 1) * S + x] = rgb(40, 40, 60);
         }
     } else {
-        /* white eyes with blue pupils */
-        int e;
-        for (e = 0; e < 2; e++) {
-            int cx = e ? 21 : 11, cy = 12;
-            for (y = -5; y <= 5; y++)
-                for (x = -4; x <= 4; x++)
-                    if (x * x * 25 + y * y * 16 <= 400)
-                        p[(cy + y) * S + cx + x] = rgb(250, 250, 255);
-            for (y = -2; y <= 2; y++)
-                for (x = -2; x <= 2; x++)
-                    if (x * x + y * y <= 4)
-                        p[(cy + 1 + y) * S + cx + 1 + x] = rgb(30, 40, 200);
-        }
+        for (y = -5; y <= 5; y++)
+            for (x = -6; x <= 6; x++)
+                if (x * x * 25 + y * y * 36 <= 900)
+                    p[(11 + y) * S + 16 + x] = rgb(250, 245, 220);
+        for (y = -4; y <= 4; y++)                /* slit pupil */
+            p[(11 + y) * S + 16] = p[(11 + y) * S + 17] = rgb(20, 10, 30);
     }
     return pc_tex_create(S, S, p);
 }
@@ -141,20 +157,20 @@ static int key(void)
 int sprites_init(void)
 {
     static const int dir[4][2] = { { 1, 0 }, { 0, -1 }, { -1, 0 }, { 0, 1 } };
-    static const int open16[3] = { 1, 8, 16 };       /* ~5, 25, 45 degrees */
+    static const int open16[3] = { 1, 8, 16 };       /* shut, half, wide */
     int pw, d, m;
     for (pw = 0; pw < 2; pw++)
         for (d = 0; d < 4; d++)
             for (m = 0; m < 3; m++)
                 if ((tex_chomper[pw][d][m] = chomper(pw, dir[d][0], dir[d][1], open16[m])) < 0)
                     return 0;
-    tex_ghost[GT_BLAZE] = ghost(255, 64, 51, 0, 0);
-    tex_ghost[GT_PETAL] = ghost(255, 140, 216, 0, 0);
-    tex_ghost[GT_FROST] = ghost(77, 242, 255, 0, 0);
-    tex_ghost[GT_EMBER] = ghost(255, 166, 51, 0, 0);
-    tex_ghost[GT_FRIGHT] = ghost(50, 70, 255, 1, 0);
-    tex_ghost[GT_FLASH] = ghost(240, 240, 255, 1, 0);
-    tex_ghost[GT_EYES] = ghost(0, 0, 0, 0, 1);
+    tex_ghost[GT_GLOOM] = spook(170, 80, 255, 0, 0);
+    tex_ghost[GT_SPARK] = spook(240, 220, 60, 0, 0);
+    tex_ghost[GT_MIST] = spook(210, 210, 230, 0, 0);
+    tex_ghost[GT_MOSS] = spook(40, 200, 170, 0, 0);
+    tex_ghost[GT_FRIGHT] = spook(136, 144, 168, 1, 0);
+    tex_ghost[GT_FLASH] = spook(240, 240, 255, 1, 0);
+    tex_ghost[GT_EYES] = spook(0, 0, 0, 0, 1);
     tex_key = key();
     for (d = 0; d < GT_COUNT; d++) if (tex_ghost[d] < 0) return 0;
     return tex_key >= 0;

@@ -7,7 +7,7 @@
 #include <exec/types.h>
 
 /*
- * Trading model — minimalist Elite: 6 commodities, per-station
+ * Trading model — minimal: 6 commodities, per-station
  * fixed prices, one shared cargo hold + credits. Buy raises your
  * cargo, spends credits; sell drops cargo, earns credits.
  *
