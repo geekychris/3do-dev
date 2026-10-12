@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Chris Collins <chris@hitorro.com>
 
 /*
- * DOT CHASE - dot-eater arcade game for Amiga
+ * DOT CHASE - a ladybug in a hedge maze, chased by spiders
  * Game definitions and structures
  */
 #ifndef GAME_H
@@ -28,7 +28,7 @@
 #define T_WALL      1
 #define T_DOT       2
 #define T_POWER     3
-#define T_GHOST_DOOR 4
+#define T_SPIDER_DOOR 4
 
 /* Directions */
 #define DIR_NONE    -1
@@ -37,18 +37,18 @@
 #define DIR_LEFT    2
 #define DIR_UP      3
 
-/* Ghost states */
-#define GHOST_SCATTER   0
-#define GHOST_CHASE     1
-#define GHOST_FRIGHT    2
-#define GHOST_EATEN     3
+/* Spider states */
+#define SPIDER_SCATTER   0
+#define SPIDER_CHASE     1
+#define SPIDER_FRIGHT    2
+#define SPIDER_EATEN     3
 
-/* Ghost IDs */
-#define GHOST_BLINKY    0
-#define GHOST_PINKY     1
-#define GHOST_INKY      2
-#define GHOST_CLYDE     3
-#define NUM_GHOSTS      4
+/* Spider IDs */
+#define SPIDER_HUNTER    0
+#define SPIDER_AMBUSH     1
+#define SPIDER_FLANK      2
+#define SPIDER_SHY     3
+#define NUM_SPIDERS      4
 
 /* Game states */
 #define STATE_TITLE      0
@@ -57,19 +57,19 @@
 #define STATE_DYING      3
 #define STATE_GAMEOVER   4
 #define STATE_LEVEL_DONE 5
-#define STATE_EAT_GHOST  6
+#define STATE_EAT_SPIDER  6
 
 /* Speed: pixels per frame (fixed 8.8) */
-#define MUNCHER_SPEED     320   /* ~1.25 px/frame at 50fps */
-#define GHOST_SPEED      288   /* slightly slower */
-#define GHOST_FRIGHT_SPD 160   /* slow when frightened */
-#define GHOST_EATEN_SPD  640   /* fast returning to ghost house */
-#define GHOST_TUNNEL_SPD 160   /* slow in tunnel */
+#define HERO_SPEED     320   /* ~1.25 px/frame at 50fps */
+#define SPIDER_SPEED      288   /* slightly slower */
+#define SPIDER_FRIGHT_SPD 160   /* slow when frightened */
+#define SPIDER_EATEN_SPD  640   /* fast returning to spider house */
+#define SPIDER_TUNNEL_SPD 160   /* slow in tunnel */
 
 /* Timing (frames at 50fps) */
 #define READY_TIME       100   /* 2 seconds */
 #define DYING_TIME       60
-#define EAT_GHOST_TIME   30
+#define EAT_SPIDER_TIME   30
 #define LEVEL_DONE_TIME  100
 #define FRIGHT_TIME      350   /* 7 seconds */
 #define FRIGHT_BLINK     200   /* start blinking at this remaining */
@@ -87,69 +87,66 @@
 /* Scoring */
 #define SCORE_DOT        10
 #define SCORE_POWER      50
-#define SCORE_GHOST1     200
-#define SCORE_GHOST2     400
-#define SCORE_GHOST3     800
-#define SCORE_GHOST4     1600
-#define SCORE_FRUIT_BASE 100
+#define SCORE_SPIDER1     150   /* then 300, 600, 1200 */
+#define SCORE_BONUS_BASE 100
 #define EXTRA_LIFE_SCORE 10000
 
-/* Fruit types */
-#define FRUIT_CHERRY     0
-#define FRUIT_STRAWBERRY 1
-#define FRUIT_ORANGE     2
-#define FRUIT_APPLE      3
-#define FRUIT_GRAPE      4
-#define FRUIT_BELL       5
-#define FRUIT_KEY        6
-#define MAX_FRUIT_TYPE   7
+/* Bonus types: garden treats that appear mid-level */
+#define BONUS_BERRY      0
+#define BONUS_MUSHROOM   1
+#define BONUS_CARROT     2
+#define BONUS_PEAR       3
+#define BONUS_ACORN      4
+#define BONUS_HONEY      5
+#define BONUS_SUNFLOWER  6
+#define MAX_BONUS_TYPE   7
 
-/* Fruit point values */
-static const LONG fruit_scores[MAX_FRUIT_TYPE] = {
-    100, 300, 500, 700, 1000, 3000, 5000
+/* Bonus point values */
+static const LONG bonus_scores[MAX_BONUS_TYPE] = {
+    150, 250, 400, 600, 900, 1500, 2500
 };
 
 /* Sound event flags */
-#define EV_CHOMP     1
-#define EV_EAT_GHOST 2
+#define EV_SEED     1
+#define EV_EAT_SPIDER 2
 #define EV_DIE       4
-#define EV_FRUIT     8
+#define EV_BONUS     8
 #define EV_EXTRA     16
 #define EV_POWER     32
 
-/* Colors */
-#define COL_BLACK    0
-#define COL_YELLOW   1
-#define COL_RED      2
-#define COL_PINK     3
-#define COL_CYAN     4
-#define COL_ORANGE   5
-#define COL_BLUE     6
+/* Colors (palette in main_3do.c) */
+#define COL_BG       0   /* dark soil */
+#define COL_HERO     1   /* ladybug red */
+#define COL_SP_PURPLE 2  /* the four spiders */
+#define COL_SP_STEEL 3
+#define COL_SP_BROWN 4
+#define COL_SP_BONE  5
+#define COL_HEDGE    6   /* maze walls */
 #define COL_WHITE    7
-#define COL_DKBLUE   8
-#define COL_PEACH    9
-#define COL_DKPINK   10
-#define COL_DKRED    11
-#define COL_GREEN    12
-#define COL_PURPLE   13
+#define COL_HEDGE_DK 8
+#define COL_HEDGE_LT 9
+#define COL_GOLD     10  /* flower centres, popups */
+#define COL_BLACK    11  /* ladybug spots, spider legs */
+#define COL_LEAF     12
+#define COL_PLUM     13
 #define COL_GRAY     14
-#define COL_CREAM    15
+#define COL_SEED     15
 
-/* Ghost structure */
+/* Spider structure */
 typedef struct {
     WORD  tile_x, tile_y;    /* current tile position */
     WORD  pixel_x, pixel_y;  /* pixel position (top-left of sprite) */
     WORD  sub_x, sub_y;      /* fractional sub-pixel (8.8 fixed) */
     WORD  dir;               /* current direction */
     WORD  next_dir;          /* next direction at next intersection */
-    WORD  state;             /* GHOST_SCATTER/CHASE/FRIGHT/EATEN */
+    WORD  state;             /* SPIDER_SCATTER/CHASE/FRIGHT/EATEN */
     WORD  target_x, target_y; /* target tile for AI */
-    WORD  home;              /* 1 if still in ghost house */
+    WORD  home;              /* 1 if still in spider house */
     WORD  dot_counter;       /* dots needed to leave house */
     WORD  fright_timer;      /* remaining fright frames */
-} Ghost;
+} Spider;
 
-/* Muncher structure */
+/* Hero structure */
 typedef struct {
     WORD  tile_x, tile_y;
     WORD  pixel_x, pixel_y;
@@ -158,8 +155,8 @@ typedef struct {
     WORD  next_dir;          /* buffered direction input */
     WORD  anim_frame;
     WORD  anim_timer;
-    WORD  mouth_open;        /* for chomp animation */
-} Muncher;
+    WORD  leg_step;        /* walking animation */
+} Hero;
 
 /* Input state */
 typedef struct {
@@ -171,8 +168,8 @@ typedef struct {
 /* Game state */
 typedef struct {
     UBYTE maze[MAZE_H][MAZE_W]; /* current maze state */
-    Muncher muncher;
-    Ghost  ghosts[NUM_GHOSTS];
+    Hero hero;
+    Spider  spiders[NUM_SPIDERS];
 
     LONG   score;
     LONG   hiscore;
@@ -186,7 +183,7 @@ typedef struct {
     /* Dot tracking */
     WORD   dots_total;
     WORD   dots_eaten;
-    WORD   dots_eaten_global; /* for ghost house dot counter */
+    WORD   dots_eaten_global; /* for spider house dot counter */
 
     /* Scatter/Chase mode */
     WORD   mode;             /* 0=scatter, 1=chase */
@@ -196,13 +193,13 @@ typedef struct {
     /* Fright mode */
     WORD   fright_active;
     WORD   fright_timer;
-    WORD   ghosts_eaten;     /* count during current fright for scoring */
+    WORD   spiders_eaten;     /* count during current fright for scoring */
 
-    /* Fruit */
-    WORD   fruit_active;
-    WORD   fruit_timer;
-    WORD   fruit_type;
-    WORD   fruit_x, fruit_y; /* pixel position */
+    /* Bonus */
+    WORD   bonus_active;
+    WORD   bonus_timer;
+    WORD   bonus_type;
+    WORD   bonus_x, bonus_y; /* pixel position */
 
     /* Score popup */
     WORD   popup_active;
@@ -220,8 +217,8 @@ typedef struct {
     /* Sound events */
     WORD   ev_flags;
 
-    /* Siren speed (increases as dots eaten) */
-    WORD   siren_speed;
+    /* Pulse speed (increases as dots eaten) */
+    WORD   pulse_speed;
 
     /* Title screen */
     WORD   title_blink;
@@ -236,12 +233,12 @@ void game_update(GameState *gs, InputState *input);
 /* Maze data (defined in game.c) */
 extern const UBYTE maze_template[MAZE_H][MAZE_W];
 
-/* Scatter corner targets for each ghost */
-static const WORD scatter_target[NUM_GHOSTS][2] = {
-    { 25, -3 },  /* Blinky: top-right */
-    {  2, -3 },  /* Pinky: top-left */
-    { 27, 34 },  /* Inky: bottom-right */
-    {  0, 34 },  /* Clyde: bottom-left */
+/* Corner each spider retreats to between hunts */
+static const WORD scatter_target[NUM_SPIDERS][2] = {
+    { 25, -3 },  /* hunter: top-right */
+    {  2, -3 },  /* ambusher: top-left */
+    { 27, 34 },  /* flanker: bottom-right */
+    {  0, 34 },  /* shy one: bottom-left */
 };
 
 #endif

@@ -11,26 +11,29 @@
 #define SCREEN_H 256
 #define SCREEN_DEPTH 4
 
-/* Alien grid */
-#define ALIEN_COLS 11
-#define ALIEN_ROWS 5
-#define ALIEN_W 12
-#define ALIEN_H 8
-#define ALIEN_CELL_W 24
-#define ALIEN_CELL_H 16
-#define ALIEN_GRID_W (ALIEN_COLS * ALIEN_CELL_W)
+/* Alien swarm: staggered rows, odd rows shifted half a cell right */
+#define ALIEN_COLS 8
+#define ALIEN_ROWS 6
+#define ALIEN_W 14
+#define ALIEN_H 10
+#define ALIEN_CELL_W 26
+#define ALIEN_CELL_H 15
+#define ALIEN_ROW_SHIFT(r) (((r) & 1) ? ALIEN_CELL_W / 2 : 0)
+#define ALIEN_GRID_W (ALIEN_COLS * ALIEN_CELL_W + ALIEN_CELL_W / 2)
 #define ALIEN_START_X ((SCREEN_W - ALIEN_GRID_W) / 2)
-#define ALIEN_START_Y 52
+#define ALIEN_START_Y 46
+#define ALIEN_X(gs, r, c) ((gs)->swarm.grid_x + (c) * ALIEN_CELL_W + ALIEN_ROW_SHIFT(r))
+#define ALIEN_Y(gs, r)    ((gs)->swarm.grid_y + (r) * ALIEN_CELL_H)
 
-/* Alien types by row (top to bottom) */
-#define ALIEN_TYPE_C 0  /* Top row - 30 pts */
-#define ALIEN_TYPE_B 1  /* Middle 2 rows - 20 pts */
-#define ALIEN_TYPE_A 2  /* Bottom 2 rows - 10 pts */
+/* Alien types by row pair (top to bottom) */
+#define ALIEN_TYPE_C 0  /* Rows 0-1: eye pods - 30 pts */
+#define ALIEN_TYPE_B 1  /* Rows 2-3: rays - 20 pts */
+#define ALIEN_TYPE_A 2  /* Rows 4-5: spore crawlers - 10 pts */
 
-/* Shields */
-#define SHIELD_COUNT 4
-#define SHIELD_W 22
-#define SHIELD_H 16
+/* Shields: three crystal hexagons (pixel value 1 = crystal, 2 = facet) */
+#define SHIELD_COUNT 3
+#define SHIELD_W 32
+#define SHIELD_H 14
 #define SHIELD_Y 200
 
 /* Player */
@@ -49,7 +52,7 @@
 /* UFO */
 #define UFO_Y 36
 #define UFO_W 16
-#define UFO_H 7
+#define UFO_H 7  /* the comet: bonus target crossing the top */
 #define UFO_SPEED 1
 
 /* Game states */

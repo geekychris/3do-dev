@@ -2,4 +2,4 @@ title=Dot Chase
 origin=Amiga
 genre=Maze
 order=30
-desc=Maze chase in the style of Pac-Man. Eat every dot, grab a power pellet to turn the tables on the ghosts. D-pad steers, A starts.
+desc=A ladybug in a hedge maze. Gather every seed while four spiders hunt you; eat a flower to scare them and catch them for points. D-pad steers, A starts.

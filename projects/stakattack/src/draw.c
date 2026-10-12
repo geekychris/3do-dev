@@ -18,21 +18,21 @@
 /* 16-color palette: 4-bit RGB values */
 const UWORD palette[NUM_COLORS] = {
     0x112,  /*  0: dark blue-black background */
-    0x0CF,  /*  1: cyan - I piece */
-    0xFC0,  /*  2: yellow - O piece */
-    0xA0F,  /*  3: purple - T piece */
-    0x0F4,  /*  4: green - S piece */
-    0xF22,  /*  5: red - Z piece */
-    0xF80,  /*  6: orange - L piece */
-    0x24F,  /*  7: blue - J piece */
+    0xE4A,  /*  1: rose - I gem */
+    0x3BB,  /*  2: teal - O gem */
+    0xDA3,  /*  3: ochre - T gem */
+    0x96F,  /*  4: lavender - S gem */
+    0x6D6,  /*  5: jade - Z gem */
+    0x5AF,  /*  6: sky - L gem */
+    0xF75,  /*  7: coral - J gem */
     0x888,  /*  8: gray - field border */
-    0xFFF,  /*  9: white - text */
-    0x556,  /* 10: dim - ghost piece */
-    0x334,  /* 11: grid lines */
+    0xFFF,  /*  9: white - text, gem glint */
+    0x667,  /* 10: dim - landing marks */
+    0x112,  /* 11: gem shadow edge */
     0xFF0,  /* 12: bright yellow - flash */
-    0xF4F,  /* 13: magenta - title accent */
-    0x4F4,  /* 14: bright green - score highlight */
-    0x223   /* 15: very dark - field background */
+    0xC85,  /* 13: copper - title, well walls */
+    0xFD8,  /* 14: pale gold - score */
+    0x223   /* 15: very dark - field background (alternate columns are 0) */
 };
 
 /*
@@ -256,24 +256,43 @@ static int text_width(const char *str, int scale)
     return len * (FONT_W + 1) * scale - scale; /* subtract trailing gap */
 }
 
+/* A gem: rounded body, dark lower edge, a white glint top-left */
 static void draw_cell(struct RastPort *rp, int x, int y, int color, BOOL bevel)
 {
-    /* Fill */
+    int e = CELL_SIZE - 2;
+#ifdef AMIGA3DO
+    /* 3DO port: each gem is pre-rendered once as a multi-colour sprite */
+    static GfxSprite *gem[NUM_COLORS];
+    if (bevel && color > 0 && color < NUM_COLORS) {
+        if (!gem[color]) {
+            UBYTE m[(CELL_SIZE - 1) * (CELL_SIZE - 1)];
+            int w = CELL_SIZE - 1, r, c;
+            for (r = 0; r <= e; r++)
+                for (c = 0; c <= e; c++) {
+                    UBYTE v = (UBYTE)color;
+                    if ((r == 0 || r == e) && (c == 0 || c == e)) v = 0;
+                    else if (r == e - 1 && c >= 2 && c <= e - 2) v = 11;
+                    else if (r >= 2 && r <= 3 && c >= 2 && c <= 3) v = 9;
+                    m[r * w + c] = v;
+                }
+            gem[color] = gfx_sprite_make(m, w, w);
+        }
+        if (gem[color]) {
+            gfx_sprite_draw(rp, gem[color], x, y, -1);
+            return;
+        }
+    }
+#endif
+
     SetAPen(rp, color);
-    RectFill(rp, x, y, x + CELL_SIZE - 2, y + CELL_SIZE - 2);
+    RectFill(rp, x + 1, y, x + e - 1, y + e);
+    RectFill(rp, x, y + 1, x + e, y + e - 1);
 
     if (bevel) {
-        /* Top and left highlight */
-        SetAPen(rp, 9);
-        Move(rp, x, y + CELL_SIZE - 2);
-        Draw(rp, x, y);
-        Draw(rp, x + CELL_SIZE - 2, y);
-
-        /* Bottom and right shadow */
         SetAPen(rp, 11);
-        Move(rp, x + 1, y + CELL_SIZE - 2);
-        Draw(rp, x + CELL_SIZE - 2, y + CELL_SIZE - 2);
-        Draw(rp, x + CELL_SIZE - 2, y + 1);
+        RectFill(rp, x + 2, y + e - 1, x + e - 2, y + e - 1);
+        SetAPen(rp, 9);
+        RectFill(rp, x + 2, y + 2, x + 3, y + 3);
     }
 }
 
@@ -288,21 +307,12 @@ void draw_field(struct RastPort *rp, const GameState *gs)
     int fw = FIELD_W * CELL_SIZE;
     int fh = FIELD_H * CELL_SIZE;
 
-    /* Field background */
+    /* Field background: shaded column stripes instead of a grid (the
+     * screen is already cleared to pen 0 by draw_clear()) */
     SetAPen(rp, 15);
-    RectFill(rp, FIELD_X, FIELD_Y, FIELD_X + fw - 1, FIELD_Y + fh - 1);
-
-    /* Grid lines */
-    SetAPen(rp, 11);
-    for (x = 1; x < FIELD_W; x++) {
+    for (x = 0; x < FIELD_W; x += 2) {
         px = FIELD_X + x * CELL_SIZE;
-        Move(rp, px, FIELD_Y);
-        Draw(rp, px, FIELD_Y + fh - 1);
-    }
-    for (y = 1; y < FIELD_H; y++) {
-        py = FIELD_Y + y * CELL_SIZE;
-        Move(rp, FIELD_X, py);
-        Draw(rp, FIELD_X + fw - 1, py);
+        RectFill(rp, px, FIELD_Y, px + CELL_SIZE - 1, FIELD_Y + fh - 1);
     }
 
     /* Filled cells */
@@ -317,13 +327,11 @@ void draw_field(struct RastPort *rp, const GameState *gs)
         }
     }
 
-    /* Field border */
-    SetAPen(rp, 8);
-    Move(rp, FIELD_X - 1, FIELD_Y - 1);
-    Draw(rp, FIELD_X + fw, FIELD_Y - 1);
-    Draw(rp, FIELD_X + fw, FIELD_Y + fh);
-    Draw(rp, FIELD_X - 1, FIELD_Y + fh);
-    Draw(rp, FIELD_X - 1, FIELD_Y - 1);
+    /* Open-topped well: thick sides and floor, no lid */
+    SetAPen(rp, 13);
+    RectFill(rp, FIELD_X - 4, FIELD_Y, FIELD_X - 2, FIELD_Y + fh + 3);
+    RectFill(rp, FIELD_X + fw + 1, FIELD_Y, FIELD_X + fw + 3, FIELD_Y + fh + 3);
+    RectFill(rp, FIELD_X - 4, FIELD_Y + fh + 1, FIELD_X + fw + 3, FIELD_Y + fh + 3);
 }
 
 void draw_current_piece(struct RastPort *rp, const GameState *gs)
@@ -367,12 +375,8 @@ void draw_ghost_piece(struct RastPort *rp, const GameState *gs)
                 px = FIELD_X + (gs->current.x + col) * CELL_SIZE;
                 py = FIELD_Y + fy * CELL_SIZE;
 
-                /* Outline only */
-                Move(rp, px, py);
-                Draw(rp, px + CELL_SIZE - 2, py);
-                Draw(rp, px + CELL_SIZE - 2, py + CELL_SIZE - 2);
-                Draw(rp, px, py + CELL_SIZE - 2);
-                Draw(rp, px, py);
+                /* Landing marks: a small dot in each cell */
+                RectFill(rp, px + 4, py + 4, px + 6, py + 6);
             }
         }
     }
@@ -383,31 +387,20 @@ void draw_next_piece(struct RastPort *rp, const GameState *gs)
     const PieceShape *shape;
     int row, col, px, py;
     int color = gs->next_type + 1;
-    int box_x = 170;
-    int box_y = 40;
+    int box_x = 30;
+    int box_y = 150;
 
-    /* Label */
-    draw_text(rp, box_x, box_y - 12, "NEXT", 9, 1);
+    /* "Coming up" tray at the bottom of the left panel, no frame */
+    draw_text(rp, box_x, box_y - 14, "COMING UP", 10, 1);
+    SetAPen(rp, 13);
+    RectFill(rp, box_x - 6, box_y + 4 * CELL_SIZE + 2,
+             box_x + 4 * CELL_SIZE + 52, box_y + 4 * CELL_SIZE + 3);
 
-    /* Preview box border */
-    SetAPen(rp, 8);
-    Move(rp, box_x - 2, box_y - 2);
-    Draw(rp, box_x + 4 * CELL_SIZE + 1, box_y - 2);
-    Draw(rp, box_x + 4 * CELL_SIZE + 1, box_y + 4 * CELL_SIZE + 1);
-    Draw(rp, box_x - 2, box_y + 4 * CELL_SIZE + 1);
-    Draw(rp, box_x - 2, box_y - 2);
-
-    /* Preview box background */
-    SetAPen(rp, 15);
-    RectFill(rp, box_x, box_y,
-             box_x + 4 * CELL_SIZE - 1, box_y + 4 * CELL_SIZE - 1);
-
-    /* Draw piece */
     shape = piece_get_shape(gs->next_type, 0);
     for (row = 0; row < 4; row++) {
         for (col = 0; col < 4; col++) {
             if (shape->cells[row][col]) {
-                px = box_x + col * CELL_SIZE;
+                px = box_x + 20 + col * CELL_SIZE;
                 py = box_y + row * CELL_SIZE;
                 draw_cell(rp, px, py, color, TRUE);
             }
@@ -418,23 +411,23 @@ void draw_next_piece(struct RastPort *rp, const GameState *gs)
 void draw_hud(struct RastPort *rp, const GameState *gs)
 {
     char buf[16];
-    int hx = 170;
-    int hy = 120;
+    int hx = 24;
 
-    /* SCORE */
-    draw_text(rp, hx, hy, "SCORE", 9, 1);
-    sprintf(buf, "%07ld", (long)gs->score);
-    draw_text(rp, hx, hy + 10, buf, 14, 1);
+    /* Name plate */
+    draw_text(rp, hx, 14, "STAKATTACK", 13, 1);
 
-    /* LEVEL */
-    draw_text(rp, hx, hy + 28, "LEVEL", 9, 1);
-    sprintf(buf, "%02ld", (long)gs->level);
-    draw_text(rp, hx, hy + 38, buf, 14, 1);
+    /* Big score, then rows and stage on one line */
+    sprintf(buf, "%ld", (long)gs->score);
+    draw_text(rp, hx, 40, "POINTS", 10, 1);
+    draw_text(rp, hx, 52, buf, 14, 2);
 
-    /* LINES */
-    draw_text(rp, hx, hy + 56, "LINES", 9, 1);
-    sprintf(buf, "%03ld", (long)gs->lines);
-    draw_text(rp, hx, hy + 66, buf, 14, 1);
+    draw_text(rp, hx, 84, "ROWS", 10, 1);
+    sprintf(buf, "%ld", (long)gs->lines);
+    draw_text(rp, hx, 96, buf, 9, 1);
+
+    draw_text(rp, hx + 60, 84, "STAGE", 10, 1);
+    sprintf(buf, "%ld", (long)gs->level);
+    draw_text(rp, hx + 60, 96, buf, 9, 1);
 }
 
 void draw_title(struct RastPort *rp)
@@ -447,10 +440,12 @@ void draw_title(struct RastPort *rp)
     cx = (320 - text_width(title, 3)) / 2;
     draw_text(rp, cx, 60, title, 13, 3);
 
-    /* Decorative line under title */
-    SetAPen(rp, 8);
-    Move(rp, cx, 85);
-    Draw(rp, cx + text_width(title, 3), 85);
+    /* A row of the seven gems under the title */
+    {
+        int i;
+        for (i = 0; i < NUM_PIECES; i++)
+            draw_cell(rp, 160 - (NUM_PIECES * 16) / 2 + i * 16 + 2, 96, i + 1, TRUE);
+    }
 
     /* Prompt */
     cx = (320 - text_width(prompt, 1)) / 2;
@@ -477,16 +472,16 @@ void draw_gameover(struct RastPort *rp, const GameState *gs)
     RectFill(rp, FIELD_X + 2, FIELD_Y + 70, FIELD_X + FIELD_W * CELL_SIZE - 3, FIELD_Y + 170);
 
     /* GAME OVER in large red */
-    cx = (320 - text_width(go_text, 2)) / 2;
-    draw_text(rp, cx, 90, go_text, 5, 2);
+    cx = FIELD_X + (FIELD_W * CELL_SIZE - text_width(go_text, 2)) / 2;
+    draw_text(rp, cx, 90, go_text, 1, 2);
 
     /* Final score */
-    sprintf(buf, "%07ld", (long)gs->score);
-    cx = (320 - text_width(buf, 2)) / 2;
+    sprintf(buf, "%ld", (long)gs->score);
+    cx = FIELD_X + (FIELD_W * CELL_SIZE - text_width(buf, 2)) / 2;
     draw_text(rp, cx, 120, buf, 9, 2);
 
     /* Prompt */
-    cx = (320 - text_width(prompt, 1)) / 2;
+    cx = FIELD_X + (FIELD_W * CELL_SIZE - text_width(prompt, 1)) / 2;
     draw_text(rp, cx, 150, prompt, 9, 1);
 }
 
@@ -497,8 +492,8 @@ void draw_line_clear_flash(struct RastPort *rp, const GameState *gs)
 
     if (gs->clear_timer <= 0) return;
 
-    /* Alternate between bright yellow and field background */
-    flash_color = (gs->clear_timer & 2) ? 12 : 15;
+    /* Alternate between white and copper */
+    flash_color = (gs->clear_timer & 2) ? 9 : 13;
 
     for (i = 0; i < gs->clear_count; i++) {
         int line = gs->clear_lines[i];

@@ -1,0 +1,5 @@
+title=Rotoball
+origin=Amiga
+genre=Sports
+order=140
+desc=Split-screen futuristic ball sport against the computer. Steer your skimmer, grab the orb and carry it over the goal line. UP or A forward, DOWN or B reverse, LEFT/RIGHT strafe.

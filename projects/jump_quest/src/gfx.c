@@ -202,18 +202,19 @@ void gfx_draw_tile(struct RastPort *rp, int tile_id, int sx, int sy) {
         break;
 
     case TILE_QBLOCK:
-        SetAPen(rp, COL_YELLOW);
+        /* gift box: red with a yellow ribbon */
+        SetAPen(rp, COL_RED);
         RectFill(rp, sx, sy, ex, ey);
-        SetAPen(rp, COL_DKORANGE);
+        SetAPen(rp, COL_BLACK);
         Move(rp, sx, sy); Draw(rp, ex, sy);
         Move(rp, sx, ey); Draw(rp, ex, ey);
         Move(rp, sx, sy); Draw(rp, sx, ey);
         Move(rp, ex, sy); Draw(rp, ex, ey);
-        RectFill(rp, sx + 5, sy + 3, sx + 10, sy + 4);
-        RectFill(rp, sx + 9, sy + 5, sx + 10, sy + 7);
-        RectFill(rp, sx + 6, sy + 7, sx + 9, sy + 8);
-        RectFill(rp, sx + 6, sy + 9, sx + 7, sy + 10);
-        RectFill(rp, sx + 6, sy + 12, sx + 7, sy + 13);
+        SetAPen(rp, COL_YELLOW);
+        RectFill(rp, sx + 7, sy + 1, sx + 8, ey - 1);
+        RectFill(rp, sx + 1, sy + 7, ex - 1, sy + 8);
+        RectFill(rp, sx + 4, sy + 2, sx + 6, sy + 4);
+        RectFill(rp, sx + 9, sy + 2, sx + 11, sy + 4);
         break;
 
     case TILE_QBLOCK_HIT:
@@ -239,41 +240,52 @@ void gfx_draw_tile(struct RastPort *rp, int tile_id, int sx, int sy) {
         Move(rp, sx + 1, sy + 1); Draw(rp, sx + 1, ey - 1);
         break;
 
+    /* "pipes" are stone columns with a capital */
     case TILE_PIPE_TL:
-        SetAPen(rp, COL_DKGREEN);
+        SetAPen(rp, COL_SKY);
         RectFill(rp, sx, sy, ex, ey);
-        SetAPen(rp, COL_GREEN);
-        RectFill(rp, sx + 2, sy + 2, ex - 1, sy + 4);
-        SetAPen(rp, COL_LTGREEN);
-        RectFill(rp, sx + 3, sy + 2, sx + 5, sy + 4);
-        SetAPen(rp, COL_GREEN);
-        RectFill(rp, sx + 2, sy + 5, ex, ey);
+        SetAPen(rp, COL_GREY);
+        RectFill(rp, sx, sy + 2, ex, sy + 5);
+        RectFill(rp, sx + 3, sy + 6, ex, ey);
+        SetAPen(rp, COL_WHITE);
+        Move(rp, sx, sy + 2); Draw(rp, ex, sy + 2);
+        Move(rp, sx + 5, sy + 7); Draw(rp, sx + 5, ey);
+        SetAPen(rp, COL_BLACK);
+        Move(rp, sx, sy + 5); Draw(rp, ex, sy + 5);
         break;
 
     case TILE_PIPE_TR:
-        SetAPen(rp, COL_DKGREEN);
+        SetAPen(rp, COL_SKY);
         RectFill(rp, sx, sy, ex, ey);
-        SetAPen(rp, COL_GREEN);
-        RectFill(rp, sx, sy + 2, ex - 2, sy + 4);
-        RectFill(rp, sx, sy + 5, ex - 2, ey);
+        SetAPen(rp, COL_GREY);
+        RectFill(rp, sx, sy + 2, ex, sy + 5);
+        RectFill(rp, sx, sy + 6, ex - 3, ey);
+        SetAPen(rp, COL_WHITE);
+        Move(rp, sx, sy + 2); Draw(rp, ex, sy + 2);
+        SetAPen(rp, COL_BLACK);
+        Move(rp, sx, sy + 5); Draw(rp, ex, sy + 5);
+        Move(rp, sx + 10, sy + 7); Draw(rp, sx + 10, ey);
         break;
 
     case TILE_PIPE_BL:
         SetAPen(rp, COL_SKY);
-        RectFill(rp, sx, sy, sx + 1, ey);
-        SetAPen(rp, COL_GREEN);
-        RectFill(rp, sx + 2, sy, ex, ey);
-        SetAPen(rp, COL_DKGREEN);
-        Move(rp, sx + 2, sy); Draw(rp, sx + 2, ey);
+        RectFill(rp, sx, sy, sx + 2, ey);
+        SetAPen(rp, COL_GREY);
+        RectFill(rp, sx + 3, sy, ex, ey);
+        SetAPen(rp, COL_WHITE);
+        Move(rp, sx + 5, sy); Draw(rp, sx + 5, ey);
+        SetAPen(rp, COL_BLACK);
+        Move(rp, sx + 3, sy); Draw(rp, sx + 3, ey);
         break;
 
     case TILE_PIPE_BR:
         SetAPen(rp, COL_SKY);
-        RectFill(rp, ex - 1, sy, ex, ey);
-        SetAPen(rp, COL_GREEN);
-        RectFill(rp, sx, sy, ex - 2, ey);
-        SetAPen(rp, COL_DKGREEN);
-        Move(rp, ex - 2, sy); Draw(rp, ex - 2, ey);
+        RectFill(rp, ex - 2, sy, ex, ey);
+        SetAPen(rp, COL_GREY);
+        RectFill(rp, sx, sy, ex - 3, ey);
+        SetAPen(rp, COL_BLACK);
+        Move(rp, sx + 10, sy); Draw(rp, sx + 10, ey);
+        Move(rp, ex - 3, sy); Draw(rp, ex - 3, ey);
         break;
 
     case TILE_PLATFORM:

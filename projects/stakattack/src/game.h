@@ -6,8 +6,8 @@
 
 #include <exec/types.h>
 
-#define FIELD_W 10
-#define FIELD_H 20
+#define FIELD_W 12
+#define FIELD_H 19
 #define NUM_PIECES 7
 
 /* Piece types */

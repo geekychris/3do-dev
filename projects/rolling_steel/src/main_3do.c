@@ -256,7 +256,7 @@ static void hud_title(void)
     big(160, 10, "ROLLING STEEL", P_AMBER);
     ctext(160, 32, "SIX COURSES, ONE CLOCK", P_CYAN);
     for (i = 0; i < course_count; i++) {
-        static const char *names[6] = { "PRACTICE", "BEGINNER", "INTERMEDIATE", "AERIAL", "SILLY", "ULTIMATE" };
+        static const char *names[6] = { "WARM-UP", "FIRST DROP", "SWITCHBACK", "SKYWAY", "TOPSY-TURVY", "THE GAUNTLET" };
         int y = 50 + i * 12, sel = i == G.title_select;
         if (sel) bar(36, y - 2, 284, y + 8, P_SEL);
         sprintf(buf, "%d  %s", i + 1, names[i]);

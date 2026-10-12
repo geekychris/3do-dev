@@ -100,8 +100,8 @@ Keep and Rolling Steel), each on its own disc and all of them on the arcade disc
 (`./3do build arcade && ./3do run arcade`; X in a game returns to the menu).
 
 ![The arcade menu](docs/images/games/arcade-menu.png)
-![Fractalus](docs/images/games/fractalus-play.png)
-![Ballblazer](docs/images/games/ballblazer-play.png)
+![Canyon Rescue](docs/images/games/canyon_rescue-play.png)
+![Rotoball](docs/images/games/rotoball-play.png)
 ![Dot Chase](docs/images/games/dot_chase-play.png)
 ![Frank the Frog](docs/images/games/frank_the_frog-play.png)
 ![RJ Birthday](docs/images/games/rj_birthday-play.png)
