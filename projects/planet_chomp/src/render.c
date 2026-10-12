@@ -219,8 +219,8 @@ void rd_frame(const Camera *cam, const unsigned char *crumb, const unsigned char
             it_c[it] = RGB15(235, 240, 255);
             it_c2[it] = RGB15(255, 255, 255);
         } else {
-            it_c[it] = shade(50, 80, 220, k);
-            it_c2[it] = RGB15(130, 180, 255);
+            it_c[it] = shade(158, 92, 41, k);
+            it_c2[it] = RGB15(255, 199, 115);
         }
         rd_stats_walls++;
     }
