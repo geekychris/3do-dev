@@ -235,7 +235,7 @@ static void spawn_piece(GameState *gs)
 {
     gs->current.type = gs->next_type;
     gs->current.rotation = 0;
-    gs->current.x = 3;
+    gs->current.x = (FIELD_W - 4) / 2;
     gs->current.y = 0;
 
     gs->next_type = random_piece(gs);

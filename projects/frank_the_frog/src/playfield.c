@@ -12,6 +12,7 @@
 
 #include "game.h"
 #include "playfield.h"
+#include "lanes.h"
 
 /* Draw a row-width filled rectangle */
 static void fill_row(struct RastPort *rp, int row, UBYTE color)
@@ -36,23 +37,29 @@ static void draw_road_divider(struct RastPort *rp, int row)
     }
 }
 
-/* Draw home base slots (5 lily pads on water background) */
+/* Draw the home bank: grass with reeds and a few ponds to hop into */
 static void draw_home_row(struct RastPort *rp)
 {
-    int slot;
-    int pad_w = 24;
-    int pad_h = 12;
+    int slot, x;
+    int y0 = ROW_HOME * TILE_H;
 
-    /* Water background */
-    fill_row(rp, ROW_HOME, COL_WATER);
+    fill_row(rp, ROW_HOME, COL_GRASS);
 
-    /* 5 home slots evenly spaced */
-    SetAPen(rp, (long)COL_LILY);
-    for (slot = 0; slot < 5; slot++) {
-        int cx = slot * (SCREEN_W / 5) + (SCREEN_W / 10);
-        int x0 = cx - pad_w / 2;
-        int y0 = ROW_HOME * TILE_H + (TILE_H - pad_h) / 2;
-        RectFill(rp, x0, y0, x0 + pad_w - 1, y0 + pad_h - 1);
+    /* reeds along the bank */
+    SetAPen(rp, (long)COL_FROG_DARK);
+    for (x = 6; x < SCREEN_W; x += 11) {
+        Move(rp, x, y0 + 14);
+        Draw(rp, x + ((x & 2) ? 1 : -1), y0 + 5 + (x % 5));
+    }
+
+    /* ponds: rounded water patches in a muddy rim */
+    for (slot = 0; slot < NUM_HOMES; slot++) {
+        int cx = lanes_home_cx(slot);
+        SetAPen(rp, (long)COL_LOG);
+        RectFill(rp, cx - 14, y0 + 2, cx + 14, y0 + 14);
+        SetAPen(rp, (long)COL_WATER);
+        RectFill(rp, cx - 11, y0 + 3, cx + 11, y0 + 13);
+        RectFill(rp, cx - 13, y0 + 5, cx + 13, y0 + 11);
     }
 }
 

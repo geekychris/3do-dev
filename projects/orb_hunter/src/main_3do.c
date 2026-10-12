@@ -65,7 +65,7 @@ static GameState gs;
 static const UWORD palette[16] = {
     0x001,  /*  0: near-black (BG) */
     0xFFF,  /*  1: white */
-    0xE40,  /*  2: orange-red (hunter suit) */
+    0x0A9,  /*  2: teal (hunter suit) */
     0xFC0,  /*  3: yellow (suit detail/visor) */
     0x141,  /*  4: dark green (cavern rock) */
     0x262,  /*  5: medium green */

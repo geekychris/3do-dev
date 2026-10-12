@@ -16,7 +16,7 @@
 #include "game.h"
 #include "lanes.h"
 
-/* A single object in a lane (car, truck, log, turtle group) */
+/* A single object in a lane (car, bus, log, lily-pad raft) */
 typedef struct {
     int x;          /* pixel x position (can be negative for wrap) */
     int width;      /* width in pixels */
@@ -31,7 +31,7 @@ typedef struct {
     int tick_cnt;   /* frame counter */
     int num_objs;
     UBYTE color;    /* draw color */
-    int is_river;   /* 1 = river (logs/turtles), 0 = road (cars/trucks) */
+    int is_river;   /* 1 = river (logs/rafts), 0 = road (cars/buses) */
     LaneObj objs[MAX_LANE_OBJECTS];
 } Lane;
 
@@ -39,8 +39,14 @@ typedef struct {
 #define NUM_LANES 10
 static Lane lanes[NUM_LANES];
 
-/* Home base slots */
-static int home_filled[5] = {0, 0, 0, 0, 0};
+/* Home ponds: centre x of each pond on the top bank */
+static const int home_cx[NUM_HOMES] = { 40, 120, 216, 280 };
+static int home_filled[NUM_HOMES] = {0, 0, 0, 0};
+
+int lanes_home_cx(int slot)
+{
+    return home_cx[slot];
+}
 
 /* Draw a filled frog icon in a home slot */
 static void draw_home_frog(struct RastPort *rp, int cx)
@@ -92,7 +98,7 @@ void lanes_init(int level)
     setup_lane(0, ROW_ROAD_1, DIR_RIGHT, 2 + base/2, 1, COL_CAR_RED,    0, 3, 16, 120);
     setup_lane(1, ROW_ROAD_2, DIR_LEFT,  3 + base/3, 1, COL_CAR_YELLOW, 0, 3, 16, 110);
     setup_lane(2, ROW_ROAD_3, DIR_RIGHT, 2 + base/2, 1, COL_CAR_BLUE,   0, 3, 16, 110);
-    setup_lane(3, ROW_ROAD_4, DIR_LEFT,  2 + base/3, 1, COL_TRUCK,      0, 2, 32, 160);
+    setup_lane(3, ROW_ROAD_4, DIR_LEFT,  2 + base/3, 1, COL_BUS,        0, 2, 36, 160);
     setup_lane(4, ROW_ROAD_5, DIR_RIGHT, 3 + base/2, 1, COL_CAR_RED,    0, 3, 16, 120);
 
     /* Clamp tick_div minimum to 1 */
@@ -103,11 +109,11 @@ void lanes_init(int level)
         }
     }
 
-    /* River lanes: logs and turtles */
+    /* River lanes: logs and lily-pad rafts */
     setup_lane(5, ROW_RIVER_1, DIR_RIGHT, 2 + base/3, 1, COL_LOG,    1, 3, 48, 110);
-    setup_lane(6, ROW_RIVER_2, DIR_LEFT,  1 + base/3, 1, COL_TURTLE, 1, 3, 32, 100);
+    setup_lane(6, ROW_RIVER_2, DIR_LEFT,  1 + base/3, 1, COL_PAD, 1, 3, 32, 100);
     setup_lane(7, ROW_RIVER_3, DIR_RIGHT, 2 + base/2, 1, COL_LOG,    1, 2, 64, 170);
-    setup_lane(8, ROW_RIVER_4, DIR_LEFT,  2 + base/3, 1, COL_TURTLE, 1, 3, 32, 110);
+    setup_lane(8, ROW_RIVER_4, DIR_LEFT,  2 + base/3, 1, COL_PAD, 1, 3, 32, 110);
     setup_lane(9, ROW_RIVER_5, DIR_RIGHT, 2 + base/2, 1, COL_LOG,    1, 2, 48, 160);
 }
 
@@ -152,32 +158,30 @@ static void draw_car(struct RastPort *rp, int x, int y, UBYTE color)
     RectFill(rp, x + 5, y + 2, x + 10, y + 3);
 }
 
-/* Draw a truck shape - cab faces the direction of travel */
-static void draw_truck(struct RastPort *rp, int x, int y, UBYTE color, int dir)
+/* Draw a bus: long body, a row of windows, a door at the front */
+static void draw_bus(struct RastPort *rp, int x, int y, UBYTE color, int dir)
 {
-    if (dir == DIR_RIGHT) {
-        /* Cab on right (front), cargo on left (back) */
-        SetAPen(rp, (long)color);
-        RectFill(rp, x + 1, y + 2, x + 22, y + 12);   /* Cargo */
-        RectFill(rp, x + 23, y + 4, x + 30, y + 12);   /* Cab */
-        SetAPen(rp, (long)COL_BG);
-        RectFill(rp, x + 3, y + 12, x + 6, y + 14);    /* Rear wheel */
-        RectFill(rp, x + 16, y + 12, x + 19, y + 14);  /* Mid wheel */
-        RectFill(rp, x + 25, y + 12, x + 28, y + 14);  /* Front wheel */
-        SetAPen(rp, (long)COL_WATER);
-        RectFill(rp, x + 24, y + 5, x + 29, y + 7);    /* Windshield */
-    } else {
-        /* Cab on left (front), cargo on right (back) */
-        SetAPen(rp, (long)color);
-        RectFill(rp, x + 1, y + 4, x + 8, y + 12);     /* Cab */
-        RectFill(rp, x + 9, y + 2, x + 30, y + 12);    /* Cargo */
-        SetAPen(rp, (long)COL_BG);
-        RectFill(rp, x + 3, y + 12, x + 6, y + 14);    /* Front wheel */
-        RectFill(rp, x + 12, y + 12, x + 15, y + 14);  /* Mid wheel */
-        RectFill(rp, x + 25, y + 12, x + 28, y + 14);  /* Rear wheel */
-        SetAPen(rp, (long)COL_WATER);
-        RectFill(rp, x + 2, y + 5, x + 7, y + 7);      /* Windshield */
-    }
+    int wx, w = 36;
+    SetAPen(rp, (long)color);
+    RectFill(rp, x + 1, y + 2, x + w - 2, y + 12);
+    /* window strip */
+    SetAPen(rp, (long)COL_WATER);
+    for (wx = x + 6; wx + 3 < x + w - 6; wx += 6)
+        RectFill(rp, wx, y + 4, wx + 3, y + 6);
+    /* door at the front */
+    SetAPen(rp, (long)COL_WHITE);
+    if (dir == DIR_RIGHT)
+        RectFill(rp, x + w - 5, y + 4, x + w - 4, y + 11);
+    else
+        RectFill(rp, x + 3, y + 4, x + 4, y + 11);
+    /* stripe */
+    SetAPen(rp, (long)COL_CAR_YELLOW);
+    Move(rp, x + 2, y + 9);
+    Draw(rp, x + w - 3, y + 9);
+    /* wheels */
+    SetAPen(rp, (long)COL_BG);
+    RectFill(rp, x + 5, y + 12, x + 9, y + 14);
+    RectFill(rp, x + w - 10, y + 12, x + w - 6, y + 14);
 }
 
 /* Draw a log */
@@ -202,30 +206,31 @@ static void draw_log(struct RastPort *rp, int x, int y, int w)
     }
 }
 
-/* Draw a turtle group */
-static void draw_turtles(struct RastPort *rp, int x, int y, int w)
+/* Draw a raft of round lily pads; every other pad carries a flower */
+static void draw_pads(struct RastPort *rp, int x, int y, int w)
 {
     int i;
-    int num = w / 12;
+    int num = w / 16;
     if (num < 1) num = 1;
 
     for (i = 0; i < num; i++) {
-        int tx = x + i * 12 + 1;
-        /* Shell */
-        SetAPen(rp, (long)COL_TURTLE);
-        RectFill(rp, tx + 1, y + 3, tx + 9, y + 11);
-        /* Shell highlight */
-        SetAPen(rp, (long)COL_GRASS);
-        RectFill(rp, tx + 3, y + 4, tx + 7, y + 6);
-        /* Head */
-        SetAPen(rp, (long)COL_TURTLE);
-        RectFill(rp, tx + 4, y + 1, tx + 6, y + 3);
-        /* Flippers */
-        WritePixel(rp, tx, y + 6);
-        WritePixel(rp, tx + 10, y + 6);
-        /* Legs */
-        WritePixel(rp, tx + 1, y + 12);
-        WritePixel(rp, tx + 9, y + 12);
+        int px = x + i * 16;
+        /* round pad from overlapping rectangles, dark rim */
+        SetAPen(rp, (long)COL_PAD);
+        RectFill(rp, px + 3, y + 2, px + 12, y + 13);
+        RectFill(rp, px + 1, y + 4, px + 14, y + 11);
+        SetAPen(rp, (long)COL_LILY);
+        RectFill(rp, px + 3, y + 4, px + 12, y + 11);
+        /* notch cut to the centre */
+        SetAPen(rp, (long)COL_WATER);
+        RectFill(rp, px + 7, y + 2, px + 8, y + 7);
+        /* flower */
+        if ((i & 1) == 0) {
+            SetAPen(rp, (long)COL_WHITE);
+            RectFill(rp, px + 4, y + 8, px + 6, y + 10);
+            SetAPen(rp, (long)COL_CAR_YELLOW);
+            WritePixel(rp, px + 5, y + 9);
+        }
     }
 }
 
@@ -245,14 +250,14 @@ void lanes_draw(struct RastPort *rp)
             if (x < 0 || x + w > SCREEN_W) continue;
 
             if (l->is_river) {
-                if (l->color == COL_TURTLE) {
-                    draw_turtles(rp, x, y, w);
+                if (l->color == COL_PAD) {
+                    draw_pads(rp, x, y, w);
                 } else {
                     draw_log(rp, x, y, w);
                 }
             } else {
                 if (w >= 32) {
-                    draw_truck(rp, x, y, l->color, l->dir);
+                    draw_bus(rp, x, y, l->color, l->dir);
                 } else {
                     draw_car(rp, x, y, l->color);
                 }
@@ -260,14 +265,12 @@ void lanes_draw(struct RastPort *rp)
         }
     }
 
-    /* Draw frogs in filled home slots */
+    /* Draw frogs in filled home ponds */
     {
         int slot;
-        for (slot = 0; slot < 5; slot++) {
-            if (home_filled[slot]) {
-                int cx = slot * (SCREEN_W / 5) + (SCREEN_W / 10);
-                draw_home_frog(rp, cx);
-            }
+        for (slot = 0; slot < NUM_HOMES; slot++) {
+            if (home_filled[slot])
+                draw_home_frog(rp, home_cx[slot]);
         }
     }
 }
@@ -324,7 +327,7 @@ int lanes_check_river(int px, int py, int *ride_dx)
                 if (l->tick_cnt == 0) {
                     *ride_dx = l->speed * l->dir;
                 }
-                return 1; /* on a log/turtle */
+                return 1; /* on a log/raft */
             }
         }
     }
@@ -336,8 +339,8 @@ int lanes_check_home(int px)
 {
     int slot;
 
-    for (slot = 0; slot < 5; slot++) {
-        int cx = slot * (SCREEN_W / 5) + (SCREEN_W / 10);
+    for (slot = 0; slot < NUM_HOMES; slot++) {
+        int cx = home_cx[slot];
         int pad_w = 32;  /* generous landing zone */
 
         if (px + TILE_W / 2 >= cx - pad_w / 2 &&
@@ -351,7 +354,7 @@ int lanes_check_home(int px)
 
 void lanes_fill_home(int slot)
 {
-    if (slot >= 0 && slot < 5) {
+    if (slot >= 0 && slot < NUM_HOMES) {
         home_filled[slot] = 1;
     }
 }
@@ -359,7 +362,7 @@ void lanes_fill_home(int slot)
 int lanes_all_home(void)
 {
     int i;
-    for (i = 0; i < 5; i++) {
+    for (i = 0; i < NUM_HOMES; i++) {
         if (!home_filled[i]) return 0;
     }
     return 1;
@@ -368,7 +371,7 @@ int lanes_all_home(void)
 void lanes_reset_home(void)
 {
     int i;
-    for (i = 0; i < 5; i++) {
+    for (i = 0; i < NUM_HOMES; i++) {
         home_filled[i] = 0;
     }
 }

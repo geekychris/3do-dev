@@ -53,7 +53,7 @@ Atari ports in hatari_augmented), all playable from the **arcade** disc
   `gfx_layer_cel16()`, place it with `gfx_layer_move()` (game pixels; the
   256 -> 240 scaling is applied), link two with `gfx_layer_chain()`, and fill
   the frame with the transparent pen where it should show. Games that do:
-  ballblazer (floor as ~40 perspective cels per pane), pea_shooter_blast
+  rotoball (floor as ~40 perspective cels per pane), pea_shooter_blast
   (scrolled tile cache), uranus_lander (terrain), rj_birthday (rooms),
   void_trader (triangles as cels over a space-and-stars layer).
   For split screen, `gfx_set_underlay_split(left, right, over, x)` draws
@@ -122,7 +122,7 @@ projects/<game>/
    repeated line loses its last. Use `gfx_set_view(GFX_VIEW_CROP, y0)` to show
    240 lines 1:1 instead if the game leaves 16 lines empty, and
    `gfx_set_line_drop(0)` for plain 15/16 scaling if it places underlay cels
-   with `gfx_display_y()` (ballblazer).
+   with `gfx_display_y()` (rotoball).
 5. Update on-screen instructions that name keyboard keys to the 3DO pad.
 6. `./3do build <game>`, `./3do run <game>`, then write `test.py` (copy
    `projects/rock_blaster/test.py`) and make `./3do test <game>` pass.
@@ -157,20 +157,20 @@ In order of preference:
   `check_game_speed()` - the game keeps its real speed at a lower frame rate.
   Games that draw below 12 fps call `gfx_set_max_steps(n)` so the catch-up
   limit (default 4 steps per frame) doesn't slow their logic down. Logic
-  tuned for 25 fps runs one tick per two steps (projects/fractalus/main.cpp).
+  tuned for 25 fps runs one tick per two steps (projects/canyon_rescue/main.cpp).
 - **Let the hardware draw what doesn't move or is regular**: a background
   that only scrolls or changes per level becomes a layer cel, drawn once
   (Pea Shooter Blast 24 -> 50 fps, Uranus Lander 25 -> 50, RJ Birthday
-  34 -> 50), and big regular shapes become cel lists (Ballblazer's floor:
+  34 -> 50), and big regular shapes become cel lists (Rotoball's floor:
   11.9 -> 29.6 fps with the fixes below; Void Trader's triangles).
 - **Horizontal spans with `RectFill(rp, x0, y, x1, y)`**, not Move/Draw:
-  it skips the line set-up and clipping (ballblazer's ball and rotofoils).
+  it skips the line set-up and clipping (rotoball's ball and skimmers).
 - **Hidden samples by compare, not divide**: a front-to-back raycaster only
   needs the perspective divide for samples that draw. Keep the "would this
   draw" threshold as `k * dist`, advance it by addition, and find the new
-  strip top by stepping up a row at a time (fractalus/render.cpp).
+  strip top by stepping up a row at a time (canyon_rescue/render.cpp).
 - **Assembly for the one hot loop** when the compiler spills its state to the
-  stack every iteration (look with `emu_disasm`): fractalus/fracmarch.s
+  stack every iteration (look with `emu_disasm`): canyon_rescue/fracmarch.s
   halves the per-sample cost of the terrain march. Prove it exact by
   running the old and new code side by side in a debug build.
 - The C library `memmove` is not safe for overlapping copies to a higher
@@ -192,7 +192,7 @@ In order of preference:
 `extern "C"` guards. Rewrite lambdas as static functions. A block-scope
 `extern` declaration of a layer function inside a `.cpp` gets C++ linkage
 and fails to link: declare it in a header instead (or at file scope inside
-`extern "C" { }`). See projects/fractalus.
+`extern "C" { }`). See projects/canyon_rescue.
 
 ## Not supported
 

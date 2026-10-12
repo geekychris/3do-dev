@@ -16,7 +16,7 @@
 /* Color indices (matching palette in main.c) */
 #define COL_BG          0   /* dark blue-black 0x001 */
 #define COL_WHITE       1   /* white */
-#define COL_HUNTER      2   /* orange-red (hunter suit) 0xE40 */
+#define COL_HUNTER      2   /* teal (hunter suit) 0x0A9 */
 #define COL_HUNTER2     3   /* yellow (suit detail) 0xFC0 */
 #define COL_ROCK        4   /* dark green (cavern rock) 0x141 */
 #define COL_ROCK2       5   /* medium green (cavern) 0x262 */
@@ -788,8 +788,8 @@ static void draw_items(struct RastPort *rp, GameState *gs)
 static const char *area_names[] = {
     "CAVERN",
     "MAGMA",
-    "BEAST LAIR",
-    "DRAKE LAIR",
+    "BEAST DEN",
+    "WYRM HOLLOW",
     "CITADEL",
     "SURFACE"
 };
@@ -808,7 +808,7 @@ void draw_hud(struct RastPort *rp, GameState *gs)
 
     /* Energy label */
     SetAPen(rp, COL_WHITE);
-    draw_string(rp, 2, 1, "EN", 1);
+    draw_string(rp, 2, 1, "PW", 1);
 
     /* Energy bar frame */
     SetAPen(rp, COL_METAL2);

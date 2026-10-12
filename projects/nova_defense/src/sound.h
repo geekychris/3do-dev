@@ -12,7 +12,7 @@ void sound_play_shoot(void);
 void sound_play_alien_explode(void);
 void sound_play_player_explode(void);
 void sound_play_ufo(BOOL on);
-void sound_play_march(WORD note);   /* 0-3 for the 4-note cycle */
+void sound_play_march(WORD note);   /* 0-2: the rising swarm pulse */
 void sound_update(void);
 
 #endif

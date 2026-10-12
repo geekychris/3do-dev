@@ -14,8 +14,9 @@ struct GameState;
 extern const UWORD palette[NUM_COLORS];
 
 /* Field drawing position */
-#define FIELD_X 20
-#define FIELD_Y 8
+/* the well sits on the right; the panel is on the left */
+#define FIELD_X 156
+#define FIELD_Y 10
 #define CELL_SIZE 12
 
 void draw_clear(struct RastPort *rp);

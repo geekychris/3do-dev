@@ -396,6 +396,11 @@ WORD arcade_voice_is_playing(void)
     return voice_active >= 0;
 }
 
+WORD arcade_voice_current(void)
+{
+    return voice_active;
+}
+
 void arcade_voice_check_done(void)
 {
     if (voice_active < 0) return;
