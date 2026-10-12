@@ -57,7 +57,7 @@ void  gfx_set_line_drop(int smart);
  * pen show what the underlay cels drew. gfx_set_underlay() takes a CCB
  * list (last one flagged CCB_LAST), drawn before the frame at every
  * gfx_swap() in display coordinates (320x240); gfx_display_y() maps a
- * logical y (16.16) to display y for them. See projects/ballblazer. */
+ * logical y (16.16) to display y for them. See projects/rotoball. */
 void  gfx_set_transparent_pen(int pen);   /* -1: none (default) */
 void  gfx_set_underlay(void *ccb_list);   /* NULL: none */
 /* split screen: left list clipped to x < split, right to x >= split, then

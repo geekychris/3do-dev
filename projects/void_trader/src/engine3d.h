@@ -25,8 +25,8 @@
 #define FP        12
 #define ONE       (1L << FP)
 
-/* Vertex + face count caps per model. Enough for a Cobra Mk III
- * or a Coriolis station. */
+/* Vertex + face count caps per model. Enough for a Skiff
+ * or the trade station. */
 #define MAX_VERTS 64
 #define MAX_FACES 48
 

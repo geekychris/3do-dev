@@ -1,5 +1,6 @@
 /*
- * DOT CHASE - 3DO port.
+ * DOT CHASE - 3DO port. A ladybug gathers seeds in a hedge maze while
+ * four spiders hunt it; a flower turns the tables.
  *
  * game.c / draw.c / sound.c are the Amiga sources (geekychris/amiga_games)
  * drawing through the Amiga graphics API in sdk/amiga and playing through
@@ -18,24 +19,24 @@
 
 static GameState gs;
 
-/* Color palette: 16 colors (from the Amiga main.c) */
+/* Color palette: 16 colors (indices named in game.h) */
 static const UWORD palette[16] = {
-    0x000,  /*  0: Black (bg) */
-    0xFF0,  /*  1: Yellow (dot-eater) */
-    0xF00,  /*  2: Red (Blinky) */
-    0xFBD,  /*  3: Pink (Pinky) */
-    0x0FF,  /*  4: Cyan (Inky) */
-    0xF80,  /*  5: Orange (Clyde) */
-    0x22F,  /*  6: Blue (walls/frightened ghost) */
-    0xFFF,  /*  7: White (text) */
-    0x118,  /*  8: Dark blue (maze outline) */
-    0xFDA,  /*  9: Peach (ghost face) */
-    0xF9B,  /* 10: Dark pink */
-    0xA00,  /* 11: Dark red */
-    0x0F0,  /* 12: Green */
-    0xA0F,  /* 13: Purple */
-    0x888,  /* 14: Gray */
-    0xEED,  /* 15: Cream (dots) */
+    0x211,  /*  0: dark soil (bg) */
+    0xE22,  /*  1: ladybug red */
+    0xA5E,  /*  2: Webster, purple */
+    0x8AD,  /*  3: Silk, steel blue */
+    0xB73,  /*  4: Tangle, brown */
+    0xDDB,  /*  5: Nibs, bone */
+    0x283,  /*  6: hedge */
+    0xFFF,  /*  7: white (text) */
+    0x152,  /*  8: hedge shadow */
+    0x4B4,  /*  9: hedge leaves */
+    0xFC2,  /* 10: gold */
+    0x000,  /* 11: black (spots, legs) */
+    0x7D4,  /* 12: leaf green */
+    0x82C,  /* 13: plum */
+    0x999,  /* 14: gray */
+    0xDB8,  /* 15: seed */
 };
 
 static const char *state_name(WORD s)
@@ -47,7 +48,7 @@ static const char *state_name(WORD s)
     case STATE_DYING:      return "DYING";
     case STATE_LEVEL_DONE: return "LEVEL_DONE";
     case STATE_GAMEOVER:   return "GAMEOVER";
-    case STATE_EAT_GHOST:  return "EAT_GHOST";
+    case STATE_EAT_SPIDER:  return "CAUGHT_SPIDER";
     }
     return "?";
 }
@@ -102,10 +103,10 @@ int main(void)
             (prev_state == STATE_GAMEOVER && gs.state == STATE_TITLE))
             draw_set_dirty();
 
-        if (gs.ev_flags & EV_CHOMP)     sound_chomp();
-        if (gs.ev_flags & EV_EAT_GHOST) sound_eat_ghost();
+        if (gs.ev_flags & EV_SEED)     sound_seed();
+        if (gs.ev_flags & EV_EAT_SPIDER) sound_eat_spider();
         if (gs.ev_flags & EV_DIE)       sound_die();
-        if (gs.ev_flags & EV_FRUIT)     sound_fruit();
+        if (gs.ev_flags & EV_BONUS)     sound_bonus();
         if (gs.ev_flags & EV_EXTRA)     sound_extra_life();
         if (gs.ev_flags & EV_POWER)     sound_power();
         gs.ev_flags = 0;
@@ -114,10 +115,10 @@ int main(void)
             sound_power_off();
         prev_fright = gs.fright_active ? 1 : 0;
         if (gs.state == STATE_PLAYING) {
-            if (gs.fright_active) sound_siren_off();
-            else                  sound_set_siren(gs.siren_speed);
+            if (gs.fright_active) sound_pulse_off();
+            else                  sound_set_pulse(gs.pulse_speed);
         } else {
-            sound_siren_off();
+            sound_pulse_off();
             sound_power_off();
         }
 

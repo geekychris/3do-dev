@@ -3,12 +3,12 @@
 
 /*
  * DOT_CHASE - Sound
- * Retro dot-eater sounds via direct Paula chip access
+ * Garden sounds via direct Paula chip access
  *
- * Channel 0: Chomp waka-waka
- * Channel 1: SFX (eat ghost, die, fruit, extra life)
- * Channel 2: Siren (rising/falling tone)
- * Channel 3: Power pellet drone / intermission
+ * Channel 0: seed pips (a pentatonic run, one note per seed)
+ * Channel 1: SFX (catch a spider, lose a life, bonus, extra life)
+ * Channel 2: cricket chirps that quicken as the garden empties
+ * Channel 3: bubbling arpeggio while the spiders are scared
  */
 #include <exec/types.h>
 #include <exec/memory.h>
@@ -23,51 +23,60 @@
 
 #define WAVE_LEN     32
 #define NOISE_LEN    128
-#define PAL_CLOCK    3546895UL
 
 /* Waveform buffers in chip RAM */
 static BYTE *wave_square;
 static BYTE *wave_sine;
 static BYTE *wave_noise;
-static BYTE *wave_chomp;
+static BYTE *wave_tri;
 
 /* Channel timers (frames remaining) */
 static WORD ch_timer[4];
 
-/* Chomp alternation */
-static WORD chomp_toggle;
+/* Seed pips walk up and down a pentatonic scale */
+static const UWORD pip_notes[] = { 339, 285, 254, 214, 190, 214, 254, 285 };
+#define PIP_LEN 8
+static WORD pip_pos;
 
-/* Siren state */
-static WORD siren_phase;
-static WORD siren_on;
-static WORD siren_speed_level; /* 0=slow, 1=med, 2=fast */
+/* Cricket chirps */
+static WORD pulse_on;
+static WORD pulse_speed_level;
+static WORD pulse_timer;
 
-/* Power pellet drone */
+/* Scared-spider arpeggio */
 static WORD power_on;
 static WORD power_phase;
 
-/* Death melody state */
-static WORD death_active;
-static WORD death_pos;
-static WORD death_timer;
+/* Simple note sequencer on channel 1: 0 = rest, 1 = noise burst */
+static const UWORD *seq_notes;
+static WORD seq_len, seq_pos, seq_timer, seq_speed;
+static BYTE *seq_wave;
 
-/* Death melody: descending notes */
-static const UWORD death_notes[] = {
-    400, 424, 450, 476, 504, 534, 566, 600,
-    636, 674, 714, 756, 800, 848, 900, 952
-};
-#define DEATH_LEN 16
-#define DEATH_SPEED 4
+static const UWORD lose_notes[] = { 1, 1, 0, 381, 0, 453, 0, 508, 508, 0, 678, 678, 678 };
+static const UWORD catch_notes[] = { 1, 226, 190, 151, 113 };
+static const UWORD bonus_notes[] = { 285, 214, 170 };
+static const UWORD extra_notes[] = { 254, 0, 254, 190, 151, 127 };
 
-/* Eat ghost melody */
-static WORD eat_active;
-static WORD eat_pos;
-static WORD eat_timer;
-static const UWORD eat_notes[] = {
-    600, 504, 424, 356, 300, 252, 212, 178
-};
-#define EAT_LEN 8
-#define EAT_SPEED 3
+static void play(int ch, BYTE *wave, UWORD words, UWORD period, UWORD vol, WORD frames)
+{
+    paula_dmacon((UWORD)(DMAF_AUD0 << ch));
+    CUSTOM->aud[ch].ac_ptr = (UWORD *)wave;
+    CUSTOM->aud[ch].ac_len = words;
+    CUSTOM->aud[ch].ac_per = period;
+    CUSTOM->aud[ch].ac_vol = vol;
+    paula_dmacon((UWORD)(DMAF_SETCLR | (DMAF_AUD0 << ch)));
+    ch_timer[ch] = frames;
+}
+
+static void start_seq(const UWORD *notes, WORD len, WORD speed, BYTE *wave)
+{
+    seq_notes = notes;
+    seq_len = len;
+    seq_pos = 0;
+    seq_timer = speed;   /* first note on the next update */
+    seq_speed = speed;
+    seq_wave = wave;
+}
 
 int sound_init(void)
 {
@@ -76,18 +85,16 @@ int sound_init(void)
     wave_square = (BYTE *)AllocMem(WAVE_LEN, MEMF_CHIP | MEMF_CLEAR);
     wave_sine   = (BYTE *)AllocMem(WAVE_LEN, MEMF_CHIP | MEMF_CLEAR);
     wave_noise  = (BYTE *)AllocMem(NOISE_LEN, MEMF_CHIP | MEMF_CLEAR);
-    wave_chomp  = (BYTE *)AllocMem(WAVE_LEN, MEMF_CHIP | MEMF_CLEAR);
+    wave_tri    = (BYTE *)AllocMem(WAVE_LEN, MEMF_CHIP | MEMF_CLEAR);
 
-    if (!wave_square || !wave_sine || !wave_noise || !wave_chomp) {
+    if (!wave_square || !wave_sine || !wave_noise || !wave_tri) {
         sound_cleanup();
         return -1;
     }
 
-    /* Square wave */
-    for (i = 0; i < WAVE_LEN / 2; i++) wave_square[i] = 100;
-    for (i = WAVE_LEN / 2; i < WAVE_LEN; i++) wave_square[i] = -100;
+    for (i = 0; i < WAVE_LEN / 2; i++) wave_square[i] = 90;
+    for (i = WAVE_LEN / 2; i < WAVE_LEN; i++) wave_square[i] = -90;
 
-    /* Sine wave */
     {
         static const BYTE sine_tab[32] = {
             0, 25, 49, 71, 90, 106, 117, 125,
@@ -98,33 +105,27 @@ int sound_init(void)
         for (i = 0; i < 32; i++) wave_sine[i] = sine_tab[i];
     }
 
-    /* Noise */
     {
-        ULONG seed = 7919;
+        ULONG seed = 4243;
         for (i = 0; i < NOISE_LEN; i++) {
             seed = seed * 1103515245 + 12345;
             wave_noise[i] = (BYTE)((seed >> 16) & 0xFF);
         }
     }
 
-    /* Chomp waveform: asymmetric pulse for "waka" sound */
-    for (i = 0; i < 6; i++) wave_chomp[i] = 120;
-    for (i = 6; i < 16; i++) wave_chomp[i] = -60;
-    for (i = 16; i < 20; i++) wave_chomp[i] = 80;
-    for (i = 20; i < WAVE_LEN; i++) wave_chomp[i] = -40;
+    for (i = 0; i < 16; i++) wave_tri[i] = (BYTE)(-120 + i * 16);
+    for (i = 16; i < WAVE_LEN; i++) wave_tri[i] = (BYTE)(120 - (i - 16) * 16);
 
-    /* Disable all audio DMA */
     paula_dmacon(DMAF_AUD0 | DMAF_AUD1 | DMAF_AUD2 | DMAF_AUD3);
 
     for (i = 0; i < 4; i++) ch_timer[i] = 0;
-    chomp_toggle = 0;
-    siren_phase = 0;
-    siren_on = 0;
-    siren_speed_level = 0;
+    pip_pos = 0;
+    pulse_on = 0;
+    pulse_speed_level = 0;
+    pulse_timer = 0;
     power_on = 0;
     power_phase = 0;
-    death_active = 0;
-    eat_active = 0;
+    seq_notes = NULL;
 
     return 0;
 }
@@ -143,66 +144,37 @@ void sound_cleanup(void)
 
     if (wave_square) { FreeMem(wave_square, WAVE_LEN); wave_square = NULL; }
     if (wave_sine)   { FreeMem(wave_sine, WAVE_LEN);   wave_sine = NULL; }
-    if (wave_noise)  { FreeMem(wave_noise, NOISE_LEN);  wave_noise = NULL; }
-    if (wave_chomp)  { FreeMem(wave_chomp, WAVE_LEN);   wave_chomp = NULL; }
+    if (wave_noise)  { FreeMem(wave_noise, NOISE_LEN); wave_noise = NULL; }
+    if (wave_tri)    { FreeMem(wave_tri, WAVE_LEN);    wave_tri = NULL; }
 }
 
-void sound_chomp(void)
+void sound_seed(void)
 {
-    /* Alternating waka-waka tone */
-    UWORD period = chomp_toggle ? 500 : 600;
-    chomp_toggle = !chomp_toggle;
-
-    paula_dmacon(DMAF_AUD0);
-    CUSTOM->aud[0].ac_ptr = (UWORD *)wave_chomp;
-    CUSTOM->aud[0].ac_len = WAVE_LEN / 2;
-    CUSTOM->aud[0].ac_per = period;
-    CUSTOM->aud[0].ac_vol = 40;
-    paula_dmacon(DMAF_SETCLR | DMAF_AUD0);
-
-    ch_timer[0] = 4;
+    play(0, wave_tri, WAVE_LEN / 2, pip_notes[pip_pos], 30, 2);
+    pip_pos = (pip_pos + 1) % PIP_LEN;
 }
 
-void sound_eat_ghost(void)
+void sound_eat_spider(void)
 {
-    eat_active = 1;
-    eat_pos = 0;
-    eat_timer = 0;
+    start_seq(catch_notes, 5, 3, wave_square);
 }
 
 void sound_die(void)
 {
-    death_active = 1;
-    death_pos = 0;
-    death_timer = 0;
-    /* Stop siren and power */
-    siren_on = 0;
+    start_seq(lose_notes, 13, 5, wave_square);
+    pulse_on = 0;
     power_on = 0;
     paula_dmacon(DMAF_AUD2 | DMAF_AUD3);
 }
 
-void sound_fruit(void)
+void sound_bonus(void)
 {
-    /* Ascending blip on channel 1 */
-    paula_dmacon(DMAF_AUD1);
-    CUSTOM->aud[1].ac_ptr = (UWORD *)wave_sine;
-    CUSTOM->aud[1].ac_len = WAVE_LEN / 2;
-    CUSTOM->aud[1].ac_per = 250;
-    CUSTOM->aud[1].ac_vol = 45;
-    paula_dmacon(DMAF_SETCLR | DMAF_AUD1);
-    ch_timer[1] = 10;
+    start_seq(bonus_notes, 3, 4, wave_sine);
 }
 
 void sound_extra_life(void)
 {
-    /* Short bright jingle on channel 1 */
-    paula_dmacon(DMAF_AUD1);
-    CUSTOM->aud[1].ac_ptr = (UWORD *)wave_sine;
-    CUSTOM->aud[1].ac_len = WAVE_LEN / 2;
-    CUSTOM->aud[1].ac_per = 200;
-    CUSTOM->aud[1].ac_vol = 50;
-    paula_dmacon(DMAF_SETCLR | DMAF_AUD1);
-    ch_timer[1] = 20;
+    start_seq(extra_notes, 6, 5, wave_sine);
 }
 
 void sound_power(void)
@@ -218,15 +190,15 @@ void sound_power_off(void)
     paula_dmacon(DMAF_AUD3);
 }
 
-void sound_set_siren(int speed)
+void sound_set_pulse(int speed)
 {
-    siren_on = 1;
-    siren_speed_level = speed;
+    pulse_on = 1;
+    pulse_speed_level = speed;
 }
 
-void sound_siren_off(void)
+void sound_pulse_off(void)
 {
-    siren_on = 0;
+    pulse_on = 0;
     paula_dmacon(DMAF_AUD2);
 }
 
@@ -234,104 +206,47 @@ void sound_update(void)
 {
     int i;
 
-    /* Handle channel timers */
     for (i = 0; i < 4; i++) {
         if (ch_timer[i] > 0) {
             ch_timer[i]--;
             if (ch_timer[i] == 0) {
-                paula_dmacon((DMAF_AUD0 << i));
+                paula_dmacon((UWORD)(DMAF_AUD0 << i));
             }
         }
     }
 
-    /* Death melody on channel 1 */
-    if (death_active) {
-        death_timer++;
-        if (death_timer >= DEATH_SPEED) {
-            death_timer = 0;
-
-            paula_dmacon(DMAF_AUD1);
-            CUSTOM->aud[1].ac_ptr = (UWORD *)wave_sine;
-            CUSTOM->aud[1].ac_len = WAVE_LEN / 2;
-            CUSTOM->aud[1].ac_per = death_notes[death_pos];
-            CUSTOM->aud[1].ac_vol = 45;
-            paula_dmacon(DMAF_SETCLR | DMAF_AUD1);
-
-            ch_timer[1] = DEATH_SPEED - 1;
-            death_pos++;
-            if (death_pos >= DEATH_LEN) {
-                death_active = 0;
-            }
+    /* Channel 1 sequences */
+    if (seq_notes) {
+        seq_timer++;
+        if (seq_timer >= seq_speed) {
+            UWORD n = seq_notes[seq_pos];
+            seq_timer = 0;
+            if (n == 1)
+                play(1, wave_noise, NOISE_LEN / 2, 300, 40, seq_speed - 1);
+            else if (n)
+                play(1, seq_wave, WAVE_LEN / 2, n, 42, seq_speed - 1);
+            else
+                paula_dmacon(DMAF_AUD1);
+            seq_pos++;
+            if (seq_pos >= seq_len) seq_notes = NULL;
         }
     }
 
-    /* Eat ghost ascending tone on channel 1 */
-    if (eat_active) {
-        eat_timer++;
-        if (eat_timer >= EAT_SPEED) {
-            eat_timer = 0;
-
-            paula_dmacon(DMAF_AUD1);
-            CUSTOM->aud[1].ac_ptr = (UWORD *)wave_square;
-            CUSTOM->aud[1].ac_len = WAVE_LEN / 2;
-            CUSTOM->aud[1].ac_per = eat_notes[eat_pos];
-            CUSTOM->aud[1].ac_vol = 40;
-            paula_dmacon(DMAF_SETCLR | DMAF_AUD1);
-
-            ch_timer[1] = EAT_SPEED - 1;
-            eat_pos++;
-            if (eat_pos >= EAT_LEN) {
-                eat_active = 0;
-            }
-        }
+    /* Crickets: three quick chirps, then a pause that shortens as
+     * the seeds run out. Quiet while the arpeggio plays. */
+    if (pulse_on && !power_on) {
+        WORD gap = pulse_speed_level == 0 ? 48 : pulse_speed_level == 1 ? 34 : 22;
+        pulse_timer++;
+        if (pulse_timer == 1 || pulse_timer == 4 || pulse_timer == 7)
+            play(2, wave_sine, WAVE_LEN / 2, 120, 14, 2);
+        if (pulse_timer >= gap) pulse_timer = 0;
     }
 
-    /* Siren on channel 2. Silenced while power drone is active so
-     * the two don't fight. The main loop is responsible for clearing
-     * power_on (via sound_power_off) when frightened mode ends,
-     * which lets the siren resume cleanly next frame. */
-    if (siren_on && !power_on) {
-        WORD base_period;
-        WORD range;
-        WORD step;
-
-        switch (siren_speed_level) {
-        case 0: base_period = 500; range = 100; step = 2; break;
-        case 1: base_period = 420; range = 80;  step = 3; break;
-        default: base_period = 350; range = 60;  step = 4; break;
-        }
-
-        siren_phase += step;
-        if (siren_phase >= 128) siren_phase -= 128;
-
-        {
-            /* Triangle wave oscillation */
-            WORD pos = siren_phase;
-            WORD offset;
-            if (pos < 64) {
-                offset = (pos * range) / 64;
-            } else {
-                offset = ((128 - pos) * range) / 64;
-            }
-
-            CUSTOM->aud[2].ac_ptr = (UWORD *)wave_sine;
-            CUSTOM->aud[2].ac_len = WAVE_LEN / 2;
-            CUSTOM->aud[2].ac_per = base_period - offset;
-            CUSTOM->aud[2].ac_vol = 25;
-            paula_dmacon(DMAF_SETCLR | DMAF_AUD2);
-        }
-    }
-
-    /* Power pellet drone on channel 3 (replaces siren) */
+    /* Scared spiders: a bubbling four-note arpeggio */
     if (power_on) {
+        static const UWORD arp[4] = { 254, 214, 170, 214 };
         power_phase++;
-        {
-            WORD per = 280 + ((power_phase & 4) ? 40 : -40);
-            CUSTOM->aud[3].ac_ptr = (UWORD *)wave_square;
-            CUSTOM->aud[3].ac_len = WAVE_LEN / 2;
-            CUSTOM->aud[3].ac_per = per;
-            CUSTOM->aud[3].ac_vol = 20;
-            paula_dmacon(DMAF_SETCLR | DMAF_AUD3);
-        }
+        if ((power_phase % 3) == 1)
+            play(3, wave_tri, WAVE_LEN / 2, arp[(power_phase / 3) & 3], 20, 0);
     }
 }

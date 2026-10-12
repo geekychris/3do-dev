@@ -7,7 +7,7 @@
 #include "engine3d.h"
 
 /*
- * Elite's iconic 3D scanner — an ellipse in the dashboard
+ * 3D scanner — an ellipse in the dashboard
  * projecting each object onto the horizontal plane relative to
  * the player, with a vertical stalk indicating altitude above/
  * below the ecliptic. Colour-coded: enemies red, station green,

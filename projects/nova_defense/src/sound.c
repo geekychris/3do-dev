@@ -32,9 +32,8 @@ static WORD ch_timer[4];    /* frames remaining, 0 = idle */
 static BOOL ufo_active;
 static WORD ufo_phase;
 
-/* March note periods (32-sample square wave) */
-/* Notes: C3, Bb2, Ab2, G2 - descending pattern */
-static const UWORD march_periods[4] = { 846, 950, 1066, 1130 };
+/* Swarm pulse: three rising sine blips (32-sample sine) */
+static const UWORD march_periods[3] = { 640, 538, 452 };
 
 /* Melody pattern - simple repeating arpeggio on channel 3 */
 static const UWORD melody_periods[] = {
@@ -136,7 +135,7 @@ void sound_play_march(WORD note)
 
     paula_dmacon(DMAF_SETCLR | DMAF_AUD0);
 
-    ch_timer[0] = 6;  /* play for 6 frames (~120ms) */
+    ch_timer[0] = 3;  /* short blip (~60ms) */
 }
 
 /* Shoot SFX on channel 1 */
@@ -184,7 +183,7 @@ void sound_play_player_explode(void)
     ch_timer[1] = 25;
 }
 
-/* UFO warble on channel 2 */
+/* Comet sweep on channel 2 */
 void sound_play_ufo(BOOL on)
 {
     if (on && !ufo_active) {
@@ -218,13 +217,10 @@ void sound_update(void)
         }
     }
 
-    /* UFO warble modulation */
+    /* Comet whoosh: a rising sweep that restarts every 32 frames */
     if (ufo_active) {
-        /* Oscillate period between 250-350 for warble effect */
-        WORD per;
-        ufo_phase++;
-        per = 300 + ((ufo_phase & 8) ? 50 : -50);
-        CUSTOM->aud[2].ac_per = per;
+        ufo_phase = (ufo_phase + 1) & 31;
+        CUSTOM->aud[2].ac_per = 420 - ufo_phase * 7;
     }
 
     /* Background melody on channel 3 */

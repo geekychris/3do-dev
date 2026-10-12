@@ -21,7 +21,7 @@
 #define GRID_ROWS 13
 
 /* Row layout (top to bottom) */
-#define ROW_HOME     0    /* Home bases */
+#define ROW_HOME     0    /* Home bank: ponds to hop into */
 #define ROW_RIVER_5  1    /* River lanes (top = fast) */
 #define ROW_RIVER_4  2
 #define ROW_RIVER_3  3
@@ -50,8 +50,8 @@
 #define COL_CAR_RED   7   /* red */
 #define COL_CAR_YELLOW 8  /* yellow */
 #define COL_CAR_BLUE  9   /* blue car */
-#define COL_TRUCK     10  /* purple/dark */
-#define COL_TURTLE    11  /* dark green */
+#define COL_BUS       10  /* purple */
+#define COL_PAD       11  /* dark green (lily-pad rafts) */
 #define COL_LILY      12  /* light green */
 #define COL_WHITE     13
 #define COL_HUD_BG    14  /* dark blue */
@@ -66,6 +66,9 @@
 
 /* Max objects per lane */
 #define MAX_LANE_OBJECTS 6
+
+/* Home ponds on the top bank (irregularly placed) */
+#define NUM_HOMES 4
 
 /* Directions */
 #define DIR_LEFT  (-1)

@@ -2,4 +2,4 @@ title=Rock Blaster
 origin=Amiga
 genre=Shooter
 order=10
-desc=Asteroids-style vector shooter. Rotate, thrust and blast the rocks before they smash your ship. LEFT/RIGHT rotate, UP or B thrust, A fire.
+desc=Vector space shooter. Rotate, thrust and blast the drifting rocks before they smash your ship. LEFT/RIGHT rotate, UP or B thrust, A fire.

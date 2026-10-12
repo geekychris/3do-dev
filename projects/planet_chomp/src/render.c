@@ -271,7 +271,7 @@ void rd_frame(const Camera *cam, const unsigned char *crumb, const unsigned char
         it_x[it][0] = px; it_y[it][0] = py;
         it_half[it] = spr[i].half * recip[(z >> 2) < RECIP_N ? z >> 2 : RECIP_N - 1];
     }
-    /* the nest: a flat pink disc on the surface */
+    /* the nest: a flat violet disc on the surface */
     {
         static const short cs[9][2] = { {16384,0},{11585,11585},{0,16384},{-11585,11585},
             {-16384,0},{-11585,-11585},{0,-16384},{11585,-11585},{16384,0} };
@@ -299,7 +299,7 @@ void rd_frame(const Camera *cam, const unsigned char *crumb, const unsigned char
                 for (k2 = 0; k2 < 8; k2++)
                     pc_quad(nest_x[8], nest_y[8], nest_x[k2], nest_y[k2], nest_x[k2 + 1 < 8 ? k2 + 1 : 0],
                             nest_y[k2 + 1 < 8 ? k2 + 1 : 0], nest_x[k2 + 1 < 8 ? k2 + 1 : 0],
-                            nest_y[k2 + 1 < 8 ? k2 + 1 : 0], RGB15(240, 110, 190));
+                            nest_y[k2 + 1 < 8 ? k2 + 1 : 0], RGB15(120, 90, 170));
                 continue;
             }
             pc_quad(it_x[i][0], it_y[i][0], it_x[i][1], it_y[i][1],

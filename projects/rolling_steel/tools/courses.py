@@ -374,7 +374,7 @@ def parse(text):
             c["text"] = line[len(parts[0]):].strip()
             cmds.append(c)
             continue
-        header = verb in ("name", "time", "width", "decor", "music", "medals")
+        header = verb in ("name", "time", "width", "decor", "music", "medals", "seed")
         for p in parts[1:]:
             if "=" in p and p.index("=") > 0:
                 k, v = p.split("=", 1)
@@ -398,7 +398,7 @@ def build(text):
     cmds = parse(text)
     G = lambda c, k, d: c["vals"].get(k, d)
     first = lambda c, d: c["vals"].get("v", next(iter(c["vals"].values()), d))
-    name, time, width, decor, music = "COURSE", 60.0, 9.0, 0, 1
+    name, time, width, decor, music, seed = "COURSE", 60.0, 9.0, 0, 1, None
     gold = silver = bronze = 0.0
     for c in cmds:
         v = c["verb"]
@@ -407,10 +407,11 @@ def build(text):
         elif v == "width": width = first(c, 9.0)
         elif v == "decor": decor = round(first(c, 0.0))
         elif v == "music": music = round(first(c, 1.0))
+        elif v == "seed": seed = int(first(c, 0.0))
         elif v == "medals":
             gold, silver, bronze = G(c, "gold", 0.0), G(c, "silver", 0.0), G(c, "bronze", 0.0)
     b = Builder(name, time, width)
-    b.L.decor, b.L.music = decor, music
+    b.L.decor, b.L.music, b.L.seed = decor, music, seed
     b.L.gold, b.L.silver, b.L.bronze = gold, silver, bronze
     for c in cmds:
         v, has = c["verb"], (lambda f, c=c: f in c["flags"])
@@ -786,7 +787,9 @@ class Course:
 
     # -------- Decor.cs: a dozen floating pieces of themed scenery
     def decor(self):
-        from_seed = sum(ord(ch) * 31 ** i for i, ch in enumerate(self.L.name)) & 0x7FFFFFFF
+        # "seed N" in the course header keeps a course's scenery when it is renamed
+        from_seed = self.L.seed if getattr(self.L, "seed", None) is not None else \
+            sum(ord(ch) * 31 ** i for i, ch in enumerate(self.L.name)) & 0x7FFFFFFF
         rng = NetRandom(from_seed ^ (self.L.decor * 7919))
         R = lambda lo, hi: lo + rng.next_double() * (hi - lo)
         path = self.L.path

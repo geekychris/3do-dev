@@ -2,4 +2,4 @@ title=Orbital Patrol
 origin=Amiga
 genre=Shooter
 order=80
-desc=Defender-style side scroller with ProTracker music. Fly over the planet, shoot the invaders and protect the humans. D-pad flies, A fire, B smart bomb, C hyperspace.
+desc=Side-scrolling planet defence with tracker music. Fly over the planet, shoot the invaders and protect the humans. D-pad flies, A fire, B smart bomb, C hyperspace.

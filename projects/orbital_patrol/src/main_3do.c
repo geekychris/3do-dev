@@ -3,8 +3,8 @@
  *
  * game.c, draw.c, score.c and sound.c are the Amiga sources
  * (geekychris/amiga_games), drawing through the Amiga graphics API in
- * sdk/amiga; the music is the original orbital_patrol.mod (on the disc)
- * played by the layer's ProTracker player, and high scores are saved to
+ * sdk/amiga; the music is orbital_patrol.mod (on the disc, made by
+ * tools/modgen/orbital_patrol.py) played by the layer's ProTracker player, and high scores are saved to
  * NVRAM. The state machine below is copied unchanged from main.c; this
  * file replaces its screen, IDCMP keyboard and joystick code.
  *

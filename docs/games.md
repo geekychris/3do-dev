@@ -37,11 +37,11 @@ Measured in the emulator by `./3do selftest`.
 | [Orb Hunter](#orb-hunter) | 50 | 50 |
 | [Uranus Lander](#uranus-lander) | 50 | 50 |
 | [Pea Shooter Blast](#pea-shooter-blast) | 50 | 50 |
-| [Ballblazer](#ballblazer) | 49 | 29 |
+| [Rotoball](#rotoball) | 49 | 29 |
 | [Ace Pilot](#ace-pilot) | 50 | 26 |
 | [Void Trader](#void-trader) | 50 | 24 |
 | [RJ Birthday](#rj-birthday) | 50 | 50 |
-| [Fractalus](#fractalus) | 50 | 9 |
+| [Canyon Rescue](#canyon-rescue) | 50 | 9 |
 | [Planet Chomp](#planet-chomp) | 49 | 14 |
 | [Spectral Keep](#spectral-keep) | 50 | 50 |
 | [Rolling Steel](#rolling-steel) | 50 | 18 |
@@ -165,14 +165,14 @@ Action · `projects/pea_shooter_blast` · from the Amiga version
 
 ![Pea Shooter Blast title](images/games/pea_shooter_blast-title.png) ![Pea Shooter Blast play](images/games/pea_shooter_blast-play.png)
 
-### Ballblazer
-<a id="ballblazer"></a>
+### Rotoball
+<a id="rotoball"></a>
 
-Split-screen futuristic ball sport against the computer. Steer your rotofoil, grab the plasmorb and carry it over the goal line. UP or A forward, DOWN or B reverse, LEFT/RIGHT strafe.
+Split-screen futuristic ball sport against the computer. Steer your skimmer, grab the orb and carry it over the goal line. UP or A forward, DOWN or B reverse, LEFT/RIGHT strafe.
 
-Sports · `projects/ballblazer` · from the Amiga version
+Sports · `projects/rotoball` · from the Amiga version
 
-![Ballblazer play](images/games/ballblazer-play.png)
+![Rotoball play](images/games/rotoball-play.png)
 
 ### Ace Pilot
 <a id="ace-pilot"></a>
@@ -201,14 +201,14 @@ Adventure · `projects/rj_birthday` · from the Amiga version
 
 ![RJ Birthday title](images/games/rj_birthday-title.png) ![RJ Birthday play](images/games/rj_birthday-play.png)
 
-### Fractalus
-<a id="fractalus"></a>
+### Canyon Rescue
+<a id="canyon-rescue"></a>
 
-Fly a fractal planet's valleys and rescue downed pilots - but some are Jaggis in disguise. Up/Down thrust and brake, Left/Right turn, L/R climb and dive, A fires, B lands, P starts.
+Fly a fractal planet's valleys and rescue downed pilots - but some are Mimics in disguise. Up/Down thrust and brake, Left/Right turn, L/R climb and dive, A fires, B lands, P starts.
 
-3D flight · `projects/fractalus` · from the Amiga version
+3D flight · `projects/canyon_rescue` · from the Amiga version
 
-![Fractalus title](images/games/fractalus-title.png) ![Fractalus play](images/games/fractalus-play.png)
+![Canyon Rescue title](images/games/canyon_rescue-title.png) ![Canyon Rescue play](images/games/canyon_rescue-play.png)
 
 ### Planet Chomp
 <a id="planet-chomp"></a>

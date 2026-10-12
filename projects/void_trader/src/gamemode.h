@@ -29,7 +29,7 @@ enum GameMode {
 #define WIN_CREDITS_TARGET  5000
 
 /* Enemy respawn cooldown — after all enemies are dead this many
- * frames elapse before a new Krait spawns in a random-ish spot. */
+ * frames elapse before a new Raider spawns in a random-ish spot. */
 #define ENEMY_RESPAWN_FRAMES 300
 
 /* Distance from station centre within which the docking prompt

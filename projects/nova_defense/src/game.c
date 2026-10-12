@@ -22,8 +22,8 @@ static const WORD alien_points[] = { 30, 20, 10 };
 /* Get alien type for a row (0=top) */
 static WORD alien_type_for_row(WORD row)
 {
-    if (row == 0) return ALIEN_TYPE_C;
-    if (row <= 2) return ALIEN_TYPE_B;
+    if (row <= 1) return ALIEN_TYPE_C;
+    if (row <= 3) return ALIEN_TYPE_B;
     return ALIEN_TYPE_A;
 }
 
@@ -37,31 +37,18 @@ static void init_shields(GameState *gs)
         gs->shields[s].y = SHIELD_Y;
         memset(gs->shields[s].pixels, 0, sizeof(gs->shields[s].pixels));
 
-        /* Create arch shape */
+        /* Crystal hexagon: pointed top and bottom, facet lines inside */
         for (y = 0; y < SHIELD_H; y++) {
-            for (x = 0; x < SHIELD_W; x++) {
-                /* Top arch */
-                if (y < 4) {
-                    WORD cx = SHIELD_W / 2;
-                    WORD dx = x - cx;
-                    WORD dy = y;
-                    if (dx * dx + dy * dy * 4 <= (SHIELD_W / 2) * (SHIELD_W / 2))
-                        gs->shields[s].pixels[y][x] = 1;
-                }
-                /* Body */
-                else if (y < SHIELD_H - 4) {
-                    gs->shields[s].pixels[y][x] = 1;
-                }
-                /* Bottom cutout (arch underneath) */
-                else {
-                    WORD cx = SHIELD_W / 2;
-                    WORD dx = x - cx;
-                    WORD margin = SHIELD_H - y;
-                    if (dx < -3 || dx > 3)
-                        gs->shields[s].pixels[y][x] = 1;
-                    else if (margin > 2)
-                        gs->shields[s].pixels[y][x] = 1;
-                }
+            WORD inset;
+            if (y < 5) inset = (5 - y) * 2;
+            else if (y >= SHIELD_H - 3) inset = (y - (SHIELD_H - 4)) * 2;
+            else inset = 0;
+            for (x = inset; x < SHIELD_W - inset; x++) {
+                WORD d = x - SHIELD_W / 2;
+                if (d < 0) d = -d;
+                /* facets: a centre ridge and two diagonals */
+                gs->shields[s].pixels[y][x] =
+                    (d == 0 || (x + y) % 9 == 0 || (x - y + 18) % 9 == 0) ? 2 : 1;
             }
         }
     }
@@ -204,8 +191,8 @@ static void alien_fire(GameState *gs)
         WORD col = game_rand() % ALIEN_COLS;
         WORD row = find_lowest_alien(gs, col);
         if (row >= 0) {
-            gs->alien_bullets[slot].x = gs->swarm.grid_x + col * ALIEN_CELL_W + ALIEN_W / 2;
-            gs->alien_bullets[slot].y = gs->swarm.grid_y + row * ALIEN_CELL_H + ALIEN_H;
+            gs->alien_bullets[slot].x = ALIEN_X(gs, row, col) + ALIEN_W / 2;
+            gs->alien_bullets[slot].y = ALIEN_Y(gs, row) + ALIEN_H;
             gs->alien_bullets[slot].active = TRUE;
             return;
         }
@@ -264,8 +251,8 @@ static void update_playing(GameState *gs, InputState *input)
                 WORD ax;
                 WORD ay;
                 if (!gs->swarm.alive[r][c]) continue;
-                ax = gs->swarm.grid_x + c * ALIEN_CELL_W;
-                ay = gs->swarm.grid_y + r * ALIEN_CELL_H;
+                ax = ALIEN_X(gs, r, c);
+                ay = ALIEN_Y(gs, r);
                 /* Y interval overlap: [by_lo, by_hi] vs [ay, ay+ALIEN_H) */
                 if (bx >= ax && bx < ax + ALIEN_W &&
                     by_hi >= ay && by_lo < ay + ALIEN_H) {
@@ -326,29 +313,25 @@ bullet_done:
         else                  step = 3;
 
         if (gs->swarm.move_timer >= delay) {
-            WORD left_col, right_col;
-            WORD left_edge;
-            WORD right_edge;
+            WORD left_edge = SCREEN_W;
+            WORD right_edge = 0;
             BOOL drop;
+
             gs->swarm.move_timer = 0;
             gs->swarm.anim_frame ^= 1;
             gs->ev_march = TRUE;
-            gs->march_note = (gs->march_note + 1) % 4;
+            gs->march_note = (gs->march_note + 1) % 3;
 
-            /* Find actual grid bounds (skip empty edge columns) */
-            left_col = ALIEN_COLS; right_col = -1;
-            for (c = 0; c < ALIEN_COLS; c++) {
-                for (r = 0; r < ALIEN_ROWS; r++) {
-                    if (gs->swarm.alive[r][c]) {
-                        if (c < left_col) left_col = c;
-                        if (c > right_col) right_col = c;
-                        break;
-                    }
+            /* Actual swarm bounds (rows are staggered) */
+            for (r = 0; r < ALIEN_ROWS; r++) {
+                for (c = 0; c < ALIEN_COLS; c++) {
+                    WORD ax;
+                    if (!gs->swarm.alive[r][c]) continue;
+                    ax = ALIEN_X(gs, r, c);
+                    if (ax < left_edge) left_edge = ax;
+                    if (ax + ALIEN_CELL_W > right_edge) right_edge = ax + ALIEN_CELL_W;
                 }
             }
-
-            left_edge = gs->swarm.grid_x + left_col * ALIEN_CELL_W;
-            right_edge = gs->swarm.grid_x + (right_col + 1) * ALIEN_CELL_W;
 
             /* Check if we need to drop down and reverse */
             drop = FALSE;
@@ -432,7 +415,7 @@ bullet_done:
         for (r = ALIEN_ROWS - 1; r >= 0; r--) {
             for (c = 0; c < ALIEN_COLS; c++) {
                 if (gs->swarm.alive[r][c]) {
-                    WORD ay = gs->swarm.grid_y + r * ALIEN_CELL_H + ALIEN_H;
+                    WORD ay = ALIEN_Y(gs, r) + ALIEN_H;
                     if (ay > bottom_alien_y) bottom_alien_y = ay;
                 }
             }
@@ -447,12 +430,12 @@ bullet_done:
              * part of each shield covered by each alive alien. */
             int s, ar, ac;
             for (ar = 0; ar < ALIEN_ROWS; ar++) {
-                WORD ay = gs->swarm.grid_y + ar * ALIEN_CELL_H;
+                WORD ay = ALIEN_Y(gs, ar);
                 if (ay + ALIEN_H <= SHIELD_Y) continue;
                 for (ac = 0; ac < ALIEN_COLS; ac++) {
                     WORD ax;
                     if (!gs->swarm.alive[ar][ac]) continue;
-                    ax = gs->swarm.grid_x + ac * ALIEN_CELL_W;
+                    ax = ALIEN_X(gs, ar, ac);
                     for (s = 0; s < SHIELD_COUNT; s++) {
                         Shield *sh = &gs->shields[s];
                         WORD x0 = ax > sh->x ? ax : sh->x;
