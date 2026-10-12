@@ -6,8 +6,8 @@ from tdo.porttest import PortTest
 
 t = PortTest("orb_hunter")
 t.boot()
-t.check("runs without the (unshipped) MOD", any("sound effects only" in l or "Loaded axelf.mod" in l
-                                               for l in t.emu.debug_log), t.log_tail())
+t.check("music loads from disc", any("Loaded rock_blaster.mod" in l for l in t.emu.debug_log)
+        and not any("failed validation" in l for l in t.emu.debug_log), t.log_tail())
 t.shot("title", min_colours=4)
 t.start(["A"], expect="state=PLAYING")
 c = t.emu.log_cursor()

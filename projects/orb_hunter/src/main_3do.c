@@ -6,9 +6,8 @@
  * MOD loading/validation and the state machine below are copied from the
  * Amiga main.c; this file replaces its screen, IDCMP and joystick code.
  *
- * Music: the Amiga version plays DH2:Dev/axelf.mod, a cover of a commercial
- * song that is not part of the source; it is not shipped. If you have a
- * MOD of your own, put it on the disc as orb_hunter/axelf.mod and it plays.
+ * Music: rock_blaster.mod ("Rock Storm", an original tune made by
+ * tools/modgen/rock_blaster.py), the same song the Amiga version plays.
  *
  * Controls (3DO pad): LEFT/RIGHT move, UP or B jump / aim up, DOWN roll,
  * A fire, A or P starts, X quits to the menu.
@@ -417,9 +416,9 @@ int main(void)
     if (!gfx_init(palette, 16))
         return 1;
     build_sfx();
-    mod_data = load_file_to_chip("PROGDIR:axelf.mod", &mod_size);
+    mod_data = load_file_to_chip("PROGDIR:rock_blaster.mod", &mod_size);
     if (mod_data) {
-        AB_I("Loaded axelf.mod (%ld bytes)", (long)mod_size);
+        AB_I("Loaded rock_blaster.mod (%ld bytes)", (long)mod_size);
         if (validate_mod(mod_data, mod_size)) {
             mt_install_cia(CUSTOM_BASE, NULL, 1);
             mt_init(CUSTOM_BASE, mod_data, NULL, 0);
@@ -427,13 +426,13 @@ int main(void)
             mt_Enable = 1;
             music_playing = 1;
         } else {
-            AB_W("axelf.mod failed validation - no music");
+            AB_W("rock_blaster.mod failed validation - no music");
             FreeMem(mod_data, mod_size);
             mod_data = NULL;
             mod_size = 0;
         }
     } else {
-        AB_W("no axelf.mod on the disc - sound effects only");
+        AB_W("no rock_blaster.mod on the disc - sound effects only");
         mt_install_cia(CUSTOM_BASE, NULL, 1);     /* sound effects still use the player */
     }
 

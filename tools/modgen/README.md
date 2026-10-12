@@ -12,6 +12,8 @@ samples), and the voices are synthetic speech.
 | `orbital_patrol.py` | `projects/orbital_patrol/takeme/orbital_patrol/orbital_patrol.mod` | "Patrol Drive": original driving techno, A minor |
 | `rj_party.py` | `projects/rj_birthday/takeme/rj_birthday/party.mod` | "Party Time": original upbeat party tune, C major |
 | `rj_birthday.py` | `projects/rj_birthday/takeme/rj_birthday/birthday.mod` | "Happy Birthday to You" (Mildred and Patty Hill, public domain), our own waltz arrangement |
+| `rock_blaster.py` | `projects/orb_hunter/takeme/orb_hunter/rock_blaster.mod` | "Rock Storm": original driving synth tune, E minor (on the Amiga, Rock Blaster plays it too) |
+| `pea_shooter_blast.py` | `projects/pea_shooter_blast/takeme/pea_shooter_blast/music.mod` | "Pea Patrol": original upbeat march, D major |
 | `arcade_voices.py` | `projects/rj_birthday/takeme/rj_birthday/snd_arcade1..4.raw` | "Game on!", "Ready, player!", "High score!", "Level up!" spoken by Kokoro TTS (Apache-2.0), made to sound like a robot |
 
 Ace Pilot's `blue_danube.mod` (Strauss, public domain) was made the same way
