@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="3do Dev logo" width="180">
+</p>
+
 # 3do-dev — a modern dev kit for the 3DO, with a scriptable, debuggable emulator
 
 Write software for the **3DO Interactive Multiplayer** (1993) on a modern Mac
