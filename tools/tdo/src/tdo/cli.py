@@ -17,6 +17,7 @@ GAME is an ISO path or a project name (projects/<name>).
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 import time
@@ -53,6 +54,8 @@ def _game(target):
 
 def cmd_run(a):
     from .session import serve
+    if a.fullscreen:
+        os.environ["TDO_FULLSCREEN"] = "1"
     return serve(a.game, bios=a.bios, window=True, mode="running", scale=a.scale,
                  audio=not a.no_audio, port=a.port, gdb_port=None if a.no_gdb else a.gdb_port,
                  verbose_log=True)
@@ -322,6 +325,7 @@ def main(argv=None):
     s.add_argument("game")
     s.add_argument("--scale", type=int, default=3)
     s.add_argument("--no-audio", action="store_true")
+    s.add_argument("--fullscreen", action="store_true", help="fill the display (sets TDO_FULLSCREEN=1)")
     s.add_argument("--port", "--listen", type=int, default=7330, dest="port",
                    help="control port (default 7330; 0 = any free)")
     s.add_argument("--gdb-port", type=int, default=2330, help="gdb port (default 2330; 0 = any)")
