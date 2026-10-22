@@ -16,6 +16,7 @@ from __future__ import annotations
 import collections
 import sys
 import threading
+import os
 import time
 
 from .core import repo_root
@@ -73,7 +74,14 @@ class Window:
         pygame.init()
         pygame.display.set_caption(f"3DO – {session.iso.name}")
         self.w, self.h = 320, 240
-        self.screen = pygame.display.set_mode((self.w * scale, self.h * scale))
+        # TDO_FULLSCREEN=1 (or `tdo run --fullscreen`): fill the display,
+        # keeping the 4:3 picture, instead of a scale x 320x240 window
+        self.fullscreen = os.environ.get("TDO_FULLSCREEN", "") not in ("", "0")
+        if self.fullscreen:
+            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+            pygame.mouse.set_visible(False)
+        else:
+            self.screen = pygame.display.set_mode((self.w * scale, self.h * scale))
         self.font = pygame.font.Font(None, 22)
         self.keys = {b: getattr(pygame, k) for b, k in KEYMAP.items()}
         self.pads = []
@@ -166,8 +174,16 @@ class Window:
             surf = pg.image.frombuffer(f.rgb, (f.width, f.height), "RGB")
             if (f.width, f.height) != (self.w, self.h):
                 self.w, self.h = f.width, f.height
-                self.screen = pg.display.set_mode((self.w * self.scale, self.h * self.scale))
-            self.screen.blit(pg.transform.scale(surf, (self.w * self.scale, self.h * self.scale)), (0, 0))
+                if not self.fullscreen:
+                    self.screen = pg.display.set_mode((self.w * self.scale, self.h * self.scale))
+            if self.fullscreen:
+                sw, sh = self.screen.get_size()
+                k = min(sw / 4, sh / 3)              # 3DO pixels aren't square: show 4:3
+                dw, dh = int(4 * k), int(3 * k)
+                self.screen.fill((0, 0, 0))
+                self.screen.blit(pg.transform.scale(surf, (dw, dh)), ((sw - dw) // 2, (sh - dh) // 2))
+            else:
+                self.screen.blit(pg.transform.scale(surf, (self.w * self.scale, self.h * self.scale)), (0, 0))
         status = None
         if emu.halted:
             info = emu.stop_info()
