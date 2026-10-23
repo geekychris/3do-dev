@@ -50,7 +50,7 @@ esac
 
 tty=(); [ -t 0 ] && [ -t 1 ] && tty=(-t)
 rc=0
-docker run --rm "${tty[@]}" --platform linux/amd64 \
+docker run --rm ${tty[@]+"${tty[@]}"} --platform linux/amd64 \
   -u "$(id -u):$(id -g)" "${mounts[@]}" \
   -e TDO_ROOT=/work -e TDO_DEVKIT_PATH=/work/third_party/3do-devkit \
   -w "$cdir" "$TOOLCHAIN_IMAGE" make "$@" || rc=$?
