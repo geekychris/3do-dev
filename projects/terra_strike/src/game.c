@@ -74,18 +74,18 @@ static void reply(char *buf, int bufsz, const char *s)
 
 static int hook_scene(const char *args, char *buf, int bufsz)
 {
-    char tmp[80];
+    char tmp[160];                      /* the scene name is cut to 32 chars below */
     const char *name = (args && args[0]) ? args : "pad";
     if (!world_scene(&world, name)) {
-        sprintf(tmp, "no such scene or no target: %s", name);
+        sprintf(tmp, "no such scene or no target: %.32s", name);
         reply(buf, bufsz, tmp);
         return 1;
     }
     paused = 0;
-    sprintf(tmp, "scene %s: craft at %ld,%ld alt %ld yaw %ld", name,
+    sprintf(tmp, "scene %.32s: craft at %ld,%ld alt %ld yaw %ld", name,
             (long)(world.p.x >> FBITS), (long)(world.p.z >> FBITS),
             (long)(world.p.y >> FBITS), (long)world.p.yaw);
-    AB_I("SCENE %s", name);
+    AB_I("SCENE %.32s", name);
     reply(buf, bufsz, tmp);
     return 0;
 }
