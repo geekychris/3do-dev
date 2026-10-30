@@ -58,9 +58,12 @@ static LONG bridge_ok = 0;
 /* ---- palette -------------------------------------------------------- */
 static void put_rgb(struct ViewPort *vp, int pen, int r, int g, int b)
 {
-    if (r < 0) r = 0; if (r > 255) r = 255;
-    if (g < 0) g = 0; if (g > 255) g = 255;
-    if (b < 0) b = 0; if (b > 255) b = 255;
+    if (r < 0) r = 0;
+    if (r > 255) r = 255;
+    if (g < 0) g = 0;
+    if (g > 255) g = 255;
+    if (b < 0) b = 0;
+    if (b > 255) b = 255;
 #ifdef AMIGA3DO
     (void)vp;
     gfx_set_rgb24(pen, ((ULONG)r << 16) | ((ULONG)g << 8) | (ULONG)b);
@@ -161,14 +164,30 @@ static void close_display(void)
 static Skimmer p1, p2;
 static Ball     ball;
 static int p1_score = 0, p2_score = 0;
-static LONG match_frames_left;      /* countdown, 25fps assumption */
-#define MATCH_FRAMES (90L * 25)     /* 90 seconds */
+/* The match clock counts real time in CLOCK_HZ units, whatever the frame
+ * rate (it used to count drawn frames at an assumed 25 a second, so a
+ * 50 fps machine finished the "90 seconds" in 45). */
+#define CLOCK_HZ     50
+static LONG match_frames_left;      /* clock units left (CLOCK_HZ a second) */
+#define MATCH_FRAMES (90L * CLOCK_HZ)   /* 90 seconds */
 static int last_scorer = -1;        /* 0 = P1, 1 = P2, -1 = none yet */
 static int tackle_cooldown = 0;     /* frames until next tackle allowed */
 #define TACKLE_COOLDOWN_F   60      /* ~0.7s at 88fps observed */
+/* Set by a tackle; cleared once the skimmers are apart again. While set,
+ * the new holder can't be tackled back, so two skimmers that stay in
+ * contact no longer pass the ball back and forth every cooldown. */
+static int tackle_lock = 0;
+
+/* Match flow: kick-off screen -> playing -> full time (play frozen under
+ * the result) -> SPACE (3DO: A) starts the next match. */
+#define MS_KICKOFF   0
+#define MS_PLAYING   1
+#define MS_FULLTIME  2
+static LONG match_state = MS_KICKOFF;
 
 /* WASD input state (edge-latched: pressed while down, cleared on up). */
 static int in_fwd = 0, in_back = 0, in_left = 0, in_right = 0;
+static int start_pressed = 0;       /* SPACE went down since the last frame */
 
 static void kickoff(void)
 {
@@ -184,8 +203,43 @@ static void init_game(void)
     p1_score = 0; p2_score = 0;
     match_frames_left = MATCH_FRAMES;
     last_scorer = -1;
+    tackle_cooldown = 0;
+    tackle_lock = 0;
     kickoff();
 }
+
+#ifdef AMIGA3DO
+/* 3DO port: the game steps at 50 a second (gfx_steps), CLOCK_HZ, so one
+ * step is one clock unit. */
+static void clock_reset(void) { }
+static LONG clock_units(void) { return 1; }
+#else
+/* Real-time match clock: CLOCK_HZ units elapsed since the last call, from
+ * intuition's CurrentTime() (microseconds), so the 90-second match lasts
+ * 90 seconds at any frame rate while the game itself keeps one physics
+ * step per drawn frame, as before. */
+static ULONG clk_secs, clk_micros;
+static LONG  clk_us;
+static void clock_reset(void)
+{
+    CurrentTime(&clk_secs, &clk_micros);
+    clk_us = 0;
+}
+static LONG clock_units(void)
+{
+    ULONG s, m;
+    LONG us, units;
+    CurrentTime(&s, &m);
+    us = (LONG)(s - clk_secs) * 1000000L + ((LONG)m - (LONG)clk_micros);
+    clk_secs = s;
+    clk_micros = m;
+    if (us < 0 || us > 1000000L) us = 1000000L / CLOCK_HZ;   /* clock set / stall */
+    clk_us += us;
+    units = clk_us / (1000000L / CLOCK_HZ);
+    clk_us -= units * (1000000L / CLOCK_HZ);
+    return units;
+}
+#endif
 
 /* Award points when the ball crosses a goal line. Distance from the
  * scoring skimmer's start position determines the bonus — the
@@ -344,14 +398,14 @@ static void resolve_collision(Skimmer *a, Skimmer *b)
     LONG rel_vn;
     LONG impulse_x;
     LONG impulse_z;
-    if (sep2 >= min2) return;
+    if (sep2 >= min2) { tackle_lock = 0; return; }   /* apart: re-arm tackles */
 
     /* Ball transfer on contact. a = P1 (idx 0), b = P2 (idx 1).
      * On successful tackle the new carrier also gets an impulse kick
      * in their forward direction — without it, both skimmers stay
      * locked in the collision zone forever with the ball ping-ponging
      * every cooldown expiry. */
-    if (tackle_cooldown == 0 && ball.carrier >= 0) {
+    if (tackle_cooldown == 0 && !tackle_lock && ball.carrier >= 0) {
         int steal_to = (ball.carrier == 0) ? 1 : 0;
         Skimmer *new_carrier = (steal_to == 0) ? a : b;
         Skimmer *old_carrier = (steal_to == 0) ? b : a;
@@ -361,6 +415,7 @@ static void resolve_collision(Skimmer *a, Skimmer *b)
         new_carrier->has_ball = 1;
         ball.carrier    = steal_to;
         tackle_cooldown = TACKLE_COOLDOWN_F;
+        tackle_lock     = 1;     /* no tackle back until they separate */
         sound_play_ping();
         AB_I("tackle: ball -> %s", steal_to == 0 ? "P1" : "P2");
         /* Kick the new carrier forward, and give the old carrier a
@@ -442,10 +497,18 @@ static void update_ball(void)
 }
 
 /* ---- frame loop --------------------------------------------------- */
+/* One line of HUD text centred across the screen (8 px topaz). */
+static void hud_centre(struct RastPort *rp, int y, const char *s)
+{
+    LONG n = (LONG)strlen(s);
+    Move(rp, SCR_W / 2 - n * 4, y);
+    Text(rp, (STRPTR)s, n);
+}
+
 static void draw_hud(struct RastPort *rp)
 {
     char buf[32];
-    LONG secs = (match_frames_left + 24) / 25;
+    LONG secs = (match_frames_left + CLOCK_HZ - 1) / CLOCK_HZ;
     if (secs < 0) secs = 0;
 
     SetAPen(rp, PEN_HUD_FG);
@@ -470,12 +533,20 @@ static void draw_hud(struct RastPort *rp)
     Text(rp, (STRPTR)buf, strlen(buf));
 
     /* Match-over banner. */
-    if (match_frames_left <= 0) {
+    if (match_state == MS_FULLTIME) {
         const char *winner =
             (p1_score >  p2_score) ? "YOU WIN!" :
             (p2_score >  p1_score) ? "CPU WINS" : "DRAW";
         Move(rp, SCR_W/2 - 30, PANE_H - 6);
         Text(rp, (STRPTR)winner, strlen(winner));
+        hud_centre(rp, PANE_H + 60, "PRESS A TO PLAY AGAIN");
+    }
+
+    /* Kick-off screen: title and controls in the player's pane. */
+    if (match_state == MS_KICKOFF) {
+        hud_centre(rp, PANE_H + 40, "ROTOBALL");
+        hud_centre(rp, PANE_H + 60, "D-PAD DRIVE AND STRAFE");
+        hud_centre(rp, PANE_H + 80, "PRESS A TO START");
     }
 }
 
@@ -544,6 +615,7 @@ int main(void)
     ab_register_var("p2_z",        AB_TYPE_I32, &p2.z);
     ab_register_var("carrier",     AB_TYPE_I32, &ball.carrier);
     ab_register_var("tackle_cd",   AB_TYPE_I32, &tackle_cooldown);
+    ab_register_var("match_state", AB_TYPE_I32, &match_state);
 
     math_init();
     init_game();
@@ -558,6 +630,11 @@ int main(void)
 #endif
         return 1;
     }
+#ifdef AMIGA3DO
+    /* addresses for tests (emu read_mem) */
+    AB_I("SYMBOL p1 0x%lx ball 0x%lx", (long)&p1, (long)&ball);
+#endif
+    AB_I("state=KICKOFF");
 
     while (running) {
         LONG tgt_x, tgt_z;
@@ -572,6 +649,7 @@ int main(void)
             in_back  = (held & (PAD_DOWN | PAD_B)) ? 1 : 0;
             in_left  = (held & PAD_LEFT) ? 1 : 0;
             in_right = (held & PAD_RIGHT) ? 1 : 0;
+            if (pad_pressed(0) & (PAD_A | PAD_P)) start_pressed = 1;   /* = SPACE */
             if (amiga_quit_requested()) { running = 0; break; }
         }
 #else
@@ -588,6 +666,7 @@ int main(void)
                 int down = !(code & 0x80);
                 int c    = code & 0x7F;
                 if (c == 0x45 && down) running = 0;   /* ESC */
+                else if (c == 0x40 && down) start_pressed = 1;   /* SPACE */
                 else if (c == 0x11) in_fwd   = down;  /* W */
                 else if (c == 0x21) in_back  = down;  /* S */
                 else if (c == 0x20) in_left  = down;  /* A */
@@ -596,11 +675,22 @@ int main(void)
         }
 #endif
 
+        /* SPACE starts a match from the kick-off screen or after full
+         * time. */
+        if (start_pressed && match_state != MS_PLAYING) {
+            init_game();
+            match_state = MS_PLAYING;
+            clock_reset();
+            AB_I("state=PLAYING score=0:0");
+        }
+        start_pressed = 0;
+
 #ifdef AMIGA3DO
         /* 3DO port: game logic at 50 steps/s (gfx_steps); the two 3D
          * panes are drawn once per frame */
         { int steps_ = gfx_steps(); while (steps_-- > 0) {
 #endif
+        if (match_state == MS_PLAYING) {
         /* CPU strategy with fixed facing:
          *   - Target: ball position (chase) or P1 goal (when carrying).
          *   - P2 faces -X (angle 180) so its "forward" = -X (toward P1).
@@ -627,7 +717,14 @@ int main(void)
         check_goal();
 
         if (tackle_cooldown > 0)   tackle_cooldown--;
-        if (match_frames_left > 0) match_frames_left--;
+        match_frames_left -= clock_units();
+        if (match_frames_left <= 0) {
+            /* full time: play freezes under the result banner */
+            match_frames_left = 0;
+            match_state = MS_FULLTIME;
+            AB_I("state=FULLTIME score=%ld:%ld", (long)p1_score, (long)p2_score);
+        }
+        }   /* MS_PLAYING */
 #ifdef AMIGA3DO
         } }
 #endif

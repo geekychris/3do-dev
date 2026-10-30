@@ -474,7 +474,8 @@ static void draw_ball_sphere(struct RastPort *rp, int pane_y0,
             int mL, mR;
             SetAPen(rp, PEN_BALL);
             mL = cx - w_mid; mR = cx + w_mid;
-            if (mL < 0) mL = 0; if (mR > SCR_W - 1) mR = SCR_W - 1;
+            if (mL < 0) mL = 0;
+            if (mR > SCR_W - 1) mR = SCR_W - 1;
             HLINE(rp, mL, mR, y);
         }
         /* Highlight: PEN_BALL_HI, offset up-left */
@@ -492,7 +493,8 @@ static void draw_ball_sphere(struct RastPort *rp, int pane_y0,
 #endif
             SetAPen(rp, PEN_BALL_HI);
             hL = cx + hi_dx - w_hi; hR = cx + hi_dx + w_hi;
-            if (hL < 0) hL = 0; if (hR > SCR_W - 1) hR = SCR_W - 1;
+            if (hL < 0) hL = 0;
+            if (hR > SCR_W - 1) hR = SCR_W - 1;
             HLINE(rp, hL, hR, y);
         }
     }
