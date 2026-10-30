@@ -13,7 +13,8 @@
  * Coordinate system:
  *   +X = down-pitch toward P2 goal
  *   -X = down-pitch toward P1 goal
- *   +Z = P1's right when facing +X (grid width axis)
+ *   +Z = P1's left when facing +X (grid width axis; D / strafe right
+ *        moves P1 towards -Z, which the renderer draws to the right)
  *   Y  = up (skimmers and ball hover at Y = HOVER_H above ground)
  *
  * All coordinates are 16.16 fixed-point unless suffixed _i (raw int).
