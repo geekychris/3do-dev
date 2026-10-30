@@ -1,0 +1,5 @@
+title=Canyon Rail
+origin=Amiga
+genre=Shooter
+order=380
+desc=A rail shooter down a winding canyon: turrets, drones, a guardian at the end. D-pad moves the sight, A fires, B autopilot, C help, P pause, L title.

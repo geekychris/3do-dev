@@ -1,0 +1,5 @@
+title=ScAIry Fun
+origin=Amiga
+genre=Driving
+order=410
+desc=The self-driving car game: know when not to trust it. A takes over / hands back, D-pad steers and brakes, B view, C help, P pause, L title. (Slow on the 3DO: 4-5 fps.)

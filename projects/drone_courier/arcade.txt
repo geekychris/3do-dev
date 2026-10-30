@@ -1,0 +1,5 @@
+title=Drone Courier
+origin=Amiga
+genre=Flight
+order=370
+desc=Deliver parcels across a city of towers by drone: wind, battery, fragile loads. D-pad flies and turns, A climbs, B autopilot, C help, P pause, L title.

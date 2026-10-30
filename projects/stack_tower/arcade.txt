@@ -1,0 +1,5 @@
+title=Stack Tower
+origin=Amiga
+genre=Puzzle
+order=350
+desc=Falling blocks round a tower: rings clear only when the back is full too. D-pad turns/rotates/drops, A hard drop, B rotate back, C hold, L ghost, R help, P pause.

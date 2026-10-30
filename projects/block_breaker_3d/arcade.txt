@@ -1,0 +1,5 @@
+title=Block Breaker 3D
+origin=Amiga
+genre=Breakout
+order=300
+desc=Breakout down a tunnel: a paddle across the near opening, bricks 3 deep at the far end. D-pad moves, A serves, B autopilot, C help, P pause, L title.

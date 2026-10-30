@@ -1,0 +1,5 @@
+title=Harbour Crane
+origin=Amiga
+genre=Simulation
+order=320
+desc=Load a rolling ship with a swinging gantry crane: land containers square, keep her level, beat the clock. D-pad trolley/winch, A grab/let go, B autopilot, C help, P pause, L title.
