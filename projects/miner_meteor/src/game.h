@@ -59,8 +59,8 @@ typedef struct TileState {
  * on platforms 64 px above where you can stand, so no cavern could be
  * completed. (-12) rises 66 px: every key and exit of caverns 1, 3, 4
  * and 5 can then be reached
- * (2 and 6 still can't: their exit is behind four floor-level hazard
- * tiles that no jump clears). Set (-8) for the original jump. */
+ * (2 and 6 also needed level changes, see the levels file). Set (-8) for
+ * the original jump. */
 #define JUMP_IMPULSE        (-12)    /* upward vy on jump */
 #endif
 #define WALK_SPEED          2        /* horizontal step per frame */
