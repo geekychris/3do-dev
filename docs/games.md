@@ -62,6 +62,7 @@ Amiga; their frame rates come from `./3do test`.
 | [Lander 3D](#lander-3d) | 25 | 3.8 |
 | [Boing Pinball](#boing-pinball) | 25 | 25 |
 | [ScAIry Fun](#scairy-fun) | 25 | 4.5 |
+| [Terra Strike](#terra-strike) | 25 | 11.8 |
 
 ## Games
 
@@ -388,3 +389,12 @@ The self-driving car game: know when not to trust it. A takes over / hands back,
 Driving · `projects/scairy_fun` · from the Amiga version (amiga3d engine)
 
 ![ScAIry Fun title](images/games/scairy_fun-title.png) ![ScAIry Fun play](images/games/scairy_fun-play.png)
+
+### Terra Strike
+<a id="terra-strike"></a>
+
+A Zarch-style landscape shooter: lift off from the pad, destroy the tanks, buildings and ships on a wrapping island, land to refuel. D-pad flies, A fires, B/C throttle, P pause, L title.
+
+3D shooter · `projects/terra_strike` · from the Amiga version (its own landscape engine)
+
+![Terra Strike title](images/games/terra_strike-title.png) ![Terra Strike play](images/games/terra_strike-play.png)
