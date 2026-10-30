@@ -12,3 +12,4 @@ projects/*/build/
 __pycache__/
 *.egg-info/
 tools/probe/build/
+dist/
