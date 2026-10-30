@@ -20,7 +20,9 @@ menu. The bar to the right of the list shows where you are.
 Every game keeps its Amiga speed: logic runs at 50 steps per second
 (the PAL frame rate), and the 3D games that draw fewer frames catch
 up on logic steps (`gfx_steps()`) rather than slowing down.
-Measured in the emulator by `./3do selftest`.
+Measured in the emulator by `./3do selftest`. The amiga3d games
+(Block Breaker 3D onwards) step their logic 25 times a second, as on the
+Amiga; their frame rates come from `./3do test`.
 
 | Game | logic steps/s | frames drawn/s |
 |---|---|---|
@@ -45,6 +47,21 @@ Measured in the emulator by `./3do selftest`.
 | [Planet Chomp](#planet-chomp) | 49 | 14 |
 | [Spectral Keep](#spectral-keep) | 50 | 50 |
 | [Rolling Steel](#rolling-steel) | 50 | 18 |
+| [Emberkeep](#emberkeep) | 50 | 50 |
+| [Warden Keep](#warden-keep) | 50 | 50 |
+| [Miner Meteor](#miner-meteor) | 50 | 50 |
+| [Block Breaker 3D](#block-breaker-3d) | 25 | 15 |
+| [Marble Tilt](#marble-tilt) | 25 | 11 |
+| [Harbour Crane](#harbour-crane) | 25 | 14 |
+| [Tank Duel](#tank-duel) | 25 | 14 |
+| [Orbit Docking](#orbit-docking) | 25 | 13 |
+| [Stack Tower](#stack-tower) | 25 | 5.5 |
+| [Ridge Runner](#ridge-runner) | 25 | 9 |
+| [Drone Courier](#drone-courier) | 25 | 17 |
+| [Canyon Rail](#canyon-rail) | 25 | 15 |
+| [Lander 3D](#lander-3d) | 25 | 3.8 |
+| [Boing Pinball](#boing-pinball) | 25 | 25 |
+| [ScAIry Fun](#scairy-fun) | 25 | 4.5 |
 
 ## Games
 
@@ -236,3 +253,138 @@ Roll a steel marble down six floating courses against one clock that carries ove
 Marble racer · `projects/rolling_steel` · from the Unity version
 
 ![Rolling Steel title](images/games/rolling_steel-title.png) ![Rolling Steel play](images/games/rolling_steel-play.png)
+
+### Emberkeep
+<a id="emberkeep"></a>
+
+Top-down cavern explorer by lantern light: collect the runes to open the exit portal and keep the lamp burning with oil flasks. D-pad walks, A or P starts. C on the title plays a demo of chamber 1.
+
+Explore · `projects/emberkeep` · from the Amiga version
+
+![Emberkeep title](images/games/emberkeep-title.png) ![Emberkeep play](images/games/emberkeep-play.png)
+
+### Warden Keep
+<a id="warden-keep"></a>
+
+Isometric room adventure: push the barrels and collect the three jewels. D-pad steps one tile (hold to repeat), A or P starts.
+
+Iso adventure · `projects/warden_keep` · from the Amiga version
+
+![Warden Keep title](images/games/warden_keep-title.png) ![Warden Keep play](images/games/warden_keep-play.png)
+
+### Miner Meteor
+<a id="miner-meteor"></a>
+
+Single-screen platformer: collect the keys and reach the exit before the air runs out, past spikes, conveyors, collapsing floors and guardians. LEFT/RIGHT walk, A, B or UP jumps, A or P starts. C on the title plays a demo of cavern 1.
+
+Platform · `projects/miner_meteor` · from the Amiga version
+
+![Miner Meteor title](images/games/miner_meteor-title.png) ![Miner Meteor play](images/games/miner_meteor-play.png)
+
+### Block Breaker 3D
+<a id="block-breaker-3d"></a>
+
+Breakout down a tunnel: a paddle across the near opening, bricks 3 deep at the far end. D-pad moves, A serves, B autopilot, C help, P pause, L title.
+
+Breakout · `projects/block_breaker_3d` · from the Amiga version (amiga3d engine)
+
+![Block Breaker 3D title](images/games/block_breaker_3d-title.png) ![Block Breaker 3D play](images/games/block_breaker_3d-play.png)
+
+### Marble Tilt
+<a id="marble-tilt"></a>
+
+Tilt a maze board to roll a marble to the exit against the clock: holes, gates, bumpers, sand. D-pad tilts, A starts, B autopilot, C help, P pause, L title.
+
+Puzzle · `projects/marble_tilt` · from the Amiga version (amiga3d engine)
+
+![Marble Tilt title](images/games/marble_tilt-title.png) ![Marble Tilt play](images/games/marble_tilt-play.png)
+
+### Harbour Crane
+<a id="harbour-crane"></a>
+
+Load a rolling ship with a swinging gantry crane: land containers square, keep her level, beat the clock. D-pad trolley/winch, A grab/let go, B autopilot, C help, P pause, L title.
+
+Simulation · `projects/harbour_crane` · from the Amiga version (amiga3d engine)
+
+![Harbour Crane title](images/games/harbour_crane-title.png) ![Harbour Crane play](images/games/harbour_crane-play.png)
+
+### Tank Duel
+<a id="tank-duel"></a>
+
+A tank fight in a walled arena, from the turret, with a radar. D-pad drives and turns, A fires, B autopilot, C help, P pause, L title.
+
+3d action · `projects/tank_duel` · from the Amiga version (amiga3d engine)
+
+![Tank Duel title](images/games/tank_duel-title.png) ![Tank Duel play](images/games/tank_duel-play.png)
+
+### Orbit Docking
+<a id="orbit-docking"></a>
+
+Dock with a spinning space station: line up, match the spin, close slowly. D-pad moves across, A in, C out, L/R roll, B autopilot, P pause.
+
+Space sim · `projects/orbit_docking` · from the Amiga version (amiga3d engine)
+
+![Orbit Docking title](images/games/orbit_docking-title.png) ![Orbit Docking play](images/games/orbit_docking-play.png)
+
+### Stack Tower
+<a id="stack-tower"></a>
+
+Falling blocks round a tower: rings clear only when the back is full too. D-pad turns/rotates/drops, A hard drop, B rotate back, C hold, L ghost, R help, P pause.
+
+Puzzle · `projects/stack_tower` · from the Amiga version (amiga3d engine)
+
+![Stack Tower title](images/games/stack_tower-title.png) ![Stack Tower play](images/games/stack_tower-play.png)
+
+### Ridge Runner
+<a id="ridge-runner"></a>
+
+Hover-bike racing over generated hills: gates, jumps, boost, three rivals. D-pad steers/throttles/brakes, A boost, B autopilot, C help, P pause, L title.
+
+Racing · `projects/ridge_runner` · from the Amiga version (amiga3d engine)
+
+![Ridge Runner title](images/games/ridge_runner-title.png) ![Ridge Runner play](images/games/ridge_runner-play.png)
+
+### Drone Courier
+<a id="drone-courier"></a>
+
+Deliver parcels across a city of towers by drone: wind, battery, fragile loads. D-pad flies and turns, A climbs, B autopilot, C help, P pause, L title.
+
+Flight · `projects/drone_courier` · from the Amiga version (amiga3d engine)
+
+![Drone Courier title](images/games/drone_courier-title.png) ![Drone Courier play](images/games/drone_courier-play.png)
+
+### Canyon Rail
+<a id="canyon-rail"></a>
+
+A rail shooter down a winding canyon: turrets, drones, a guardian at the end. D-pad moves the sight, A fires, B autopilot, C help, P pause, L title.
+
+Shooter · `projects/canyon_rail` · from the Amiga version (amiga3d engine)
+
+![Canyon Rail title](images/games/canyon_rail-title.png) ![Canyon Rail play](images/games/canyon_rail-play.png)
+
+### Lander 3D
+<a id="lander-3d"></a>
+
+Land on generated terrain: the Moon, Mars, an asteroid. D-pad pitches and rolls, A full thrust, B/C steady throttle, R help, P pause, L title. (Slow on the 3DO: 4-5 fps.)
+
+3d flight · `projects/lander_3d` · from the Amiga version (amiga3d engine)
+
+![Lander 3D title](images/games/lander_3d-title.png) ![Lander 3D play](images/games/lander_3d-play.png)
+
+### Boing Pinball
+<a id="boing-pinball"></a>
+
+Three pinball tables with the Boing ball: ramps, spinners, missions, multiball. L/R flippers, A plunger, D-pad up nudges, B bot, C help, P pause.
+
+Pinball · `projects/boing_pinball` · from the Amiga version (amiga3d engine)
+
+![Boing Pinball title](images/games/boing_pinball-title.png) ![Boing Pinball play](images/games/boing_pinball-play.png)
+
+### ScAIry Fun
+<a id="scairy-fun"></a>
+
+The self-driving car game: know when not to trust it. A takes over / hands back, D-pad steers and brakes, B view, C help, P pause, L title. (Slow on the 3DO: 4-5 fps.)
+
+Driving · `projects/scairy_fun` · from the Amiga version (amiga3d engine)
+
+![ScAIry Fun title](images/games/scairy_fun-title.png) ![ScAIry Fun play](images/games/scairy_fun-play.png)
