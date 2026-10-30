@@ -1,0 +1,5 @@
+title=Warden Keep
+origin=Amiga
+genre=Iso adventure
+order=240
+desc=Isometric room adventure: push the barrels and collect the three jewels. D-pad steps one tile (hold to repeat), A or P starts.

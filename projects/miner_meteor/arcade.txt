@@ -1,0 +1,5 @@
+title=Miner Meteor
+origin=Amiga
+genre=Platform
+order=250
+desc=Single-screen platformer: collect the keys and reach the exit before the air runs out, past spikes, conveyors, collapsing floors and guardians. LEFT/RIGHT walk, A, B or UP jumps, A or P starts. C on the title plays a demo of cavern 1.
