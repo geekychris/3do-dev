@@ -1,0 +1,5 @@
+title=Emberkeep
+origin=Amiga
+genre=Explore
+order=230
+desc=Top-down cavern explorer by lantern light: collect the runes to open the exit portal and keep the lamp burning with oil flasks. D-pad walks, A or P starts. C on the title plays a demo of chamber 1.
