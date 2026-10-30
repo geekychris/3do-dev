@@ -1,0 +1,5 @@
+title=Terra Strike
+origin=Amiga
+genre=3D shooter
+order=420
+desc=A Zarch-style landscape shooter: lift off from the pad, destroy the tanks, buildings and ships on a wrapping island, land to refuel. D-pad flies, A fires, B/C throttle, P pause, L title.
