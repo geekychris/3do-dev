@@ -65,6 +65,11 @@ GAMES = {
         "LEFT/RIGHT: TABLE": "L/R: TABLE",
         "THREE TABLES  HELP FOR THE RULES": "THREE TABLES  C FOR THE RULES",
     }),
+    "terra_strike": dict(help=None, esc="L", own={
+        "ARROWS  FLY      A / Z  THROTTLE": "D-PAD  FLY      B / C  THROTTLE",
+        "SPACE  FIRE      P  PAUSE": "A  FIRE      P  START / PAUSE",
+        "ARROWS FLY  A/Z SPEED  SPACE FIRE": "D-PAD FLY  B/C SPEED  A FIRE",
+    }),
     "scairy_fun": dict(help="C", esc="L", own={
         "V              CHASE / COCKPIT VIEW": "B              CHASE / COCKPIT VIEW",
         "FIRE: AUTOPILOT   V: VIEW": "A: AUTOPILOT   B: VIEW",
