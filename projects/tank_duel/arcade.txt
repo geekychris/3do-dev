@@ -1,0 +1,5 @@
+title=Tank Duel
+origin=Amiga
+genre=3D action
+order=330
+desc=A tank fight in a walled arena, from the turret, with a radar. D-pad drives and turns, A fires, B autopilot, C help, P pause, L title.

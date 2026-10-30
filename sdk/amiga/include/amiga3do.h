@@ -60,6 +60,9 @@ void  gfx_set_line_drop(int smart);
  * logical y (16.16) to display y for them. See projects/rotoball. */
 void  gfx_set_transparent_pen(int pen);   /* -1: none (default) */
 void  gfx_set_underlay(void *ccb_list);   /* NULL: none */
+/* a CCB list drawn over the frame at every gfx_swap() (layer cels in it
+ * are cut into strips with the frame's 256 -> 240 line drop); NULL: none */
+void  gfx_set_overlay(void *ccb_list);
 /* split screen: left list clipped to x < split, right to x >= split, then
  * `over` unclipped (any may be NULL except right) */
 void  gfx_set_underlay_split(void *left, void *right, void *over, int split);

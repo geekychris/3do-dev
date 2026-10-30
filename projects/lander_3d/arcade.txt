@@ -1,0 +1,5 @@
+title=Lander 3D
+origin=Amiga
+genre=3D flight
+order=390
+desc=Land on generated terrain: the Moon, Mars, an asteroid. D-pad pitches and rolls, A full thrust, B/C steady throttle, R help, P pause, L title. (Slow on the 3DO: 4-5 fps.)

@@ -1,0 +1,5 @@
+title=Orbit Docking
+origin=Amiga
+genre=Space sim
+order=340
+desc=Dock with a spinning space station: line up, match the spin, close slowly. D-pad moves across, A in, C out, L/R roll, B autopilot, P pause.

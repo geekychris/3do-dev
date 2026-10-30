@@ -1,0 +1,5 @@
+title=Marble Tilt
+origin=Amiga
+genre=Puzzle
+order=310
+desc=Tilt a maze board to roll a marble to the exit against the clock: holes, gates, bumpers, sand. D-pad tilts, A starts, B autopilot, C help, P pause, L title.

@@ -1,0 +1,5 @@
+title=Ridge Runner
+origin=Amiga
+genre=Racing
+order=360
+desc=Hover-bike racing over generated hills: gates, jumps, boost, three rivals. D-pad steers/throttles/brakes, A boost, B autopilot, C help, P pause, L title.

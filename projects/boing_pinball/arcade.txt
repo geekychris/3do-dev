@@ -1,0 +1,5 @@
+title=Boing Pinball
+origin=Amiga
+genre=Pinball
+order=400
+desc=Three pinball tables with the Boing ball: ramps, spinners, missions, multiball. L/R flippers, A plunger, D-pad up nudges, B bot, C help, P pause.

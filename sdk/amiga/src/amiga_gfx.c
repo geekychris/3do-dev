@@ -105,6 +105,11 @@ gfx_set_transparent_pen(int pen)
 
 void gfx_set_underlay(void *cels)   { s_underlay = cels; s_split_right = 0; }
 
+/* cels drawn over the frame at every gfx_swap() (layer cels in it are
+ * stripped like the underlay's): sdk/amiga3d's 3D and what is drawn after */
+static void *s_overlay;
+void gfx_set_overlay(void *cels)    { s_overlay = cels; }
+
 /* split screen: `left` clipped to x < split, `right` to x >= split, then
  * `over` (HUD boxes, flashes) across the whole screen */
 void gfx_set_underlay_split(void *left, void *right, void *over, int split)
@@ -656,6 +661,7 @@ gfx_init_mode(int mode, int height, const UWORD *pal, int n)
   s_cel->ccb_Flags |= CCB_BGND | CCB_LAST;
   s_trans_pen = -1;
   s_underlay = 0;
+  s_overlay = 0;
   s_nlayers = 0;
   s_ndrop = 0;
   update_view();
@@ -793,6 +799,12 @@ gfx_swap(void)
           l->ccb_Flags |= CCB_LAST;
           DrawCels(s_sc.sc_BitmapItems[s_cur], f);
         }
+      if(s_overlay)
+        {
+          CCB *o = s_nlayers ? strip_underlay((CCB *)s_overlay) : (CCB *)s_overlay;
+          if(o)
+            DrawCels(s_sc.sc_BitmapItems[s_cur], o);
+        }
     }
   else
     {
@@ -815,6 +827,8 @@ gfx_swap(void)
       else if(s_underlay)
         DrawCels(bm, (CCB *)s_underlay);
       DrawCels(bm, s_cel);
+      if(s_overlay)
+        DrawCels(bm, (CCB *)s_overlay);
     }
   DisplayScreen(s_sc.sc_Screens[s_cur], 0);
   s_cur ^= 1;
