@@ -118,7 +118,7 @@ a camera copy that draws a moving model at its exact position. The engine
 scales its near clip (`clip_near_at`), `a3_quad`'s near test, `a3_model`'s
 margins and depth bias by `CAM_U()`, and sorts in whole units. Cameras set
 by assigning `x`/`y`/`z` are unchanged (`CAM_U` 1), as long as the `Cam` is
-zeroed (static, or `memset` - Canyon Rail's `cr_project` now does). Ridge
+zeroed (static, or `= { 0 }` as Canyon Rail's `cr_project` now has it). Ridge
 Runner and Tank Duel use it. The 3DO's reciprocal divides take the larger
 values: `proj_div` shifts `z >= 8192` down, and the near clip's
 interpolation already handles any `dz`.

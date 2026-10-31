@@ -68,10 +68,9 @@ void cr_camera(const CRGame *g, Cam *c)
 
 int cr_project(const CRGame *g, int32_t x, int32_t y, int32_t z, int *px, int *py, int32_t *depth)
 {
-    Cam c;
+    Cam c = { 0 };
     V3 v;
     int32_t sx, sy;
-    memset(&c, 0, sizeof(c));           /* a whole-unit camera (precise 0) */
     cr_camera(g, &c);
     cam_xform(&c, x, y, z, &v);
     if (v.z < NEAR_Z + 4) return 0;
