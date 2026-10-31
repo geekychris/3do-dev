@@ -83,12 +83,13 @@ static void spot(int32_t x, int32_t y, int32_t z, int32_t r, int col, int32_t bi
 {
     V3 c, p[4];
     cam_xform(&cam, x, y, z, &c);
-    if (c.z < NEAR_Z + r) return;
+    r *= CAM_U(&cam);                       /* camera space may be in sixteenths */
+    if (c.z < CAM_NEAR(&cam) + r) return;
     p[0].x = c.x - r; p[0].y = c.y - r; p[0].z = c.z;
     p[1].x = c.x + r; p[1].y = c.y - r; p[1].z = c.z;
     p[2].x = c.x + r; p[2].y = c.y + r; p[2].z = c.z;
     p[3].x = c.x - r; p[3].y = c.y + r; p[3].z = c.z;
-    a3_poly(&cam, c.z + bias, col, p, 4);
+    a3_poly(&cam, c.z + bias * CAM_U(&cam), col, p, 4);
 }
 
 /* an explosion: a ragged star facing the camera, turning as it fades */
@@ -97,7 +98,8 @@ static void burst(int32_t x, int32_t y, int32_t z, int32_t r, int col, int t)
     V3 c, p[8];
     int k;
     cam_xform(&cam, x, y, z, &c);
-    if (c.z < NEAR_Z + r) return;
+    r *= CAM_U(&cam);
+    if (c.z < CAM_NEAR(&cam) + r) return;
     for (k = 0; k < 8; k++) {
         int a = k * 8192 + t * 1500;
         int32_t rr = (k & 1) ? r / 2 : r;
@@ -105,7 +107,7 @@ static void burst(int32_t x, int32_t y, int32_t z, int32_t r, int col, int t)
         p[k].y = c.y + ((a3_cos(a) * rr) >> 16);
         p[k].z = c.z;
     }
-    a3_poly(&cam, c.z - 8, col, p, 8);
+    a3_poly(&cam, c.z - 8 * CAM_U(&cam), col, p, 8);
 }
 
 static void ring(int32_t x, int32_t z, int32_t r, int col)
@@ -120,7 +122,7 @@ static void ring(int32_t x, int32_t z, int32_t r, int col)
         int32_t x3 = x + ((a3_sin(a0) * (r - 8)) >> 16), z3 = z + ((a3_cos(a0) * (r - 8)) >> 16);
         cam_xform(&cam, x0, 1, z0, &q[0]); cam_xform(&cam, x1, 1, z1, &q[1]);
         cam_xform(&cam, x2, 1, z2, &q[2]); cam_xform(&cam, x3, 1, z3, &q[3]);
-        a3_quad(&cam, ((q[0].z + q[2].z) >> 1) + 30, col, q[0], q[1], q[2], q[3]);
+        a3_quad(&cam, ((q[0].z + q[2].z) >> 1) + 30 * CAM_U(&cam), col, q[0], q[1], q[2], q[3]);
     }
 }
 
@@ -132,10 +134,10 @@ static void floor_grid(Canvas *cv)
         V3 a, b, c, d;
         cam_xform(&cam, k - 3, 0, -TD_ARENA, &a); cam_xform(&cam, k + 3, 0, -TD_ARENA, &b);
         cam_xform(&cam, k + 3, 0, TD_ARENA, &c); cam_xform(&cam, k - 3, 0, TD_ARENA, &d);
-        a3_quad(&cam, 2000, PEN_GRID, a, b, c, d);
+        a3_quad(&cam, 2000 * CAM_U(&cam), PEN_GRID, a, b, c, d);
         cam_xform(&cam, -TD_ARENA, 0, k - 3, &a); cam_xform(&cam, TD_ARENA, 0, k - 3, &b);
         cam_xform(&cam, TD_ARENA, 0, k + 3, &c); cam_xform(&cam, -TD_ARENA, 0, k + 3, &d);
-        a3_quad(&cam, 2000, PEN_GRID, a, b, c, d);
+        a3_quad(&cam, 2000 * CAM_U(&cam), PEN_GRID, a, b, c, d);
     }
     a3_flush(cv);
 }
@@ -170,9 +172,11 @@ static void tanks(const TDGame *g)
     int32_t m[9];
     for (k = 1; k < g->ntanks; k++) {
         const Tank *t = &g->tk[k];
+        Cam tc;
         if (!t->alive) continue;
+        cam_for(&cam, t->x, 0, t->z, &tc);  /* drawn where it is, not on whole units */
         a3_rot_yaw(m, t->yaw);
-        a3_model(&cam, &m_tank[t->type], t->x >> 16, 0, t->z >> 16, m, NULL, 0, 0);
+        a3_model(&tc, &m_tank[t->type], t->x >> 16, 0, t->z >> 16, m, NULL, 0, 0);
     }
 }
 
@@ -205,9 +209,9 @@ static void scene(Canvas *cv, const TDGame *g)
 {
     const Tank *p = &g->tk[0];
     int hz;
-    cam.x = p->x >> 16;
-    cam.y = EYE_Y;
-    cam.z = p->z >> 16;
+    /* placed to a sixteenth of a unit: a camera on whole units steps
+     * unevenly as the tank drives, which shows as judder */
+    cam_place(&cam, p->x, EYE_Y << 16, p->z);
     cam.yaw = p->yaw;
     cam.pitch = 300;
     cam_view(&cam, SCREEN_W, VIEW_H, SCREEN_W / 2, 118, 220);

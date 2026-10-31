@@ -120,13 +120,13 @@ static void ground(const RRGame *g)
             cam_xform(&cam, x0 + CELL, hb, z0, &b);
             cam_xform(&cam, x0 + CELL, hc, z0 + CELL, &c);
             cam_xform(&cam, x0, hd, z0 + CELL, &d);
-            if (a.z < NEAR_Z && b.z < NEAR_Z && c.z < NEAR_Z && d.z < NEAR_Z) continue;
+            if (a.z < CAM_NEAR(&cam) && b.z < CAM_NEAR(&cam) && c.z < CAM_NEAR(&cam) && d.z < CAM_NEAR(&cam)) continue;
             /* lit from the left and ahead */
             slope = ((ha + hd) - (hb + hc)) + ((hc + hd) - (ha + hb)) / 2;
             pen = 2 + slope / 24;
             if (pen < 0) pen = 0;
             if (pen > 5) pen = 5;
-            a3_quad(&cam, ((a.z + b.z + c.z + d.z) >> 2) + 40, PEN_GROUND + pen, a, d, c, b);
+            a3_quad(&cam, ((a.z + b.z + c.z + d.z) >> 2) + 40 * CAM_U(&cam), PEN_GROUND + pen, a, d, c, b);
         }
 }
 
@@ -151,10 +151,10 @@ static void track(const RRGame *g)
             cam_xform(&cam, xs[0][k], ys[0][k], za, &p[0][k]);
             cam_xform(&cam, xs[1][k], ys[1][k], zb, &p[1][k]);
         }
-        if (p[1][2].z < NEAR_Z) continue;
+        if (p[1][2].z < CAM_NEAR(&cam)) continue;
         for (k = 0; k < 4; k++) {
             int pen = (k == 0 || k == 3) ? (stripe ? PEN_KERB : 1) : PEN_TRACK + ((k + stripe) & 1);
-            a3_quad(&cam, ((p[0][k].z + p[1][k + 1].z) >> 1) + 20, pen, p[0][k], p[1][k], p[1][k + 1], p[0][k + 1]);
+            a3_quad(&cam, ((p[0][k].z + p[1][k + 1].z) >> 1) + 20 * CAM_U(&cam), pen, p[0][k], p[1][k], p[1][k + 1], p[0][k + 1]);
         }
     }
 }
@@ -178,7 +178,7 @@ static void gates(const RRGame *g)
             cam_xform(&cam, c + RR_GATE_HW, y0, gz, &q[1]);
             cam_xform(&cam, c + RR_GATE_HW, y0 + 16, gz, &q[2]);
             cam_xform(&cam, c - RR_GATE_HW, y0 + 16, gz, &q[3]);
-            if (q[0].z > NEAR_Z) a3_poly(&cam, q[0].z - 4, last ? 1 : PEN_BANNER, q, 4);
+            if (q[0].z > CAM_NEAR(&cam)) a3_poly(&cam, q[0].z - 4 * CAM_U(&cam), last ? 1 : PEN_BANNER, q, 4);
             if (last)                        /* the finish: chequered */
                 for (s = 0; s < 6; s++) {
                     int32_t xa = c - RR_GATE_HW + s * 30 + 2;
@@ -186,37 +186,43 @@ static void gates(const RRGame *g)
                     cam_xform(&cam, xa + 13, y0 + 2 + (s & 1) * 6, gz, &q[1]);
                     cam_xform(&cam, xa + 13, y0 + 8 + (s & 1) * 6, gz, &q[2]);
                     cam_xform(&cam, xa, y0 + 8 + (s & 1) * 6, gz, &q[3]);
-                    if (q[0].z > NEAR_Z) a3_poly(&cam, q[0].z - 6, 0, q, 4);
+                    if (q[0].z > CAM_NEAR(&cam)) a3_poly(&cam, q[0].z - 6 * CAM_U(&cam), 0, q, 4);
                 }
         }
     }
 }
 
-static void shadow(int32_t x, int32_t y, int32_t z, int32_t r)
+static void shadow(const Cam *bc, int32_t x, int32_t y, int32_t z, int32_t r)
 {
     V3 p[6];
     int k;
     for (k = 0; k < 6; k++) {
         int a = k * 10923;
-        cam_xform(&cam, x + ((a3_sin(a) * r) >> 16), y, z + ((a3_cos(a) * r * 3 / 2) >> 16), &p[k]);
+        cam_xform(bc, x + ((a3_sin(a) * r) >> 16), y, z + ((a3_cos(a) * r * 3 / 2) >> 16), &p[k]);
     }
-    if (p[0].z > NEAR_Z && p[3].z > NEAR_Z) a3_poly(&cam, ((p[0].z + p[3].z) >> 1) + 6, PEN_SHADOW, p, 6);
+    if (p[0].z > CAM_NEAR(bc) && p[3].z > CAM_NEAR(bc)) a3_poly(bc, ((p[0].z + p[3].z) >> 1) + 6 * CAM_U(bc), PEN_SHADOW, p, 6);
 }
 
-static void bike(const RRGame *g, int32_t x, int32_t y, int32_t z, int yaw, int lean, int colour, int flame, int32_t bias)
+/* a bike at 16.16 world position (fx, fy, fz): drawn through a copy of the
+ * camera that places it exactly, so it glides with the camera rather than
+ * stepping a whole unit at a time */
+static void bike(const RRGame *g, int32_t fx_, int32_t fy_, int32_t fz_, int yaw, int lean, int colour, int flame, int32_t bias)
 {
     int32_t m[9];
+    int32_t x = fx_ >> 16, y = fy_ >> 16, z = fz_ >> 16;
     int32_t gy = rr_height(g, x, z) + 1;
-    shadow(x, gy, z, 16);
+    Cam bc;
+    cam_for(&cam, fx_, fy_, fz_, &bc);
+    shadow(&bc, x, gy, z, 16);
     a3_rot_ypr(m, yaw, 0, lean);
-    a3_model(&cam, &bike_m, x, y, z, m, body_pens[colour], 0, bias);
+    a3_model(&bc, &bike_m, x, y, z, m, body_pens[colour], 0, bias);
     if (flame) {
         V3 q[3];
         int32_t fx = a3_sin(yaw), fz = a3_cos(yaw), len = 26 + (int32_t)(g->tick % 3) * 8;
-        cam_xform(&cam, x - ((fz * 6) >> 16) - ((fx * 18) >> 16), y + 2, z + ((fx * 6) >> 16) - ((fz * 18) >> 16), &q[0]);
-        cam_xform(&cam, x + ((fz * 6) >> 16) - ((fx * 18) >> 16), y + 2, z - ((fx * 6) >> 16) - ((fz * 18) >> 16), &q[1]);
-        cam_xform(&cam, x - ((fx * (18 + len)) >> 16), y + 3, z - ((fz * (18 + len)) >> 16), &q[2]);
-        if (q[2].z > NEAR_Z) a3_poly(&cam, q[2].z - 10, (g->tick & 1) ? PEN_FLAME : PEN_YELLOW, q, 3);
+        cam_xform(&bc, x - ((fz * 6) >> 16) - ((fx * 18) >> 16), y + 2, z + ((fx * 6) >> 16) - ((fz * 18) >> 16), &q[0]);
+        cam_xform(&bc, x + ((fz * 6) >> 16) - ((fx * 18) >> 16), y + 2, z - ((fx * 6) >> 16) - ((fz * 18) >> 16), &q[1]);
+        cam_xform(&bc, x - ((fx * (18 + len)) >> 16), y + 3, z - ((fz * (18 + len)) >> 16), &q[2]);
+        if (q[2].z > CAM_NEAR(&bc)) a3_poly(&bc, q[2].z - 10 * CAM_U(&bc), (g->tick & 1) ? PEN_FLAME : PEN_YELLOW, q, 3);
     }
 }
 
@@ -229,19 +235,20 @@ static void bikes(const RRGame *g)
         int yaw;
         if (r->finished || dz < -300 || dz > (WIN * 2) * CELL) continue;
         yaw = a3_atan2(rr_centre(g, z + 60) - rr_centre(g, z), 60);
-        bike(g, x, rr_height(g, x, z) + RR_HOVER, z, yaw, 0, k + 1, 0, 0);
+        bike(g, r->x, (rr_height(g, x, z) + RR_HOVER) << 16, r->z, yaw, 0, k + 1, 0, 0);
     }
-    bike(g, g->x >> 16, g->y >> 16, g->z >> 16, g->yaw, -g->steer * 2200, 0, g->boosting, 0);
+    bike(g, g->x, g->y, g->z, g->yaw, -g->steer * 2200, 0, g->boosting, 0);
 }
 
 static void camera(const RRGame *g)
 {
     int32_t fx = a3_sin(rn.cam_yaw), fz = a3_cos(rn.cam_yaw), gy;
-    cam.x = (g->x >> 16) - ((fx * 150) >> 16);
-    cam.z = (g->z >> 16) - ((fz * 150) >> 16);
-    cam.y = (g->y >> 16) + 62;
-    gy = rr_height(g, cam.x, cam.z) + 30;
-    if (cam.y < gy) cam.y = gy;
+    int32_t x = g->x - fx * 150, z = g->z - fz * 150, y = g->y + (62 << 16);
+    /* placed to a sixteenth of a unit: a camera on whole units steps unevenly
+     * as the bike moves, which shows as judder */
+    gy = rr_height(g, x >> 16, z >> 16) + 30;
+    if ((y >> 16) < gy) y = gy << 16;
+    cam_place(&cam, x, y, z);
     cam.yaw = rn.cam_yaw;
     cam.pitch = 1500;
     cam_view(&cam, SCREEN_W, VIEW_H, SCREEN_W / 2, 104, 210);
