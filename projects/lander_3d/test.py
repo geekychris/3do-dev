@@ -31,7 +31,7 @@ s1 = t.st()
 pitches = [s.get("pitch") for s in t.sts(c)]
 c = t.emu.log_cursor()
 t.play(frames=60, hold=["LEFT", "A"])
-t.play(frames=10)
+t.play(frames=70)                       # a status line after the input (once a second)
 ss = t.sts(c)
 t.check(f"up pitches (pitch {s0.get('pitch')} -> {pitches})", any(p != s0.get("pitch") for p in pitches))
 t.check("left rolls", any(s.get("roll") != s1.get("roll") for s in ss), str(ss[-1:]))
