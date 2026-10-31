@@ -1,0 +1,5 @@
+title=Ace Pilot 2
+origin=Amiga
+genre=Flight sim
+order=430
+desc=A WWI biplane war in 3D: eight missions over the trenches and the river Sellen, chase or cockpit view. D-pad flies, A fires, L/R throttle, C view, B autopilot, P pause.

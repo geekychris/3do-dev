@@ -1025,7 +1025,7 @@ void a3_poly(const Cam *c, int32_t depth, int col, V3 *cv, int n)
     DPoly *p;
     int i, b;
 
-    n = clip_near(cv, n, cl);
+    n = clip_near_at(cv, n, cl, CAM_NEAR(c));
     if (n < 3) return;
     for (i = 0; i < n; i++) {
 #if A3_SUB > 1
@@ -1049,7 +1049,7 @@ void a3_poly(const Cam *c, int32_t depth, int col, V3 *cv, int n)
     p->col = (uint8_t)col;
     p->next = -1;
     for (i = 0; i < n; i++) { p->x[i] = (int16_t)xs[i]; p->y[i] = (int16_t)ys[i]; }
-    b = bucket_of(depth);
+    b = bucket_of(c->precise ? depth / 16 : depth);    /* sort buckets are in whole units */
     if (btail[b] >= 0) pool[btail[b]].next = (int16_t)a3_npolys; else bhead[b] = (int16_t)a3_npolys;
     btail[b] = (int16_t)a3_npolys;
     a3_npolys++;
@@ -1058,7 +1058,8 @@ void a3_poly(const Cam *c, int32_t depth, int col, V3 *cv, int n)
 void a3_quad(const Cam *c, int32_t depth, int col, V3 a, V3 b, V3 d, V3 e)
 {
     V3 q[4];
-    if (a.z < NEAR_Z && b.z < NEAR_Z && d.z < NEAR_Z && e.z < NEAR_Z) return;
+    int32_t nz = CAM_NEAR(c);
+    if (a.z < nz && b.z < nz && d.z < nz && e.z < nz) return;
     if (a.x > a.z && b.x > b.z && d.x > d.z && e.x > e.z) return;
     if (a.x < -a.z && b.x < -b.z && d.x < -d.z && e.x < -e.z) return;
     q[0] = a; q[1] = b; q[2] = d; q[3] = e;
@@ -1403,7 +1404,10 @@ void a3_model(const Cam *c, const Model *m, int32_t wx, int32_t wy, int32_t wz, 
     int i, k, nvis = 0;
 
     cam_xform(c, wx, wy, wz, &ctr);
-    if (ctr.z < -800 || ctr.x > ctr.z + 800 || ctr.x < -ctr.z - 800) return;
+    {
+        int32_t mg = 800 * CAM_U(c);
+        if (ctr.z < -mg || ctr.x > ctr.z + mg || ctr.x < -ctr.z - mg) return;
+    }
     for (i = 0; i < m->nv; i++) {
         int32_t x = m->v[i][0], y = m->v[i][1], z = m->v[i][2];
         if (rot) {
@@ -1434,7 +1438,7 @@ void a3_model(const Cam *c, const Model *m, int32_t wx, int32_t wy, int32_t wz, 
         vis_depth[i] = depth;
         nvis++;
     }
-    depth = ctr.z - depth_bias;
+    depth = ctr.z - depth_bias * CAM_U(c);
     for (i = 0; i < nvis; i++) {
         const Face *f = &m->f[vis_face[i]];
         V3 q[4];

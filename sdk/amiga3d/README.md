@@ -2,7 +2,7 @@
 
 The 3DO platform layer for the `amiga3d` engine from
 [amiga_mcp](https://github.com/geekychris/amiga_mcp) (`examples/amiga3d`),
-on top of the [`sdk/amiga`](../amiga/README.md) compatibility layer. Twelve
+on top of the [`sdk/amiga`](../amiga/README.md) compatibility layer. Thirteen
 games on that engine build from their Amiga sources for the 3DO here:
 
 | Game | fps (emulator) | Tests on the 3DO | Host cross-check |
@@ -19,6 +19,7 @@ games on that engine build from their Amiga sources for the 3DO here:
 | [Lander 3D](../../projects/lander_3d/README.md) | 4-5 | 49 | `trace_main.c`'s flight, line by line |
 | [Boing Pinball](../../projects/boing_pinball/README.md) | 25 (full) | 81 | the browser's vectors |
 | [ScAIry Fun](../../projects/scairy_fun/README.md) | 4-5 | 90 | `trace_main.c`'s route, line by line |
+| [Ace Pilot 2](../../projects/ace_pilot2/README.md) | 9 | 65 | long autopilot campaign's hash |
 
 The games run at 25 frames a second at most (as on the Amiga) and step
 their simulations by the clock (`plat_ticks`), so a game that draws fewer
@@ -108,6 +109,20 @@ use a reciprocal table (`q * ceil(2^31 / z) >> 31`: at most one more than
 is for drawing only; the simulations keep exact arithmetic. (The emulator
 charges up to 16 cycles a multiply, by the multiplier's bits, so this helps
 less than an instruction-count profile suggests.)
+
+**The camera that glides** (from amiga_games' "amiga3d: a camera that
+glides"). A camera that follows a moving vehicle on whole world units steps
+0, 1 or 2 units a frame and the near ground judders. `cam_place()` puts it
+at a 16.16 position and `cam_xform` then works in sixteenths of a unit
+(camera space 16 times larger, the projection unchanged); `cam_for()` gives
+a camera copy that draws a moving model at its exact position. The engine
+scales its near clip (`clip_near_at`), `a3_quad`'s near test, `a3_model`'s
+margins and depth bias by `CAM_U()`, and sorts in whole units. Cameras set
+by assigning `x`/`y`/`z` are unchanged (`CAM_U` 1), as long as the `Cam` is
+zeroed (static, or `= { 0 }` as Canyon Rail's `cr_project` now has it). Ridge
+Runner and Tank Duel use it. The 3DO's reciprocal divides take the larger
+values: `proj_div` shifts `z >= 8192` down, and the near clip's
+interpolation already handles any `dz`.
 
 **`plat_sky`** (the copper's gradient): a 4-pixel-wide 16-bit cel of the
 gradient's rows, stretched across the screen under the frame, and the sky

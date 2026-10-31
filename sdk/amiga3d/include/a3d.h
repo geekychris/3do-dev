@@ -47,9 +47,26 @@ typedef struct {
     int32_t cy, sy, cp, sp;             /* cached trig, 16.16 (cam_setup) */
     int cx, cyc, fov;                   /* projection centre and scale (cam_view) */
     int vw, vh;                         /* the 3D area: 0..vw-1, 0..vh-1 */
+    int32_t qx, qy, qz;                 /* cam_place: sixteenths of a unit past x, y, z */
+    int precise;                        /* cam_place: camera space in sixteenths (see below) */
 } Cam;
 
 #define NEAR_Z  12
+
+/* A camera that follows something moving smoothly must not snap to whole
+ * units, or the scene steps unevenly (judder). cam_place() puts it at a
+ * 16.16 position and makes cam_xform() work in sixteenths of a unit: its
+ * output (camera space) is then 16 times larger. Projection doesn't care;
+ * the engine scales its near plane and margins. Game code that adds sizes
+ * or depth offsets in camera space multiplies them by CAM_U(c), and tests
+ * against CAM_NEAR(c) instead of NEAR_Z. Cameras set up by assigning x, y,
+ * z are unchanged (whole units, CAM_U 1). */
+#define CAM_U(c)     ((c)->precise ? 16 : 1)
+#define CAM_NEAR(c)  (NEAR_Z * CAM_U(c))
+void cam_place(Cam *c, int32_t x, int32_t y, int32_t z);   /* 16.16 world position */
+/* a copy of c that draws an object at a 16.16 position: pass the integer
+ * parts (x >> 16 ...) to the drawing calls with the copy */
+void cam_for(const Cam *c, int32_t x, int32_t y, int32_t z, Cam *out);
 
 void cam_view(Cam *c, int vw, int vh, int cx, int cy, int fov);
 void cam_setup(Cam *c);
@@ -59,6 +76,7 @@ int  cam_horizon(const Cam *c);         /* screen row of the horizon */
 
 #define MAX_PV 10
 int clip_near(V3 *in, int n, V3 *out);
+int clip_near_at(V3 *in, int n, V3 *out, int32_t near_z);
 int clip_rect(int32_t *xs, int32_t *ys, int n, int32_t x0, int32_t y0,
               int32_t x1, int32_t y1);
 #define SPAN_MAX 1024                   /* rows: AmigaOS 4 draws at twice the resolution */
