@@ -2,7 +2,7 @@
 
 The 3DO platform layer for the `amiga3d` engine from
 [amiga_mcp](https://github.com/geekychris/amiga_mcp) (`examples/amiga3d`),
-on top of the [`sdk/amiga`](../amiga/README.md) compatibility layer. Twelve
+on top of the [`sdk/amiga`](../amiga/README.md) compatibility layer. Thirteen
 games on that engine build from their Amiga sources for the 3DO here:
 
 | Game | fps (emulator) | Tests on the 3DO | Host cross-check |
@@ -19,6 +19,7 @@ games on that engine build from their Amiga sources for the 3DO here:
 | [Lander 3D](../../projects/lander_3d/README.md) | 4-5 | 49 | `trace_main.c`'s flight, line by line |
 | [Boing Pinball](../../projects/boing_pinball/README.md) | 25 (full) | 81 | the browser's vectors |
 | [ScAIry Fun](../../projects/scairy_fun/README.md) | 4-5 | 90 | `trace_main.c`'s route, line by line |
+| [Ace Pilot 2](../../projects/ace_pilot2/README.md) | 9 | 65 | long autopilot campaign's hash |
 
 The games run at 25 frames a second at most (as on the Amiga) and step
 their simulations by the clock (`plat_ticks`), so a game that draws fewer

@@ -63,6 +63,7 @@ Amiga; their frame rates come from `./3do test`.
 | [Boing Pinball](#boing-pinball) | 25 | 25 |
 | [ScAIry Fun](#scairy-fun) | 25 | 4.5 |
 | [Terra Strike](#terra-strike) | 25 | 11.8 |
+| [Ace Pilot 2](#ace-pilot2) | 25 | 9.2 |
 
 ## Games
 
@@ -398,3 +399,12 @@ A Zarch-style landscape shooter: lift off from the pad, destroy the tanks, build
 3D shooter · `projects/terra_strike` · from the Amiga version (its own landscape engine)
 
 ![Terra Strike title](images/games/terra_strike-title.png) ![Terra Strike play](images/games/terra_strike-play.png)
+
+### Ace Pilot 2
+<a id="ace-pilot2"></a>
+
+A WWI biplane war in 3D: eight missions over the trenches and the river Sellen, chase or cockpit view. D-pad flies, A fires, L/R throttle, C view, B autopilot, P pause.
+
+Flight sim · `projects/ace_pilot2` · from the Amiga version (amiga3d engine)
+
+![Ace Pilot 2 title](images/games/ace_pilot2-title.png) ![Ace Pilot 2 play](images/games/ace_pilot2-play.png)

@@ -76,6 +76,16 @@ GAMES = {
         "FIRE: AUTOPILOT   UP: DRIVE": "A: AUTOPILOT   UP: DRIVE",
         "HELP OR H: HOW TO PLAY": "C: HOW TO PLAY",
     }),
+    "ace_pilot2": dict(help=None, esc=None, own={
+        "UP / DOWN        NOSE DOWN / UP": "UP / DOWN        NOSE DOWN / UP",
+        "A / Z            THROTTLE UP / DOWN": "R / L            THROTTLE UP / DOWN",
+        "V                CHASE / COCKPIT": "C                CHASE / COCKPIT",
+        "I                INVERT UP / DOWN": "",
+        "P                PAUSE": "P                PAUSE",
+        "BEST %ld   HELP: HOW TO FLY": "BEST %ld   R/L THROTTLE  C VIEW",
+        "ESC: BACK TO THE TITLE": "X: BACK TO THE MENU",
+        "HELP: NEXT  FIRE: BACK": "A: BACK",
+    }),
 }
 
 

@@ -20,7 +20,7 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO = "geekychris/3do-dev"
 SKIP = {"demo", "hello", "paula_test", "unittest"}
-TITLES = {"rj_birthday": "RJ's Birthday Bash", "arcade": "The Arcade (every game on one disc)", "ace_pilot": "Ace Pilot",
+TITLES = {"rj_birthday": "RJ's Birthday Bash", "arcade": "The Arcade (every game on one disc)", "ace_pilot": "Ace Pilot", "ace_pilot2": "Ace Pilot 2",
           "stakattack": "StakAttack"}
 
 
