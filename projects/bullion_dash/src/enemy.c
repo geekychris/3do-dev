@@ -340,12 +340,24 @@ static void enemy_update_one(GameState *gs, Enemy *e)
         return;
     }
 
-    /*--- Movement timing (enemies are slower) ---*/
-    e->move_timer++;
-    if (e->move_timer < (PLAYER_SPEED + 1)) {
+    /*--- fix: stolen gold is dropped again after ENEMY_CARRY_FRAMES, on the
+     *    first free cell with a floor the guard stands on (trap_timer counts,
+     *    as it is only used while trapped) ---*/
+    if (e->has_gold) {
+        if (e->trap_timer > 0) {
+            e->trap_timer--;
+        } else if (tile_at(gs, e->gx, e->gy) == TILE_EMPTY && has_support(gs, e->gx, e->gy)) {
+            gs->tiles[e->gx][e->gy] = TILE_GOLD;
+            e->has_gold = 0;
+            e->trap_timer = -1;         /* (not picked up again where it was dropped) */
+        }
+    }
+
+    /*--- Movement timing (fix: frames to wait before the next step) ---*/
+    if (e->move_timer) {
+        e->move_timer--;
         return;
     }
-    e->move_timer = 0;
 
     /*--- AI pathfinding ---*/
     move_dx = 0;
@@ -414,13 +426,17 @@ static void enemy_update_one(GameState *gs, Enemy *e)
         }
     }
 
+    e->move_timer = (move_dy != 0 ? ENEMY_CLIMB_FRAMES : ENEMY_STEP_FRAMES) - 1;
     e->anim++;
 
     /*--- Gold stealing ---*/
-    if (!e->has_gold && tile_at(gs, e->gx, e->gy) == TILE_GOLD) {
+    if (e->trap_timer < 0) {
+        e->trap_timer = 0;              /* fix: it left the gold it dropped */
+    } else if (!e->has_gold && tile_at(gs, e->gx, e->gy) == TILE_GOLD) {
         /* 30% chance to pick up gold */
         if ((enemy_rand() % 100) < 30) {
             e->has_gold = 1;
+            e->trap_timer = ENEMY_CARRY_FRAMES;     /* fix: carried this long */
             gs->tiles[e->gx][e->gy] = TILE_EMPTY;
         }
     }
