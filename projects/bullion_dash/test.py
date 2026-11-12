@@ -14,6 +14,7 @@ for d in ["LEFT", "RIGHT", "RIGHT", "LEFT", "UP", "LEFT"]:     # run around leve
 t.play(frames=10, hold=["B"])                                  # dig left
 t.play(frames=10, hold=["C"])                                  # dig right
 t.shot("playing", min_colours=6)
+t.play(frames=1200)                                            # the guards start after 3 s, slower
 lines = t.emu.debug_log[c:]
 t.check("the runner collects gold or meets a guard",
         any(l.startswith("BULLION: score=") and "gold=0/" not in l for l in lines)
