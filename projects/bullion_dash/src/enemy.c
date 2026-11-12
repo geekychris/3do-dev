@@ -340,18 +340,10 @@ static void enemy_update_one(GameState *gs, Enemy *e)
         return;
     }
 
-    /*--- fix: stolen gold is dropped again after ENEMY_CARRY_FRAMES, on the
-     *    first free cell with a floor the guard stands on (trap_timer counts,
-     *    as it is only used while trapped) ---*/
-    if (e->has_gold) {
-        if (e->trap_timer > 0) {
-            e->trap_timer--;
-        } else if (tile_at(gs, e->gx, e->gy) == TILE_EMPTY && has_support(gs, e->gx, e->gy)) {
-            gs->tiles[e->gx][e->gy] = TILE_GOLD;
-            e->has_gold = 0;
-            e->trap_timer = -1;         /* (not picked up again where it was dropped) */
-        }
-    }
+    /*--- fix: how long stolen gold has been carried (trap_timer counts, as
+     *    it is only used while trapped; the drop is below) ---*/
+    if (e->has_gold && e->trap_timer)
+        e->trap_timer--;
 
     /*--- Movement timing (fix: frames to wait before the next step) ---*/
     if (e->move_timer) {
@@ -430,15 +422,19 @@ static void enemy_update_one(GameState *gs, Enemy *e)
     e->anim++;
 
     /*--- Gold stealing ---*/
-    if (e->trap_timer < 0) {
-        e->trap_timer = 0;              /* fix: it left the gold it dropped */
-    } else if (!e->has_gold && tile_at(gs, e->gx, e->gy) == TILE_GOLD) {
+    if (!e->has_gold && tile_at(gs, e->gx, e->gy) == TILE_GOLD) {
         /* 30% chance to pick up gold */
         if ((enemy_rand() % 100) < 30) {
             e->has_gold = 1;
             e->trap_timer = ENEMY_CARRY_FRAMES;     /* fix: carried this long */
             gs->tiles[e->gx][e->gy] = TILE_EMPTY;
         }
+    /* fix: after ENEMY_CARRY_FRAMES the gold is dropped on the first empty
+       cell the guard steps onto where gold lay at the start of the level */
+    } else if (e->has_gold && !e->trap_timer && tile_at(gs, e->gx, e->gy) == TILE_EMPTY
+               && level_gold_home(e->gx, e->gy)) {
+        gs->tiles[e->gx][e->gy] = TILE_GOLD;
+        e->has_gold = 0;
     }
 
     /*--- Drop gold when falling into hole ---*/

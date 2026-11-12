@@ -35,4 +35,8 @@ int level_load_text(const char *path);
  * editor when transitioning to test-play. */
 void level_activate_spawn_markers(GameState *gs);
 
+/* fix: 1 if gold lay at (x, y) when the level started (a guard drops
+   stolen gold only there) */
+int level_gold_home(int x, int y);
+
 #endif /* LEVEL_H */

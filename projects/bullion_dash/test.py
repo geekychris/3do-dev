@@ -9,6 +9,13 @@ t.boot()
 t.shot("title", min_colours=5)
 t.start(["A"], expect="state=PLAYING")
 c = t.emu.log_cursor()
+t.play(frames=10, hold=["L", "R"])                             # give up the life
+t.play(frames=60)
+lines = t.emu.debug_log[c:]
+t.check("L+R gives up the life and restarts the level",
+        any("Gave up level" in l for l in lines)
+        and any("state=PLAYING" in l and "lives=" in l for l in lines), t.log_tail())
+c = t.emu.log_cursor()
 for d in ["LEFT", "RIGHT", "RIGHT", "LEFT", "UP", "LEFT"]:     # run around level 1
     t.play(frames=50, hold=[d])
 t.play(frames=10, hold=["B"])                                  # dig left

@@ -2372,6 +2372,16 @@ static void unpack_level(const UBYTE *packed, GameState *gs)
  * cleanly. Enemy count is capped at MAX_ENEMIES; any excess ENEMY
  * markers are still cleared from the tile grid.
  *-------------------------------------------------------------------*/
+/* fix: the cells where gold lay when the level started: a guard drops
+   stolen gold only on one of them (they are on the level's winning route;
+   elsewhere it could land in a pit the player can't leave) */
+static UBYTE gold_home[GRID_COLS][GRID_ROWS];
+
+int level_gold_home(int x, int y)
+{
+    return gold_home[x][y];
+}
+
 void level_activate_spawn_markers(GameState *gs)
 {
     int x, y, ne;
@@ -2399,6 +2409,7 @@ void level_activate_spawn_markers(GameState *gs)
     for (x = 0; x < GRID_COLS; x++) {
         for (y = 0; y < GRID_ROWS; y++) {
             UBYTE t = gs->tiles[x][y];
+            gold_home[x][y] = (t == TILE_GOLD);     /* fix */
             if (t == TILE_PLAYER) {
                 gs->player.gx = x;
                 gs->player.gy = y;
