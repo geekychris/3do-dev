@@ -82,11 +82,12 @@
    ENEMY_CLIMB_FRAMES up or down (the player: 5 and 7); every guard waits
    ENEMY_START_DELAY frames at the start of a level, and one placed on the
    player's row enters from the top instead; stolen gold is dropped again
-   after ENEMY_CARRY_FRAMES. The same rule in every version. */
+   after ENEMY_CARRY_FRAMES, on a cell where gold lay at the start of the
+   level (level_gold_home). The same rule in every version. */
 #define ENEMY_STEP_FRAMES  8
 #define ENEMY_CLIMB_FRAMES 10
 #define ENEMY_START_DELAY  150
-#define ENEMY_CARRY_FRAMES 200
+#define ENEMY_CARRY_FRAMES 150
 
 /* Directions */
 #define DIR_NONE   0

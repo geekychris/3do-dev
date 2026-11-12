@@ -57,6 +57,8 @@ void input_update(void)
         else           fire_val = 1;
     }
     if (mode == 0 && (held & PAD_C)) keys_curr[KEY_E] = 1;
+    /* fix: both shoulder buttons in play give up the life (KEY_R) */
+    if (mode == 1 && (held & PAD_L) && (held & PAD_R)) keys_curr[KEY_R] = 1;
     if (mode == 2) {
         if (held & PAD_B) keys_curr[KEY_SPACE] = 1;
         if (held & PAD_L) keys_curr[KEY_F1] = 1;

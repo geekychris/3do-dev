@@ -33,13 +33,22 @@ until trapped. Now:
 - **Speed:** a tile every 8 frames across and 10 up or down.
 - **Start:** every guard waits 3 s at the start of a level, and one placed
   on the player's start row enters from the top instead.
-- **Stolen gold:** a guard drops it again after 4 s, on the first free cell
-  with a floor.
+- **Stolen gold:** a guard drops it again after 3 s, on the first empty
+  cell it steps onto where gold lay at the start of the level.
+- **Giving up:** R (on the 3DO pad: L and R together) gives up the life and
+  restarts the level.
+
+Dropping on any free cell with a floor was measured first, with the bot on
+all 150 levels and 4 seeds (600 runs). It made a winnable level unwinnable
+228 times in 21 runs, mostly in one-way pits that can be reached but not
+left. Dropping only where gold lay at the start: 11 times, in 9 runs
+(1.5%), when the player has already gone down a one-way drop. R is the
+way out of those cases.
 
 The ZX Spectrum port's bot (`tools/try_levels.py` there, the same rules in
 C) plays the 150 repaired levels:
 - **The original's guards:** 3 cleared, 139 caught, 8 out of time.
-- **The fixed guards:** 66 cleared, 56 caught, 28 out of time (62-74
+- **The fixed guards:** 57 cleared, 54 caught, 39 out of time (57-64
   cleared across runs).
 - **No guards:** 124 cleared, the bot's own limit.
 

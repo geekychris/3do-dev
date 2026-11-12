@@ -18,6 +18,7 @@
 #define KEY_E      0x12
 #define KEY_S      0x21
 #define KEY_P      0x19
+#define KEY_R      0x13     /* fix: give up the life (restart the level) */
 #define KEY_F1     0x50
 #define KEY_F2     0x51
 #define KEY_F3     0x52

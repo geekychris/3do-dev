@@ -307,6 +307,16 @@ int main(void)
                      (long)gs.player.gx, (long)gs.player.gy);
             }
 
+            /* fix: R gives up the life and restarts the level, the way out
+             * of a level that can't be finished any more (on the pad: L and
+             * R together, input_3do.c) */
+            if (gs.state == STATE_PLAYING && input_key(KEY_R)) {
+                gs.state = STATE_DYING;
+                gs.player.state = PS_DEAD;
+                transition_frames = 30;
+                AB_I("Gave up level %ld", (long)gs.level_num);
+            }
+
             /* Check if all gold collected - reveal hidden ladders */
             if (gs.state == STATE_PLAYING &&
                 gs.gold_collected >= gs.gold_total) {
