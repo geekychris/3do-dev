@@ -307,6 +307,17 @@ int main(void)
                      (long)gs.player.gx, (long)gs.player.gy);
             }
 
+            /* fix: a player buried by a regrowing brick (level_tick_bricks)
+             * or fallen off the grid (player_update) is PS_DEAD too, but
+             * only a guard's touch ended the life: he stood frozen until a
+             * guard came, for ever on a level whose guards can't reach him */
+            if (gs.state == STATE_PLAYING && gs.player.state == PS_DEAD) {
+                gs.state = STATE_DYING;
+                transition_frames = 30;
+                AB_I("Player died at (%ld,%ld)",
+                     (long)gs.player.gx, (long)gs.player.gy);
+            }
+
             /* fix: R gives up the life and restarts the level, the way out
              * of a level that can't be finished any more (on the pad: L and
              * R together, input_3do.c) */

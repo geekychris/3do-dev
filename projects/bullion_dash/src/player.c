@@ -125,7 +125,7 @@ void player_update(GameState *gs, int dx, int dy, int dig_left, int dig_right)
 {
     Player *p = &gs->player;
     int target_px, target_py;
-    UBYTE here, below, target_tile;
+    UBYTE target_tile;
     int new_gx, new_gy;
 
     /* Dead players don't move */
@@ -143,10 +143,6 @@ void player_update(GameState *gs, int dx, int dy, int dig_left, int dig_right)
         p->anim++;
         return;
     }
-
-    /* Get current tile info */
-    here = tile_at(gs, p->gx, p->gy);
-    below = tile_at(gs, p->gx, p->gy + 1);
 
     /*--- Gravity check ---*/
     /* Fall if: not on ladder, not on bar, no solid below, and grid-aligned */
