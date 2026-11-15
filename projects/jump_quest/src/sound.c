@@ -14,6 +14,7 @@
 /* 3DO port: the audio registers are the layer's Paula emulation
  * (paula.h); DMA control goes through paula_dmacon() */
 #include "paula.h"
+#include <bridge_client.h>
 #define AUD0            (&custom.aud[0])
 #define AUD1            (&custom.aud[1])
 #define AUD2            (&custom.aud[2])
@@ -70,6 +71,15 @@ static BYTE *wave_square = NULL;
 static BYTE *wave_bass = NULL;
 static BYTE *wave_noise = NULL;
 static BYTE *sfx_buf = NULL;
+static BYTE *sfx_buf3 = NULL;   /* fix: channel 3's own (it shared sfx_buf
+                                   with channel 2, which may still play it) */
+#define SFX3_LEN    96
+
+/* fix (from the Amiga original): Paula repeats a sample until its DMA is
+   turned off, and nothing turned the effects off: each one looped until
+   the next. Frames left of each effect channel's sample;
+   sound_music_tick() stops it at 0. */
+static UWORD sfx_frames[4];
 
 /* Set to 1 only after sound_init succeeds; every entry point below
  * must early-return when zero so we never touch NULL wave/sfx buffers. */
@@ -160,8 +170,9 @@ int sound_init(void) {
     wave_bass   = (BYTE *)AllocMem(WAVE_LEN, MEMF_CHIP | MEMF_CLEAR);
     wave_noise  = (BYTE *)AllocMem(256, MEMF_CHIP | MEMF_CLEAR);
     sfx_buf     = (BYTE *)AllocMem(SFX_LEN, MEMF_CHIP | MEMF_CLEAR);
+    sfx_buf3    = (BYTE *)AllocMem(SFX3_LEN, MEMF_CHIP | MEMF_CLEAR);
 
-    if (!wave_square || !wave_bass || !wave_noise || !sfx_buf) {
+    if (!wave_square || !wave_bass || !wave_noise || !sfx_buf || !sfx_buf3) {
         sound_cleanup();
         return 0;
     }
@@ -190,6 +201,7 @@ int sound_init(void) {
     paula_dmacon(0x000F);
 
     sound_available = 1;
+    AB_I("SYMBOL custom 0x%lx", (long)&custom);   /* for test.py */
     return 1;
 }
 
@@ -204,6 +216,7 @@ void sound_cleanup(void) {
     if (wave_bass)   { FreeMem(wave_bass, WAVE_LEN); wave_bass = NULL; }
     if (wave_noise)  { FreeMem(wave_noise, 256); wave_noise = NULL; }
     if (sfx_buf)     { FreeMem(sfx_buf, SFX_LEN); sfx_buf = NULL; }
+    if (sfx_buf3)    { FreeMem(sfx_buf3, SFX3_LEN); sfx_buf3 = NULL; }
 }
 
 void sound_music_start(void) {
@@ -231,6 +244,7 @@ void sound_music_stop(void) {
     music_playing = 0;
     if (!sound_available) return;
     paula_dmacon(0x000F);  /* Stop all channels */
+    sfx_frames[2] = sfx_frames[3] = 0;
 }
 
 void sound_music_tick(void) {
@@ -238,6 +252,11 @@ void sound_music_tick(void) {
     UBYTE note;
 
     if (!sound_available) return;
+
+    /* fix: stop each effect once its sample has played (see sfx_frames) */
+    if (sfx_frames[2] && --sfx_frames[2] == 0) paula_dmacon(0x0004);
+    if (sfx_frames[3] && --sfx_frames[3] == 0) paula_dmacon(0x0008);
+
     if (!music_playing) return;
 
     tick_count++;
@@ -282,6 +301,10 @@ static void play_sfx(int channel, BYTE *data, int len, int period, int vol) {
     paula_dmacon(dma_bit);
     paula_set(base, data, (UWORD)(len / 2), (UWORD)period, (UWORD)vol);
     paula_dmacon(0x8000 | dma_bit);
+
+    /* the sample's length in 50 Hz game frames, rounded up: len bytes at
+       3546895 / period bytes a second (PAL) */
+    sfx_frames[channel] = (UWORD)(((ULONG)len * (ULONG)period + 70937UL) / 70938UL);
 }
 
 void sound_jump(void) {
@@ -316,12 +339,12 @@ void sound_collect(void) {
     int i;
     if (!sound_available) return;
     /* Quick sparkle - rising arpeggio */
-    for (i = 0; i < 96; i++) {
+    for (i = 0; i < SFX3_LEN; i++) {
         int pitch = 6 - (i / 32);
         if (pitch < 2) pitch = 2;
-        sfx_buf[i] = ((i / pitch) & 1) ? 48 : -48;
+        sfx_buf3[i] = ((i / pitch) & 1) ? 48 : -48;
     }
-    play_sfx(3, sfx_buf, 96, 160, 44);
+    play_sfx(3, sfx_buf3, SFX3_LEN, 160, 44);
 }
 
 void sound_powerup(void) {
