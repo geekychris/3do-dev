@@ -263,7 +263,7 @@ static void enemy_update_one(GameState *gs, Enemy *e)
 {
     int move_dx, move_dy;
     int new_gx, new_gy;
-    UBYTE here, below, target_tile;
+    UBYTE here, target_tile;
 
     if (!e->active)
         return;

@@ -2382,6 +2382,17 @@ int level_gold_home(int x, int y)
     return gold_home[x][y];
 }
 
+/* fix: called at every level start (level_load and the editor's test
+   play), after the spawn markers are gone, so the mask is the level's gold */
+static void mark_gold_home(GameState *gs)
+{
+    int x, y;
+
+    for (x = 0; x < GRID_COLS; x++)
+        for (y = 0; y < GRID_ROWS; y++)
+            gold_home[x][y] = (gs->tiles[x][y] == TILE_GOLD);
+}
+
 void level_activate_spawn_markers(GameState *gs)
 {
     int x, y, ne;
@@ -2409,7 +2420,6 @@ void level_activate_spawn_markers(GameState *gs)
     for (x = 0; x < GRID_COLS; x++) {
         for (y = 0; y < GRID_ROWS; y++) {
             UBYTE t = gs->tiles[x][y];
-            gold_home[x][y] = (t == TILE_GOLD);     /* fix */
             if (t == TILE_PLAYER) {
                 gs->player.gx = x;
                 gs->player.gy = y;
@@ -2437,6 +2447,7 @@ void level_activate_spawn_markers(GameState *gs)
         }
     }
     gs->num_enemies = ne;
+    mark_gold_home(gs);
 }
 
 /*--------------------------------------------------------------------
@@ -2475,6 +2486,7 @@ void level_load(GameState *gs, int level_num)
     /* Unpack level data */
     packed = &level_data[(level_num - 1) * 224];
     unpack_level(packed, gs);
+    mark_gold_home(gs);     /* fix: was filled only for the editor's test play */
 
     /* Count gold */
     gold = 0;
