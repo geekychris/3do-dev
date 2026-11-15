@@ -218,7 +218,7 @@ static void update_player(UBYTE input)
     p->y = new_y;
 
     /* Animation frame - every 6 ticks, when actually moving. */
-    if (p->vx != 0 && (gs->tick % 6) == 0) p->frame = (p->frame + 1) & 3;
+    if (p->vx != 0 && (gs->tick % 6) == 0) p->frame = (p->frame + 1) & 7;   /* fix in the original: & 3 never showed walk frames 4-7 */
 
     /* Collectibles + hazard tiles at the player's centre. */
     cx = p->x + 8; cy = p->y + 8;

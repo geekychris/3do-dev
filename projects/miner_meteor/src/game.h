@@ -88,7 +88,7 @@ typedef struct Player {
     LONG   vx, vy;
     UBYTE  facing;       /* 0 = left, 1 = right */
     UBYTE  on_ground;
-    UBYTE  frame;        /* 0..3 walk cycle counter, wraps every 8 ticks */
+    UBYTE  frame;        /* 0..7 walk cycle frame, steps every 6 ticks */
     UBYTE  jump_lock;    /* prevents auto-jump if jump held from spawn */
 } Player;
 
