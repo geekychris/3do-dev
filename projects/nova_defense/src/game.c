@@ -204,13 +204,6 @@ static void update_playing(GameState *gs, InputState *input)
     int i, r, c;
     WORD bullet_prev_y;
 
-    /* Clear events */
-    gs->ev_shoot = FALSE;
-    gs->ev_alien_hit = FALSE;
-    gs->ev_player_hit = FALSE;
-    gs->ev_ufo_hit = FALSE;
-    gs->ev_march = FALSE;
-
     /* Player movement */
     if (input->left) gs->player_x -= PLAYER_SPEED;
     if (input->right) gs->player_x += PLAYER_SPEED;
@@ -467,6 +460,16 @@ bullet_done:
 
 void game_update(GameState *gs, InputState *input)
 {
+    /* fix (from the Amiga original): the sound events last one frame in
+       every state. They were cleared only in update_playing(), so while
+       the gun was dying (and while a cleared wave paused) main_3do.c
+       restarted the last frame's explosion sound every frame. */
+    gs->ev_shoot = FALSE;
+    gs->ev_alien_hit = FALSE;
+    gs->ev_player_hit = FALSE;
+    gs->ev_ufo_hit = FALSE;
+    gs->ev_march = FALSE;
+
     switch (gs->state) {
     case STATE_TITLE:
         gs->title_blink++;
