@@ -73,7 +73,11 @@ int main(void)
 
         if (gs.ev_shoot)      sound_play_shoot();
         if (gs.ev_alien_hit)  sound_play_alien_explode();
-        if (gs.ev_player_hit) sound_play_player_explode();
+        if (gs.ev_player_hit) {
+            sound_play_player_explode();
+            AB_I("sfx=player_explode state=%s",
+                 gs.state < 5 ? state_names[gs.state] : "?");
+        }
         if (gs.ev_ufo_hit)    sound_play_alien_explode();
         if (gs.ev_march)      sound_play_march(gs.march_note);
         sound_play_ufo(gs.ufo.active);
