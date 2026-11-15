@@ -555,6 +555,10 @@ static void check_combat(GameState *gs)
                         /* Equal height - bounce off */
                         p->dx = (px < ex) ? -MOVE_SPEED : MOVE_SPEED;
                         e->dx = (ex < px) ? -ENEMY_SLOW : ENEMY_SLOW;
+                        /* fix: face the way it now flies (it flew
+                           backwards until the next re-aim, up to 64
+                           frames later) */
+                        e->facing = (e->dx < 0) ? 1 : 0;
                         p->dy = FLAP_IMPULSE / 3;
                         e->dy = FLAP_IMPULSE / 3;
                     }
@@ -563,6 +567,8 @@ static void check_combat(GameState *gs)
         }
     }
 }
+
+static WORD title_flap_held;     /* FLAP down on the last title frame */
 
 void game_update(GameState *gs, InputState *input)
 {
@@ -580,10 +586,12 @@ void game_update(GameState *gs, InputState *input)
             gs->num_players = 2;
             game_start(gs);
         }
-        /* Animate title selection */
-        if (input->p1 & INP_FLAP) {
+        /* Animate title selection.
+           fix: once a press, not every frame FLAP is held */
+        if ((input->p1 & INP_FLAP) && !title_flap_held) {
             gs->title_selection ^= 1;
         }
+        title_flap_held = (input->p1 & INP_FLAP) != 0;
         break;
 
     case STATE_WAVE_INTRO:

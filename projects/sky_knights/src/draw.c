@@ -246,9 +246,12 @@ static void draw_rider(struct RastPort *rp, WORD x, WORD y, WORD facing,
     /* Knight head */
     safe_rect(rp, rx + 7, y - 2, rx + 12, y - 1);
 
-    /* Strike weapon (in facing direction, matching mount head/beak below) */
+    /* Strike weapon (in facing direction, matching mount head/beak below).
+       fix (from the Amiga original): facing 1 is left (game.h: 0=right,
+       1=left). The lance, neck and head were drawn on the left for
+       facing 0, so every knight flew backwards. */
     SetAPen(rp, COL_WHITE);
-    if (facing == 0) {
+    if (facing == 1) {
         /* Facing left: weapon on left, matching left-side beak */
         safe_rect(rp, rx, y + 2, rx + 5, y + 4);
     } else {
@@ -260,11 +263,14 @@ static void draw_rider(struct RastPort *rp, WORD x, WORD y, WORD facing,
     SetAPen(rp, body_color);
     safe_rect(rp, rx + 3, y + 7, rx + 16, y + 13);
 
-    /* Mount neck */
-    safe_rect(rp, rx + 4, y + 4, rx + 6, y + 7);
+    /* Mount neck (on the head's side) */
+    if (facing == 1)
+        safe_rect(rp, rx + 4, y + 4, rx + 6, y + 7);
+    else
+        safe_rect(rp, rx + 13, y + 4, rx + 15, y + 7);
 
     /* Mount head/beak */
-    if (facing == 0) {
+    if (facing == 1) {
         safe_rect(rp, rx + 2, y + 2, rx + 4, y + 5);
         SetAPen(rp, COL_SCORE);
         safe_rect(rp, rx, y + 3, rx + 2, y + 4);
