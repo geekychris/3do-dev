@@ -14,7 +14,7 @@ void draw_frame(struct RastPort *rp, GameState *gs);
 void draw_title(struct RastPort *rp);
 void draw_hud(struct RastPort *rp, GameState *gs);
 void draw_item_get(struct RastPort *rp, GameState *gs);
-void draw_gameover(struct RastPort *rp);
+void draw_gameover(struct RastPort *rp, GameState *gs);
 void draw_text(struct RastPort *rp, WORD x, WORD y, const char *str, WORD color);
 
 #endif
