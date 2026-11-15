@@ -233,7 +233,9 @@ static void draw_stars(struct RastPort *rp)
 static void draw_far_mountains(struct RastPort *rp, LONG scroll_x)
 {
     WORD x;
-    WORD offset = (WORD)((scroll_x / 400) % 640);  /* 0.25x parallax speed */
+    /* 0.25x parallax speed. fix: wrapped at 640, but the range repeats
+       every 512 px of offset, so it jumped every 2560 px */
+    WORD offset = (WORD)((scroll_x / 400) % 512);
 
 #ifdef AMIGA3DO
     /* 3DO port: same columns, filled in one batch (gfx_fill_columns) */
@@ -260,7 +262,8 @@ static void draw_far_mountains(struct RastPort *rp, LONG scroll_x)
 static void draw_near_mountains(struct RastPort *rp, LONG scroll_x)
 {
     WORD x;
-    WORD offset = (WORD)((scroll_x / 200) % 640);  /* 0.5x parallax speed */
+    /* 0.5x parallax speed. fix: wrap at its repeat, 512 (as above) */
+    WORD offset = (WORD)((scroll_x / 200) % 512);
 
 #ifdef AMIGA3DO
     WORD tops[SCREEN_W / 2];
@@ -361,11 +364,11 @@ static void draw_terrain(struct RastPort *rp, GameState *gs)
                 SetAPen(rp, COL_BROWN);
                 RectFill(rp, x, th, x, th + 2);
                 BODY(x, th + 3, x, SCREEN_H - 25);
-                /* Mine dot */
-                if ((x & 3) < 2) {
-                    SetAPen(rp, COL_RED);
-                    RectFill(rp, x, th - 4, x, th - 1);
-                }
+                /* Mine dot. fix: drawn 1 px wide and only when
+                   (x & 3) < 2, so a 1-px mine on the other screen columns
+                   was invisible; now 2 px wide on every column */
+                SetAPen(rp, COL_RED);
+                RectFill(rp, x, th - 4, x < SCREEN_W - 1 ? x + 1 : x, th - 1);
                 break;
         }
     }
@@ -612,8 +615,8 @@ void draw_hud(struct RastPort *rp, GameState *gs)
     /* High score area */
     SetAPen(rp, COL_WHITE);
     draw_string_at(rp, SCREEN_W - 72, 2, "HI", 1);
-    /* Just show current score as high score placeholder */
-    long_to_str(buf, (long)gs->score);
+    /* fix: was the current score, as a placeholder */
+    long_to_str(buf, (long)gs->hiscore);
     draw_string_at(rp, SCREEN_W - 56, 2, buf, 1);
 }
 
