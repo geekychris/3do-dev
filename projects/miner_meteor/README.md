@@ -55,6 +55,13 @@ The game is C++ on the Amiga, but simple C++ (one class with methods, references
   collapsing floors, air, the collision snaps) finds a run through every
   one of the six caverns, checked by replaying it with the game code.
   Set `JUMP_IMPULSE` to (-8) for the original jump.
+- Fixed in the original too (amiga_games #53), brought over here: Hazard
+  Bay's row 5 ended in `.`, a hole in the right wall (now `#`); Guardian
+  Alley's first guard ("the one on the top ledge") started at y 48, inside
+  the row-3 ledge, and now starts at y 32, on it; the walk frame counter
+  wrapped at 4 though the sheet has 8 walk frames, so frames 4-7 were never
+  drawn. The host search still finds a run through all six caverns with
+  these changes.
 - The title and end-screen captions (pen 0 on a coloured bar) are black boxes
   on the Amiga, whose default draw mode is JAM2; the port draws text in JAM1.
 
