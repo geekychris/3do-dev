@@ -63,6 +63,7 @@ int main(void)
     int steps;
     WORD last_state = -1, last_cp = -1;
     LONG last_score = 0;
+    int held, was_held = 0, pressed;
 
     ab_init("LUNAR");
     if (!gfx_init(palette, 16))
@@ -81,6 +82,13 @@ int main(void)
             break;
         }
 
+        /* fix (Amiga original): the title and GAME OVER act on a new press
+           of FIRE/JUMP; one still held from play skipped GAME OVER and
+           began a new game at once */
+        held = input.fire || input.jump;
+        pressed = held && !was_held;
+        was_held = held;
+
         /* state machine from the Amiga main.c, run as many logic steps as
          * 50 Hz time requires (gfx_steps) so the game keeps its speed even
          * though drawing the scenery takes longer than one frame */
@@ -90,7 +98,8 @@ int main(void)
             switch (gs.state) {
             case STATE_TITLE:
                 gs.frame++;
-                if (input.fire || input.jump) {
+                if (pressed) {
+                    pressed = 0;
                     game_init(&gs);
                     gs.state = STATE_PLAYING;
                 }
@@ -108,7 +117,7 @@ int main(void)
             case STATE_GAMEOVER:
                 game_update(&gs, &input);
                 if (gs.ev_explode) sound_explode();
-                if (gs.state == STATE_GAMEOVER && (input.fire || input.jump) && last)
+                if (gs.state == STATE_GAMEOVER && pressed && last)
                     gs.state = STATE_TITLE;
                 break;
             }

@@ -134,6 +134,7 @@ typedef struct {
     Explosion explosions[MAX_EXPLOSIONS];
 
     LONG score;
+    LONG hiscore;               /* fix: the session's best (kept by game_init) */
     WORD lives;
     WORD state;
     WORD state_timer;
