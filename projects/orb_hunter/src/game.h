@@ -136,6 +136,7 @@ typedef struct {
 
 #define MAX_ENEMIES         12
 #define MAX_ENEMY_BULLETS   6
+#define HIT_FLASH_FRAMES    8     /* an enemy flashes this long when hit */
 
 typedef struct {
     Fixed x, y;
@@ -148,6 +149,7 @@ typedef struct {
     WORD  timer;
     WORD  anim_frame;
     WORD  fire_timer;
+    WORD  hit_timer;    /* fix: frames left of the hit flash (draw.c) */
 } Enemy;
 
 typedef struct {

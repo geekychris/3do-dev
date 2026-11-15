@@ -78,10 +78,11 @@ static EnemySpawn room_enemies[] = {
     /* Corridor rooms */
     { 4, 1,  8, 13, ENEMY_CRAWLER }, { 4, 2, 10, 13, ENEMY_FLYER },
     { 3, 3,  8, 13, ENEMY_CRAWLER },
-    /* Citadel rooms */
-    { 3, 4,  6, 13, ENEMY_TURRET },  { 3, 4, 14, 13, ENEMY_CRAWLER },
-    { 4, 4,  5, 13, ENEMY_HOPPER },  { 4, 4, 15, 13, ENEMY_TURRET },
-    { 5, 4,  8, 13, ENEMY_FLYER },   { 5, 4, 14, 13, ENEMY_CRAWLER },
+    /* Citadel rooms. fix: row 12, on the floor; gen_citadel's floor is
+       three rows thick (13-15), so at row 13 they were inside it */
+    { 3, 4,  6, 12, ENEMY_TURRET },  { 3, 4, 14, 12, ENEMY_CRAWLER },
+    { 4, 4,  5, 12, ENEMY_HOPPER },  { 4, 4, 15, 12, ENEMY_TURRET },
+    { 5, 4,  8, 12, ENEMY_FLYER },   { 5, 4, 14, 12, ENEMY_CRAWLER },
     /* Roll form area */
     { 1, 4,  8,  9, ENEMY_CRAWLER },
     /* Boss rooms */
@@ -153,6 +154,7 @@ void game_load_room(GameState *gs)
             e->timer = 0;
             e->anim_frame = 0;
             e->fire_timer = 0;
+            e->hit_timer = 0;
 
             switch (e->type) {
                 case ENEMY_CRAWLER:     e->health = 3;  break;
@@ -534,6 +536,7 @@ static void update_bombs(GameState *gs)
                 if (edx > -BOMB_RADIUS && edx < BOMB_RADIUS &&
                     edy > -BOMB_RADIUS && edy < BOMB_RADIUS) {
                     e->health -= 3;
+                    e->hit_timer = HIT_FLASH_FRAMES;
                 }
             }
 
@@ -591,6 +594,7 @@ static void update_enemies(GameState *gs)
 
         e->timer++;
         e->fire_timer++;
+        if (e->hit_timer > 0) e->hit_timer--;
 
         switch (e->type) {
             case ENEMY_CRAWLER:
@@ -799,6 +803,7 @@ static void check_bullet_enemy(GameState *gs)
 
             if (dx > -rad && dx < rad && dy > -rad && dy < rad) {
                 e->health -= b->power;
+                e->hit_timer = HIT_FLASH_FRAMES;
                 b->active = 0;
                 sfx_hit();
                 game_spawn_particles(gs, b->x, b->y, 4, 10);

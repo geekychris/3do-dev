@@ -410,6 +410,7 @@ int main(void)
     WORD running = 1;
     WORD music_playing = 0;
     int last_state = -1, last_room = -1;
+    UWORD prev_inp = 0;     /* last frame's input, for presses */
 
     ab_init("ORB");
     amiga_set_progdir("orb_hunter");
@@ -442,6 +443,10 @@ int main(void)
 
     while (running) {
         UWORD inp = read_pad();
+        /* fix: the title, item box and game over took a held A as a new
+           press (A held from play skipped the item box at once) */
+        UWORD pressed = inp & ~prev_inp;
+        prev_inp = inp;
         if (inp & INPUT_ESC)
             break;
         {
@@ -450,7 +455,7 @@ int main(void)
         switch (gs.state) {
             case STATE_TITLE:
                 draw_title(rp);
-                if (inp & (INPUT_FIRE | INPUT_START)) {
+                if (pressed & (INPUT_FIRE | INPUT_START)) {
                     game_init(&gs);
                 }
                 break;
@@ -468,9 +473,12 @@ int main(void)
                 break;
 
             case STATE_ITEM_GET:
+                /* fix: game_update runs its 90-frame timer (it was never
+                   called here, so the box waited for a press) */
+                game_update(&gs, 0, 0, 0, 0, 0, 0);
                 draw_frame(rp, &gs);
                 draw_item_get(rp, &gs);
-                if (inp & (INPUT_FIRE | INPUT_START)) {
+                if (pressed & (INPUT_FIRE | INPUT_START)) {
                     gs.state = STATE_PLAYING;
                 }
                 break;
@@ -487,8 +495,11 @@ int main(void)
                 break;
 
             case STATE_GAMEOVER:
-                draw_gameover(rp);
-                if (inp & (INPUT_FIRE | INPUT_START)) {
+                /* fix: game_update runs its 180-frame timer back to the
+                   title (never called here before) */
+                game_update(&gs, 0, 0, 0, 0, 0, 0);
+                draw_gameover(rp, &gs);
+                if (pressed & (INPUT_FIRE | INPUT_START)) {
                     gs.state = STATE_TITLE;
                 }
                 break;
@@ -502,7 +513,9 @@ int main(void)
             last_room = gs.room_x * 64 + gs.room_y;
         }
         gfx_swap();
-        gs.frame++;
+        /* fix: gs.frame was also incremented here, twice a loop with
+           game_update's, so draw_frame always saw it odd (enemies hidden,
+           the invulnerable hunter hidden); game_update's alone now */
     }
 
     AB_I("exit");
