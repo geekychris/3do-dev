@@ -57,8 +57,8 @@ static const char LVL1_TILES[] =
     "#..................#"
     "#.^^^^....K....^^^.#"
     "#..................#"
-    "#..............##..#"
-    "#....##............#"
+    "#....##........##..#"   /* bug in the original: unwinnable - this ledge was in row 10, too low to jump to row 5 from */
+    "#..................#"   /* was "#....##............#" */
     "#..................#"
     "#..P.....^.^^....E.#"   /* bug in the original: unwinnable (was ^^^^, no jump clears it) */
     "####################"
@@ -131,12 +131,12 @@ static const char LVL4_TILES[] =
     "####################"
     "#..................#"
     "#.........K........#"
-    "#........cccc......#"
+    "#......cccc........#"   /* bug in the original: unwinnable - out of jump reach, was "#........cccc......#" */
     "#..................#"
     "#..K...............#"
     "#.cccc.............#"
-    "#..............K...#"
-    "#............cccc..#"
+    "#........K.........#"   /* bug in the original: unwinnable - this ledge and key were out of reach, */
+    "#.......cccc.......#"   /* were "#..............K...#" / "#............cccc..#" */
     "#..................#"
     "#....K.............#"
     "#..cccc............#"
