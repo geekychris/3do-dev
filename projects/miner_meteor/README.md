@@ -41,7 +41,7 @@ The game is C++ on the Amiga, but simple C++ (one class with methods, references
   pixels, but the keys sit on platforms 64 pixels above anywhere you can
   stand. The port uses -12 (66 pixels); a breadth-first search over the
   game's tick function, compiled for the host, then reaches every key and the
-  exit of caverns 1, 3, 4 and 5 (it also produced `demo.h`).
+  exit of caverns 1, 3, 4 and 5.
   Caverns 2 and 6 still couldn't be finished, so their level data is fixed
   too (`levels`, rows marked "bug in the original: unwinnable"), the same as
   in amiga_games: in cavern 2 one of the four floor spikes in front of the
@@ -62,6 +62,21 @@ The game is C++ on the Amiga, but simple C++ (one class with methods, references
   wrapped at 4 though the sheet has 8 walk frames, so frames 4-7 were never
   drawn. The host search still finds a run through all six caverns with
   these changes.
+- **Landing bob** (fixed in the original too, amiga_games): a landing snapped
+  from the player's old y instead of the new one, so a fall that crossed a
+  tile boundary put the player 16 pixels above the floor, where they dropped
+  and snapped back every few frames until they moved. The player now lands
+  exactly on the floor. Every earlier route had relied on the bob, since
+  you could jump from 16 pixels up, and without it Hazard Bay's top-left key
+  and Collapsing Attic's upper ledges were out of reach. So two more
+  layouts changed (rows marked "bug in the original: unwinnable" in
+  `src/levels.c`): in Hazard Bay the row-10 ledge (columns 5-6) moved up to
+  row 9, in reach of the row-5 ledge; in Collapsing Attic the row-8 ledge
+  moved 5 columns left (to columns 8-11) with its key (column 9), and the
+  row-3 ledge 2 columns left (to columns 7-10). A breadth-first search over the port's own
+  game code (`tools/route_search.cpp`) finds a run through all six caverns
+  (271, 252, 842, 256, 209 and 305 ticks), and `tools/route_check.sh`
+  replays them (`tools/routes.json`). The cavern 1 run is `demo.h`.
 - The title and end-screen captions (pen 0 on a coloured bar) are black boxes
   on the Amiga, whose default draw mode is JAM2; the port draws text in JAM1.
 
@@ -72,3 +87,9 @@ checks that it clears cavern 1 and cavern 2 starts, plays a little, checks the
 speed (50 fps, 50 logic steps/s) and quits with X. The game logs a
 `MINER state=...` line on every change of mode, level, lives or keys,
 `demo: start` / `demo: done` and a `status:` line every 250 frames.
+
+`tools/route_check.sh` builds `src/game.c` and `src/levels.c` for the host and
+plays `tools/routes.json` through all six caverns; it fails unless all six
+are cleared without losing a life, and also fails a run if the player is
+ever standing with no floor under their feet (the old bob). `tools/route_check.sh search N` finds the
+shortest run through cavern N.

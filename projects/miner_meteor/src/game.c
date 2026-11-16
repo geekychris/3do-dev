@@ -205,7 +205,7 @@ static void update_player(UBYTE input)
     if (p->vy > 0) {
         /* Falling - check floor at both feet corners. */
         if (solid_at(p->x + 1, new_y + 15) || solid_at(p->x + 14, new_y + 15)) {
-            new_y = ((p->y / TILE_H) + 1) * TILE_H - 16;
+            new_y = ((new_y + 15) / TILE_H) * TILE_H - 16;   /* fix in the original: snapped from the old y, so an unaligned landing left the player 16 px up, bobbing */
             p->vy = 0;
             p->on_ground = 1;
         }
